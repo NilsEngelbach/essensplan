@@ -1,0 +1,394 @@
+'use client'
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { 
+  Calendar, 
+  Plus, 
+  Trash2, 
+  Clock, 
+  Users, 
+  Star,
+  ChefHat,
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays
+} from 'lucide-react'
+import { useAuth } from '../../components/AuthProvider'
+import { useRecipes } from '../../components/RecipeProvider'
+import { useMealPlans } from '../../components/MealPlanProvider'
+import Navigation from '../../components/Navigation'
+import RecipeSelector from '../../components/RecipeSelector'
+import toast from 'react-hot-toast'
+
+export default function MealPlanPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user, loading: authLoading } = useAuth()
+  const { recipes } = useRecipes()
+  const { mealPlans, loading, addOrUpdateMealPlan, removeMealPlan, getMealPlanForDate } = useMealPlans()
+  const [selectedDate, setSelectedDate] = useState('')
+  const [selectedRecipe, setSelectedRecipe] = useState('')
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
+
+  // Get 7 days starting from today + offset
+  const weekDates = useMemo(() => {
+    const today = new Date()
+    const dates = []
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i + (currentWeekOffset * 7))
+      dates.push(date.toISOString().split('T')[0])
+    }
+    return dates
+  }, [currentWeekOffset])
+
+  // Refresh meal plans when week dates change
+  const { refreshMealPlans } = useMealPlans()
+  useEffect(() => {
+    if (user && weekDates.length > 0) {
+      refreshMealPlans(weekDates[0], weekDates[6])
+    }
+  }, [user, weekDates, refreshMealPlans])
+
+  // Handle URL parameters for auto-opening modal with specific date
+  useEffect(() => {
+    const dateParam = searchParams.get('date')
+    const openModalParam = searchParams.get('openModal')
+    
+    if (dateParam && openModalParam === 'true') {
+      // Calculate the week offset needed to show the selected date
+      const selectedDate = new Date(dateParam)
+      const today = new Date()
+      const diffTime = selectedDate.getTime() - today.getTime()
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      const weekOffset = Math.floor(diffDays / 7)
+      
+      // Set the week offset to show the selected date
+      if (weekOffset !== currentWeekOffset) {
+        setCurrentWeekOffset(weekOffset)
+      }
+      
+      setSelectedDate(dateParam)
+      setShowAddModal(true)
+      
+      // Clean up URL parameters after handling them
+      const url = new URL(window.location.href)
+      url.searchParams.delete('date')
+      url.searchParams.delete('openModal')
+      router.replace(url.pathname + url.search, { scroll: false })
+    }
+  }, [searchParams, router, currentWeekOffset])
+
+  const handleAddToMealPlan = async () => {
+    if (!selectedDate || !selectedRecipe) {
+      toast.error('Bitte wählen Sie ein Datum und ein Rezept aus')
+      return
+    }
+    try {
+      await addOrUpdateMealPlan(selectedDate, selectedRecipe)
+      toast.success('Rezept zum Essensplan hinzugefügt')
+      setShowAddModal(false)
+      setSelectedDate('')
+      setSelectedRecipe('')
+    } catch (error) {
+      console.error('Error adding to meal plan:', error)
+      toast.error('Fehler beim Hinzufügen zum Essensplan')
+    }
+  }
+
+  const handleRemoveFromMealPlan = async (mealPlanId: string) => {
+    try {
+      await removeMealPlan(mealPlanId)
+      toast.success('Rezept aus Essensplan entfernt')
+    } catch (error) {
+      console.error('Error removing from meal plan:', error)
+      toast.error('Fehler beim Entfernen aus dem Essensplan')
+    }
+  }
+
+  const getDayName = useCallback((dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('de-DE', { weekday: 'long' })
+  }, [])
+
+  const getShortDayName = useCallback((dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('de-DE', { weekday: 'short' })
+  }, [])
+
+  const getDayNumber = useCallback((dateString: string) => {
+    const date = new Date(dateString)
+    return date.getDate()
+  }, [])
+
+  const getMonthName = useCallback((dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('de-DE', { month: 'short' })
+  }, [])
+
+
+  const getTags = useCallback((recipe: any) => {
+    if (!recipe?.tags) return []
+    try {
+      return JSON.parse(recipe.tags)
+    } catch {
+      return []
+    }
+  }, [])
+
+  // Show loading state while auth is loading or data is loading
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Laden...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show message if not authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Bitte melden Sie sich an
+          </h3>
+          <p className="text-gray-600 mb-6">
+            Sie müssen angemeldet sein, um Ihren Essensplan zu sehen.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header with Navigation */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Essensplan</h1>
+            <p className="text-gray-600 mt-2">
+              {currentWeekOffset === 0 ? 'Diese Woche' : 
+               currentWeekOffset === 1 ? 'Nächste Woche' : 
+               `${Math.abs(currentWeekOffset)} Wochen ${currentWeekOffset > 0 ? 'voraus' : 'zurück'}`}
+            </p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentWeekOffset(prev => prev - 1)}
+                className="p-2 text-gray-400 hover:text-gray-600"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setCurrentWeekOffset(0)}
+                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+              >
+                Heute
+              </button>
+              <button
+                onClick={() => setCurrentWeekOffset(prev => prev + 1)}
+                className="p-2 text-gray-400 hover:text-gray-600"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn-primary flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Rezept hinzufügen
+            </button>
+          </div>
+        </div>
+
+        {/* Meal Plan Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+          {weekDates.map((date) => {
+            const mealPlan = getMealPlanForDate(date)
+            const isToday = date === new Date().toISOString().split('T')[0]
+            
+            return (
+              <div key={date} className={`card min-h-[300px] ${
+                isToday ? 'ring-2 ring-primary-200' : ''
+              }`}>
+                {/* Date Header */}
+                <div className={`text-center mb-4 p-2 rounded-lg ${
+                  isToday ? 'bg-primary-100 text-primary-800' : 'bg-gray-50 text-gray-700'
+                }`}>
+                  <div className="text-sm font-medium">
+                    {getShortDayName(date)}
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {getDayNumber(date)}
+                  </div>
+                  <div className="text-xs">
+                    {getMonthName(date)}
+                  </div>
+                </div>
+                
+                {/* Meal Plan Content */}
+                <div>
+                  {mealPlan?.recipe ? (
+                    <div className="space-y-3">
+                      {/* Recipe Image */}
+                      <div 
+                        className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500 cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => router.push(`/recipes/${mealPlan.recipe.id}`)}
+                      >
+                        {mealPlan.recipe.imageUrl ? (
+                          <img 
+                            src={mealPlan.recipe.imageUrl} 
+                            alt={mealPlan.recipe.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <ChefHat className="h-8 w-8 text-white" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Recipe Info */}
+                      <div>
+                        <h3 
+                          className="font-semibold text-gray-900 text-sm line-clamp-2 cursor-pointer hover:text-primary-600 transition-colors"
+                          onClick={() => router.push(`/recipes/${mealPlan.recipe.id}`)}
+                        >
+                          {mealPlan.recipe.title}
+                        </h3>
+                        
+                        {/* Recipe Stats */}
+                        <div className="flex items-center text-xs text-gray-600 mt-2 space-x-2">
+                          {mealPlan.recipe.cookingTime && (
+                            <div className="flex items-center">
+                              <Clock className="h-3 w-3 mr-1" />
+                              <span>{mealPlan.recipe.cookingTime}</span>
+                            </div>
+                          )}
+                          {mealPlan.recipe.servings && (
+                            <div className="flex items-center">
+                              <Users className="h-3 w-3 mr-1" />
+                              <span>{mealPlan.recipe.servings}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Tags */}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {getTags(mealPlan.recipe).slice(0, 2).map((tag: string, index: number) => (
+                            <span 
+                              key={index}
+                              className="px-1 py-0.5 bg-gray-100 text-gray-800 text-xs rounded"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        onClick={() => handleRemoveFromMealPlan(mealPlan.id)}
+                        className="w-full text-xs text-red-600 hover:text-red-800 flex items-center justify-center"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Entfernen
+                      </button>
+                    </div>
+                  ) : (
+                    <div 
+                      className="text-center py-8 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors"
+                      onClick={() => {
+                        setSelectedDate(date)
+                        setShowAddModal(true)
+                      }}
+                    >
+                      <Calendar className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-500">Kein Rezept geplant</p>
+                      <p className="text-xs text-gray-400 mt-1">Klicken zum Hinzufügen</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Add Recipe Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Rezept zum Essensplan hinzufügen</h3>
+            
+            <div className="space-y-4">
+              {/* Date Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Datum
+                </label>
+                <select
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">Datum auswählen</option>
+                  {weekDates.map((date) => (
+                    <option key={date} value={date}>
+                      {getDayName(date)} {getDayNumber(date)}. {getMonthName(date)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Recipe Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Rezept
+                </label>
+                <RecipeSelector
+                  recipes={recipes}
+                  onRecipeSelect={setSelectedRecipe}
+                  selectedRecipeId={selectedRecipe}
+                  placeholder="Rezept suchen oder auswählen..."
+                  autoFocus={showAddModal}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => {
+                  setShowAddModal(false)
+                  setSelectedDate('')
+                  setSelectedRecipe('')
+                }}
+                className="btn-secondary"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleAddToMealPlan}
+                className="btn-primary"
+              >
+                Hinzufügen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+} 

@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Recipe {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  category    String   // Hauptspeise, Salat, Dessert, etc.
+  tags        String   // JSON array of tags like ["vegetarisch", "vegan", "schnell"]
+  cookingTime Int?     // in minutes
+  servings    Int?
+  difficulty  String?  // einfach, mittel, schwer
+  userId      String   // Supabase user ID
+  ingredients Ingredient[]
+  instructions Instruction[]
+  mealPlans   MealPlan[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Ingredient {
+  id       String  @id @default(cuid())
+  name     String
+  amount   Float?
+  unit     String?
+  notes    String?
+  recipeId String
+  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model Instruction {
+  id          String  @id @default(cuid())
+  stepNumber  Int
+  description String
+  imageUrl    String?
+  recipeId    String
+  recipe      Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+model MealPlan {
+  id        String   @id @default(cuid())
+  date      DateTime
+  recipeId  String?
+  userId    String   // Supabase user ID
+  recipe    Recipe?  @relation(fields: [recipeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
