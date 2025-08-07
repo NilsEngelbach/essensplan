@@ -8,7 +8,7 @@ import type { Recipe, RecipeInsert, RecipeUpdate, IngredientInsert, InstructionI
 interface RecipeContextType {
   recipes: RecipeWithRelations[];
   loading: boolean;
-  refreshRecipes: (sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created') => Promise<void>;
+  refreshRecipes: (sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating') => Promise<void>;
   addRecipe: (recipe: RecipeInsert, ingredients?: IngredientInsert[], instructions?: InstructionInsert[]) => Promise<void>;
   editRecipe: (id: string, recipe: RecipeUpdate, ingredients?: IngredientInsert[], instructions?: InstructionInsert[], oldImageUrl?: string) => Promise<void>;
   removeRecipe: (id: string, imageUrl?: string) => Promise<void>;
@@ -25,7 +25,7 @@ export const RecipeProvider = ({ children }: { children: React.ReactNode }) => {
   const [isUploading, setIsUploading] = useState(false);
 
   // Fetch all recipes once after login/session restore
-  const fetchAllRecipes = useCallback(async (sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created') => {
+  const fetchAllRecipes = useCallback(async (sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating') => {
     if (!user?.id) return;
     setLoading(true);
     try {

@@ -156,7 +156,7 @@ export class SupabaseService {
   public async getRecipes(userId: string, options?: {
     category?: string
     tags?: string[]
-    sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created'
+    sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating'
   }): Promise<RecipeWithRelations[]> {
     let query = this.client
       .from('Recipe')
@@ -204,6 +204,14 @@ export class SupabaseService {
             const aLastCooked = a.cookingStats?.lastCooked ? new Date(a.cookingStats.lastCooked).getTime() : 0
             const bLastCooked = b.cookingStats?.lastCooked ? new Date(b.cookingStats.lastCooked).getTime() : 0
             return bLastCooked - aLastCooked
+          case 'rating':
+            // Sort by rating (highest first), then by creation date if ratings are equal
+            const aRating = a.rating || 0
+            const bRating = b.rating || 0
+            if (bRating !== aRating) {
+              return bRating - aRating
+            }
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           case 'recent':
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           case 'created':
