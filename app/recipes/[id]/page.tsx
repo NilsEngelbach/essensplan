@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { 
   ArrowLeft, 
   Edit, 
@@ -204,12 +205,13 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
           <div className="flex flex-col md:flex-row gap-6">
             {/* Recipe Image */}
             <div className="md:w-1/3">
-              <div className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500">
+              <div className="relative aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500">
                 {recipe.imageUrl ? (
-                  <img 
+                  <Image 
                     src={recipe.imageUrl} 
                     alt={recipe.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -435,11 +437,14 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                 <div className="flex-1">
                   <p className="text-gray-700">{instruction.description}</p>
                   {instruction.imageUrl && (
-                    <img 
-                      src={instruction.imageUrl} 
-                      alt={`Schritt ${instruction.stepNumber}`}
-                      className="mt-3 rounded-lg max-w-xs"
-                    />
+                    <div className="relative mt-3 rounded-lg max-w-xs h-48">
+                      <Image 
+                        src={instruction.imageUrl} 
+                        alt={`Schritt ${instruction.stepNumber}`}
+                        fill
+                        className="object-cover rounded-lg"
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -454,7 +459,7 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-bold text-gray-900 mb-4">Rezept löschen</h3>
             <p className="text-gray-600 mb-6">
-              Sind Sie sicher, dass Sie "{recipe.title}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
+              Sind Sie sicher, dass Sie &ldquo;{recipe.title}&rdquo; löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
             </p>
             <div className="flex justify-end space-x-4">
               <button
