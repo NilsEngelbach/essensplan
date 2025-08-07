@@ -88,7 +88,8 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
       name: ing.name,
       amount: ing.amount?.toString() || '',
       unit: ing.unit || '',
-      notes: ing.notes || ''
+      notes: ing.notes || '',
+      component: ing.component || ''
     })),
     instructions: recipe.instructions.map(inst => ({
       id: inst.id,
