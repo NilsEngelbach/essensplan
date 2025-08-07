@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { Plus, X, Upload, Camera, ImageIcon, Star } from 'lucide-react'
 import { useRecipes } from './RecipeProvider'
@@ -63,13 +63,30 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
       ing.id === id ? { ...ing, [field]: value } : ing
     )
     setIngredients(updatedIngredients)
-    
-    // Auto-add new ingredient if this is the last one and has content
+  }
+
+  // Auto-add ingredient when user moves to next field or presses Enter
+  const handleIngredientKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      const currentIngredient = ingredients.find(ing => ing.id === id)
+      const currentIndex = ingredients.findIndex(ing => ing.id === id)
+      const isLastIngredient = currentIndex === ingredients.length - 1
+      const hasContent = currentIngredient?.name.trim() !== ''
+      
+      if (isLastIngredient && hasContent) {
+        e.preventDefault()
+        addIngredient()
+      }
+    }
+  }
+
+  const handleIngredientBlur = (id: string) => {
+    const currentIngredient = ingredients.find(ing => ing.id === id)
     const currentIndex = ingredients.findIndex(ing => ing.id === id)
     const isLastIngredient = currentIndex === ingredients.length - 1
-    const hasContent = value.toString().trim() !== ''
+    const hasContent = currentIngredient?.name.trim() !== ''
     
-    if (isLastIngredient && hasContent && field === 'name') {
+    if (isLastIngredient && hasContent) {
       setTimeout(() => {
         addIngredient()
       }, 100)
@@ -94,13 +111,30 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
       inst.id === id ? { ...inst, [field]: value } : inst
     )
     setInstructions(updatedInstructions)
-    
-    // Auto-add new instruction if this is the last one and has content
+  }
+
+  // Auto-add instruction when user moves to next field or presses Enter
+  const handleInstructionKeyDown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      const currentInstruction = instructions.find(inst => inst.id === id)
+      const currentIndex = instructions.findIndex(inst => inst.id === id)
+      const isLastInstruction = currentIndex === instructions.length - 1
+      const hasContent = currentInstruction?.description.trim() !== ''
+      
+      if (isLastInstruction && hasContent) {
+        e.preventDefault()
+        addInstruction()
+      }
+    }
+  }
+
+  const handleInstructionBlur = (id: string) => {
+    const currentInstruction = instructions.find(inst => inst.id === id)
     const currentIndex = instructions.findIndex(inst => inst.id === id)
     const isLastInstruction = currentIndex === instructions.length - 1
-    const hasContent = value.toString().trim() !== ''
+    const hasContent = currentInstruction?.description.trim() !== ''
     
-    if (isLastInstruction && hasContent && field === 'description') {
+    if (isLastInstruction && hasContent) {
       setTimeout(() => {
         addInstruction()
       }, 100)
@@ -472,6 +506,8 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                       type="text"
                       value={ingredient.name}
                       onChange={(e) => updateIngredient(ingredient.id, 'name', e.target.value)}
+                      onKeyDown={(e) => handleIngredientKeyDown(e, ingredient.id)}
+                      onBlur={() => handleIngredientBlur(ingredient.id)}
                       className="input-field"
                       placeholder="Zutat"
                     />
@@ -514,6 +550,8 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                         type="text"
                         value={ingredient.name}
                         onChange={(e) => updateIngredient(ingredient.id, 'name', e.target.value)}
+                        onKeyDown={(e) => handleIngredientKeyDown(e, ingredient.id)}
+                        onBlur={() => handleIngredientBlur(ingredient.id)}
                         className="input-field"
                         placeholder="Zutat"
                       />
@@ -607,9 +645,11 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                     <textarea
                       value={instruction.description}
                       onChange={(e) => updateInstruction(instruction.id, 'description', e.target.value)}
+                      onKeyDown={(e) => handleInstructionKeyDown(e, instruction.id)}
+                      onBlur={() => handleInstructionBlur(instruction.id)}
                       className="input-field w-full"
                       rows={3}
-                      placeholder="Beschreiben Sie diesen Schritt..."
+                      placeholder="Beschreiben Sie diesen Schritt... (Ctrl+Enter für neuen Schritt)"
                     />
                   </div>
                   
@@ -622,9 +662,11 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                       <textarea
                         value={instruction.description}
                         onChange={(e) => updateInstruction(instruction.id, 'description', e.target.value)}
+                        onKeyDown={(e) => handleInstructionKeyDown(e, instruction.id)}
+                        onBlur={() => handleInstructionBlur(instruction.id)}
                         className="input-field"
                         rows={2}
-                        placeholder="Beschreiben Sie diesen Schritt..."
+                        placeholder="Beschreiben Sie diesen Schritt... (Ctrl+Enter für neuen Schritt)"
                       />
                     </div>
                     <button

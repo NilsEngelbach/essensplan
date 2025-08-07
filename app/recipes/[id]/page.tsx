@@ -247,25 +247,22 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                   )}
                   {recipe.difficulty && (
                     <div className="flex items-center">
-                      <Star className="h-5 w-5 text-gray-400 mr-2" />
+                      <ChefHat className="h-5 w-5 text-gray-400 mr-2" />
                       <span className="text-gray-700">{recipe.difficulty}</span>
                     </div>
                   )}
                   {recipe.rating && (
                     <div className="flex items-center">
-                      <div className="flex mr-2">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${
-                              star <= recipe.rating
-                                ? 'text-yellow-400 fill-current'
-                                : 'text-gray-300'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-gray-700">{recipe.rating}/5 Bewertung</span>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          className={`h-4 w-4 ${
+                            star <= recipe.rating
+                              ? 'text-yellow-400 fill-current'
+                              : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
                     </div>
                   )}
                 </div>

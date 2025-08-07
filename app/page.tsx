@@ -196,7 +196,7 @@ export default function HomePage() {
                   {randomRecipes.map((recipe) => {
                     const tags = getTags(recipe);
                     return (
-                      <div key={recipe.id} className="card hover:shadow-lg transition-shadow cursor-pointer" 
+                      <div key={recipe.id} className="card hover:shadow-lg transition-shadow cursor-pointer flex flex-col h-full" 
                            onClick={() => router.push(`/recipes/${recipe.id}`)}>
                         {/* Recipe Image */}
                         <div className="mb-4">
@@ -212,73 +212,76 @@ export default function HomePage() {
                             ) : (
                               <span className="text-white text-lg font-semibold">{recipe.title}</span>
                             )}
+                            {/* Rating Overlay */}
+                            {recipe.rating && (
+                              <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 rounded-md px-2 py-1 flex items-center space-x-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`h-3 w-3 ${
+                                      star <= recipe.rating
+                                        ? 'text-yellow-400 fill-current'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         {/* Recipe Info */}
-                        <div className="space-y-3">
+                        <div className="space-y-3 flex-1 flex flex-col">
                           <h3 className="font-semibold text-gray-900">{recipe.title}</h3>
                           
-                          {recipe.description && (
-                            <p className="text-sm text-gray-600 line-clamp-2">
-                              {recipe.description}
-                            </p>
-                          )}
-
-                          {/* Recipe Stats */}
-                          <div className="space-y-2">
-                            <div className="flex items-center text-sm text-gray-600 space-x-4">
-                              {recipe.cookingTime && (
-                                <div className="flex items-center">
-                                  <Clock className="h-4 w-4 mr-1" />
-                                  <span>{recipe.cookingTime} Min</span>
-                                </div>
-                              )}
-                              {recipe.servings && (
-                                <div className="flex items-center">
-                                  <Users className="h-4 w-4 mr-1" />
-                                  <span>{recipe.servings}</span>
-                                </div>
-                              )}
-                              {recipe.difficulty && (
-                                <div className="flex items-center">
-                                  <Star className="h-4 w-4 mr-1" />
-                                  <span>{recipe.difficulty}</span>
-                                </div>
-                              )}
-                              {recipe.rating && (
-                                <div className="flex items-center">
-                                  <div className="flex">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <Star
-                                        key={star}
-                                        className={`h-3 w-3 ${
-                                          star <= recipe.rating
-                                            ? 'text-yellow-400 fill-current'
-                                            : 'text-gray-300'
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Cooking Stats */}
-                            <div className="flex items-center text-xs text-gray-500 space-x-3">
-                              <div className="flex items-center">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                <span>{recipe.cookingStats?.timesCooked || 0}x</span>
-                              </div>
-                              <div className="flex items-center">
-                                <Calendar className="h-3 w-3 mr-1" />
-                                <span>{formatLastCooked(recipe.cookingStats?.lastCooked || null)}</span>
-                              </div>
-                            </div>
+                          <div className="h-10 flex-shrink-0">
+                            {recipe.description && (
+                              <p className="text-sm text-gray-600 line-clamp-2">
+                                {recipe.description}
+                              </p>
+                            )}
                           </div>
 
-                          {/* Category and Tags */}
-                          <div className="flex flex-wrap gap-1">
+                          {/* Bottom Content - pushed to bottom */}
+                          <div className="mt-auto space-y-3">
+                            {/* Recipe Stats */}
+                            <div className="space-y-2">
+                              <div className="flex items-center text-sm text-gray-600 space-x-4">
+                                {recipe.cookingTime && (
+                                  <div className="flex items-center">
+                                    <Clock className="h-4 w-4 mr-1" />
+                                    <span>{recipe.cookingTime} Min</span>
+                                  </div>
+                                )}
+                                {recipe.servings && (
+                                  <div className="flex items-center">
+                                    <Users className="h-4 w-4 mr-1" />
+                                    <span>{recipe.servings}</span>
+                                  </div>
+                                )}
+                                {recipe.difficulty && (
+                                  <div className="flex items-center">
+                                    <ChefHat className="h-4 w-4 mr-1" />
+                                    <span>{recipe.difficulty}</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {/* Cooking Stats */}
+                              <div className="flex items-center text-xs text-gray-500 space-x-3">
+                                <div className="flex items-center">
+                                  <TrendingUp className="h-3 w-3 mr-1" />
+                                  <span>{recipe.cookingStats?.timesCooked || 0}x</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Calendar className="h-3 w-3 mr-1" />
+                                  <span>{formatLastCooked(recipe.cookingStats?.lastCooked || null)}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Category and Tags */}
+                            <div className="flex flex-wrap gap-1">
                             <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
                               {recipe.category}
                             </span>
@@ -294,6 +297,7 @@ export default function HomePage() {
                                 {tag}
                               </span>
                             ))}
+                          </div>
                           </div>
                         </div>
                       </div>
