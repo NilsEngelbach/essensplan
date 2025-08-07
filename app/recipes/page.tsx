@@ -347,7 +347,7 @@ export default function RecipesPage() {
                 Filter zurücksetzen
               </button>
               <button
-                onClick={refreshRecipes}
+                onClick={() => refreshRecipes(sortBy)}
                 className="btn-primary flex items-center justify-center"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
