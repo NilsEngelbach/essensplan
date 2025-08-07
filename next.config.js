@@ -14,6 +14,10 @@ const nextConfig = {
       },
     ],
   },
+  eslint: {
+    ignoreDuringBuilds: false,
+    dirs: ['app', 'components', 'lib'], // Only lint these directories during build
+  },
 }
 
 module.exports = nextConfig 
