@@ -11,7 +11,6 @@ import {
   Star, 
   Calendar,
   ChefHat,
-  Plus,
   TrendingUp,
   CalendarPlus
 } from 'lucide-react'
@@ -21,7 +20,6 @@ import DatePickerModal from '../../../components/DatePickerModal'
 import toast from 'react-hot-toast'
 import { useRecipes } from '../../../components/RecipeProvider'
 import { useMealPlans } from '../../../components/MealPlanProvider'
-import type { RecipeWithRelations } from '../../../lib/supabase'
 
 export default function RecipeDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -275,21 +273,25 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
               </div>
 
               {/* Category and Tags */}
-              <div className="mb-6">
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-3 py-1 bg-primary-100 text-primary-800 text-sm rounded-full">
-                    {recipe.category}
-                  </span>
-                  {tags.map((tag: string, index: number) => (
-                    <span 
-                      key={index}
-                      className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+              {(recipe.category || tags.length > 0) && (
+                <div className="mb-6">
+                  <div className="flex flex-wrap gap-2">
+                    {recipe.category && (
+                      <span className="px-3 py-1 bg-primary-100 text-primary-800 text-sm rounded-full">
+                        {recipe.category}
+                      </span>
+                    )}
+                    {tags.length > 0 && tags.map((tag: string, index: number) => (
+                      <span 
+                        key={index}
+                        className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Add to Meal Plan */}
               <div className="space-y-3">
@@ -327,7 +329,7 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                   </button>
                   <button
                     onClick={() => addToMealPlan(dayAfterTomorrowDate)}
-                    className={`flex items-center text-sm px-3 py-2 ${
+                    className={`hidden sm:flex items-center text-sm px-3 py-2 ${
                       isRecipePlannedForDate(dayAfterTomorrowDate) 
                         ? 'btn-primary' 
                         : 'btn-secondary'
@@ -356,21 +358,69 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
         {/* Ingredients */}
         <div className="card mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Zutaten</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recipe.ingredients.map((ingredient) => (
-              <div key={ingredient.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="flex-1">
-                  <span className="font-medium text-gray-900">{ingredient.name}</span>
-                  {ingredient.notes && (
-                    <span className="text-sm text-gray-500 ml-2">({ingredient.notes})</span>
-                  )}
+          {(() => {
+            // Group ingredients by component
+            const groupedIngredients = recipe.ingredients.reduce((groups: any, ingredient) => {
+              const component = ingredient.component || 'Allgemein'
+              if (!groups[component]) {
+                groups[component] = []
+              }
+              groups[component].push(ingredient)
+              return groups
+            }, {})
+
+            const components = Object.keys(groupedIngredients)
+            const hasComponents = components.length > 1 || !groupedIngredients['Allgemein']
+
+            if (!hasComponents) {
+              // Display ingredients normally if no components are defined
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {recipe.ingredients.map((ingredient) => (
+                    <div key={ingredient.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <span className="font-medium text-gray-900">{ingredient.name}</span>
+                        {ingredient.notes && (
+                          <span className="text-sm text-gray-500 ml-2">({ingredient.notes})</span>
+                        )}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {ingredient.amount} {ingredient.unit}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="text-sm text-gray-600">
-                  {ingredient.amount} {ingredient.unit}
-                </div>
+              )
+            }
+
+            // Display ingredients grouped by components
+            return (
+              <div className="space-y-8">
+                {components.map((component) => (
+                  <div key={component}>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
+                      {component}
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {groupedIngredients[component].map((ingredient: any) => (
+                        <div key={ingredient.id} className="flex items-center p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-900">{ingredient.name}</span>
+                            {ingredient.notes && (
+                              <span className="text-sm text-gray-500 ml-2">({ingredient.notes})</span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {ingredient.amount} {ingredient.unit}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )
+          })()}
         </div>
 
         {/* Instructions */}

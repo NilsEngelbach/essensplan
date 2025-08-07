@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Plus, X, Upload, Camera } from 'lucide-react'
+import { Plus, X, Upload, Camera, ImageIcon } from 'lucide-react'
 import { useRecipes } from './RecipeProvider'
 
 interface Ingredient {
@@ -10,6 +10,7 @@ interface Ingredient {
   amount: string
   unit: string
   notes: string
+  component?: string
 }
 
 interface Instruction {
@@ -48,7 +49,8 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
       name: '',
       amount: '',
       unit: '',
-      notes: ''
+      notes: '',
+      component: ''
     }
     setIngredients([...ingredients, newIngredient])
   }
@@ -97,6 +99,23 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
       const publicUrl = await uploadImage(file)
       setImageUrl(publicUrl)
       console.log('Image uploaded successfully:', publicUrl)
+    } catch (error) {
+      console.error('Upload error:', error)
+      if (error instanceof Error) {
+        alert(`Upload failed: ${error.message}`)
+      } else {
+        alert('Upload failed. Please check your connection and try again.')
+      }
+    }
+  }
+
+  const handleInstructionImageUpload = async (file: File, instructionId: string) => {
+    if (!file) return
+
+    try {
+      const publicUrl = await uploadImage(file)
+      updateInstruction(instructionId, 'imageUrl', publicUrl)
+      console.log('Instruction image uploaded successfully:', publicUrl)
     } catch (error) {
       console.error('Upload error:', error)
       if (error instanceof Error) {
@@ -354,7 +373,7 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
             <div className="space-y-3">
               {ingredients.map((ingredient, index) => (
                 <div key={ingredient.id} className="grid grid-cols-12 gap-3 items-center">
-                  <div className="col-span-4">
+                  <div className="col-span-3">
                     <input
                       type="text"
                       value={ingredient.name}
@@ -381,7 +400,16 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                       placeholder="Einheit"
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2">
+                    <input
+                      type="text"
+                      value={ingredient.component || ''}
+                      onChange={(e) => updateIngredient(ingredient.id, 'component', e.target.value)}
+                      className="input-field"
+                      placeholder="Komponente (z.B. Teig)"
+                    />
+                  </div>
+                  <div className="col-span-2">
                     <input
                       type="text"
                       value={ingredient.notes}
@@ -419,28 +447,73 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                 Schritt hinzufügen
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {instructions.map((instruction) => (
-                <div key={instruction.id} className="flex space-x-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-medium">
-                    {instruction.stepNumber}
+                <div key={instruction.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex space-x-3 mb-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-medium">
+                      {instruction.stepNumber}
+                    </div>
+                    <div className="flex-1">
+                      <textarea
+                        value={instruction.description}
+                        onChange={(e) => updateInstruction(instruction.id, 'description', e.target.value)}
+                        className="input-field"
+                        rows={2}
+                        placeholder="Beschreiben Sie diesen Schritt..."
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeInstruction(instruction.id)}
+                      className="flex-shrink-0 text-red-500 hover:text-red-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                  <div className="flex-1">
-                    <textarea
-                      value={instruction.description}
-                      onChange={(e) => updateInstruction(instruction.id, 'description', e.target.value)}
-                      className="input-field"
-                      rows={2}
-                      placeholder="Beschreiben Sie diesen Schritt..."
+                  
+                  {/* Step Image */}
+                  <div className="ml-11">
+                    <input
+                      type="file"
+                      id={`instruction-image-${instruction.id}`}
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          handleInstructionImageUpload(file, instruction.id)
+                        }
+                      }}
+                      className="hidden"
                     />
+                    
+                    {instruction.imageUrl ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={instruction.imageUrl}
+                          alt={`Schritt ${instruction.stepNumber}`}
+                          className="w-32 h-32 object-cover rounded-lg border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateInstruction(instruction.id, 'imageUrl', '')}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById(`instruction-image-${instruction.id}`)?.click()}
+                        disabled={isUploading}
+                        className="flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        {isUploading ? 'Wird hochgeladen...' : 'Bild hinzufügen'}
+                      </button>
+                    )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => removeInstruction(instruction.id)}
-                    className="flex-shrink-0 text-red-500 hover:text-red-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
                 </div>
               ))}
             </div>

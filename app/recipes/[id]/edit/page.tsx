@@ -1,12 +1,11 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../../../components/AuthProvider'
 import { useRecipes } from '../../../../components/RecipeProvider'
 import RecipeForm from '../../../../components/RecipeForm'
 import toast from 'react-hot-toast'
-import type { RecipeWithRelations } from '../../../../lib/supabase'
 
 export default function EditRecipePage({ params }: { params: { id: string } }) {
   const router = useRouter()

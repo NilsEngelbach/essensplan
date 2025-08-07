@@ -101,3 +101,9 @@ jspm_packages/
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# Supabase
+.supabase/
+supabase/.temp/
+supabase/seed.sql
+supabase/config.toml

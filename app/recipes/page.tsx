@@ -14,7 +14,9 @@ import {
   Trash2,
   Wand2,
   TrendingUp,
-  Calendar
+  Calendar,
+  X,
+  RefreshCw
 } from 'lucide-react'
 import { useAuth } from '../../components/AuthProvider'
 import { useRecipes } from '../../components/RecipeProvider'
@@ -164,6 +166,14 @@ export default function RecipesPage() {
     )
   }, [])
 
+  const resetFilters = useCallback(() => {
+    setSearchTerm('')
+    setSelectedCategory('')
+    setSelectedTags([])
+    setSortBy('created')
+    refreshRecipes('created')
+  }, [refreshRecipes])
+
   const getTags = useCallback((recipe: RecipeWithRelations) => {
     if (!recipe.tags) return []
     try {
@@ -220,22 +230,22 @@ export default function RecipesPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header with Actions */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Rezepte</h1>
-            <p className="text-gray-600 mt-2">Verwalten Sie Ihre Rezeptsammlung</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Rezepte</h1>
+            <p className="text-gray-600 mt-1 sm:mt-2">Verwalten Sie Ihre Rezeptsammlung</p>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
             <button
               onClick={() => setShowAIImportModal(true)}
-              className="btn-secondary flex items-center"
+              className="btn-secondary flex items-center justify-center"
             >
               <Wand2 className="h-4 w-4 mr-2" />
               KI Import
             </button>
             <button
               onClick={handleCreateRecipe}
-              className="btn-primary flex items-center"
+              className="btn-primary flex items-center justify-center"
             >
               <Plus className="h-4 w-4 mr-2" />
               Neues Rezept
@@ -328,12 +338,19 @@ export default function RecipesPage() {
             </div>
 
             {/* Apply Filters Button */}
-            <div className="flex justify-end">
+            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+              <button
+                onClick={resetFilters}
+                className="btn-secondary flex items-center justify-center"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Filter zurücksetzen
+              </button>
               <button
                 onClick={refreshRecipes}
-                className="btn-primary flex items-center"
+                className="btn-primary flex items-center justify-center"
               >
-                <Filter className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-4 w-4 mr-2" />
                 Rezepte neu laden
               </button>
             </div>
@@ -451,21 +468,27 @@ export default function RecipesPage() {
 
                     {/* Category and Tags */}
                     <div className="flex flex-wrap gap-1">
-                      <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
-                        {recipe.category}
-                      </span>
-                      {tags.slice(0, 2).map((tag: string, index: number) => (
-                        <span 
-                          key={index}
-                          className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
-                        >
-                          {tag}
+                      {recipe.category && (
+                        <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
+                          {recipe.category}
                         </span>
-                      ))}
-                      {tags.length > 2 && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
-                          +{tags.length - 2}
-                        </span>
+                      )}
+                      {tags.length > 0 && (
+                        <>
+                          {tags.slice(0, 2).map((tag: string, index: number) => (
+                            <span 
+                              key={index}
+                              className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          {tags.length > 2 && (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                              +{tags.length - 2}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

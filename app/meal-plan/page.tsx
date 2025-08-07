@@ -19,6 +19,7 @@ import { useRecipes } from '../../components/RecipeProvider'
 import { useMealPlans } from '../../components/MealPlanProvider'
 import Navigation from '../../components/Navigation'
 import RecipeSelector from '../../components/RecipeSelector'
+import DatePickerModal from '../../components/DatePickerModal'
 import toast from 'react-hot-toast'
 
 export default function MealPlanPage() {
@@ -30,6 +31,7 @@ export default function MealPlanPage() {
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedRecipe, setSelectedRecipe] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
 
   // Get 7 days starting from today + offset
@@ -90,12 +92,25 @@ export default function MealPlanPage() {
       await addOrUpdateMealPlan(selectedDate, selectedRecipe)
       toast.success('Rezept zum Essensplan hinzugefügt')
       setShowAddModal(false)
+      setShowDatePicker(false)
       setSelectedDate('')
       setSelectedRecipe('')
     } catch (error) {
       console.error('Error adding to meal plan:', error)
       toast.error('Fehler beim Hinzufügen zum Essensplan')
     }
+  }
+
+  const handleDateSelect = (dateString: string) => {
+    setSelectedDate(dateString)
+    setShowDatePicker(false)
+  }
+
+  const handleCloseModal = () => {
+    setShowAddModal(false)
+    setShowDatePicker(false)
+    setSelectedDate('')
+    setSelectedRecipe('')
   }
 
   const handleRemoveFromMealPlan = async (mealPlanId: string) => {
@@ -173,17 +188,17 @@ export default function MealPlanPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header with Navigation */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Essensplan</h1>
-            <p className="text-gray-600 mt-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Essensplan</h1>
+            <p className="text-gray-600 mt-1 sm:mt-2">
               {currentWeekOffset === 0 ? 'Diese Woche' : 
                currentWeekOffset === 1 ? 'Nächste Woche' : 
                `${Math.abs(currentWeekOffset)} Wochen ${currentWeekOffset > 0 ? 'voraus' : 'zurück'}`}
             </p>
           </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+            <div className="flex items-center justify-center space-x-2">
               <button
                 onClick={() => setCurrentWeekOffset(prev => prev - 1)}
                 className="p-2 text-gray-400 hover:text-gray-600"
@@ -205,10 +220,10 @@ export default function MealPlanPage() {
             </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="btn-primary flex items-center"
+              className="btn-primary flex items-center justify-center"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Rezept hinzufügen
+              <CalendarDays className="h-4 w-4 mr-2" />
+              Rezepte planen
             </button>
           </div>
         </div>
@@ -286,16 +301,18 @@ export default function MealPlanPage() {
                         </div>
 
                         {/* Tags */}
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {getTags(mealPlan.recipe).slice(0, 2).map((tag: string, index: number) => (
-                            <span 
-                              key={index}
-                              className="px-1 py-0.5 bg-gray-100 text-gray-800 text-xs rounded"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
+                        {getTags(mealPlan.recipe).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {getTags(mealPlan.recipe).slice(0, 2).map((tag: string, index: number) => (
+                              <span 
+                                key={index}
+                                className="px-1 py-0.5 bg-gray-100 text-gray-800 text-xs rounded"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Remove Button */}
@@ -339,18 +356,23 @@ export default function MealPlanPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Datum
                 </label>
-                <select
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="input-field"
+                <button
+                  onClick={() => setShowDatePicker(true)}
+                  className="input-field text-left w-full flex items-center justify-between"
                 >
-                  <option value="">Datum auswählen</option>
-                  {weekDates.map((date) => (
-                    <option key={date} value={date}>
-                      {getDayName(date)} {getDayNumber(date)}. {getMonthName(date)}
-                    </option>
-                  ))}
-                </select>
+                  <span className={selectedDate ? 'text-gray-900' : 'text-gray-500'}>
+                    {selectedDate 
+                      ? new Date(selectedDate).toLocaleDateString('de-DE', { 
+                          weekday: 'long', 
+                          day: 'numeric', 
+                          month: 'long', 
+                          year: 'numeric' 
+                        })
+                      : 'Datum auswählen'
+                    }
+                  </span>
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                </button>
               </div>
 
               {/* Recipe Selection */}
@@ -363,18 +385,14 @@ export default function MealPlanPage() {
                   onRecipeSelect={setSelectedRecipe}
                   selectedRecipeId={selectedRecipe}
                   placeholder="Rezept suchen oder auswählen..."
-                  autoFocus={showAddModal}
+                  autoFocus={showAddModal && !showDatePicker}
                 />
               </div>
             </div>
 
             <div className="flex justify-end space-x-4 mt-6">
               <button
-                onClick={() => {
-                  setShowAddModal(false)
-                  setSelectedDate('')
-                  setSelectedRecipe('')
-                }}
+                onClick={handleCloseModal}
                 className="btn-secondary"
               >
                 Abbrechen
@@ -382,6 +400,7 @@ export default function MealPlanPage() {
               <button
                 onClick={handleAddToMealPlan}
                 className="btn-primary"
+                disabled={!selectedDate || !selectedRecipe}
               >
                 Hinzufügen
               </button>
@@ -389,6 +408,15 @@ export default function MealPlanPage() {
           </div>
         </div>
       )}
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        isOpen={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onDateSelect={handleDateSelect}
+        title="Datum für Essensplan auswählen"
+        preselectedDate={selectedDate}
+      />
     </div>
   )
 } 

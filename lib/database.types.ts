@@ -17,6 +17,7 @@ export type Database = {
       Ingredient: {
         Row: {
           amount: number | null
+          component: string | null
           id: string
           name: string
           notes: string | null
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           amount?: number | null
+          component?: string | null
           id: string
           name: string
           notes?: string | null
@@ -33,6 +35,7 @@ export type Database = {
         }
         Update: {
           amount?: number | null
+          component?: string | null
           id?: string
           name?: string
           notes?: string | null

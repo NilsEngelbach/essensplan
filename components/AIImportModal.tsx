@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { X, Upload, Link, Camera, FileText, Loader2 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 interface AIImportModalProps {
   isOpen: boolean
@@ -19,38 +20,57 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
   const handleImport = async () => {
     setIsLoading(true)
     try {
-      // Simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      let content: string = ''
       
-      // Mock AI response
-      const mockRecipe = {
-        title: 'Pasta Carbonara',
-        description: 'Klassische italienische Pasta mit Eiern, Käse und Speck',
-        category: 'Hauptspeise',
-        tags: ['Italienisch', 'Schnell', 'Hauptspeise'],
-        cookingTime: 25,
-        servings: 4,
-        difficulty: 'Einfach',
-        ingredients: [
-          { name: 'Spaghetti', amount: 400, unit: 'g', notes: '' },
-          { name: 'Eier', amount: 4, unit: 'Stück', notes: '' },
-          { name: 'Parmesan', amount: 100, unit: 'g', notes: 'gerieben' },
-          { name: 'Pancetta', amount: 150, unit: 'g', notes: 'in Würfel geschnitten' },
-          { name: 'Schwarzer Pfeffer', amount: 1, unit: 'TL', notes: 'frisch gemahlen' },
-          { name: 'Salz', amount: 1, unit: 'Prise', notes: '' }
-        ],
-        instructions: [
-          { stepNumber: 1, description: 'Spaghetti in reichlich Salzwasser al dente kochen.' },
-          { stepNumber: 2, description: 'Pancetta in einer großen Pfanne knusprig braten.' },
-          { stepNumber: 3, description: 'Eier und geriebenen Parmesan in einer Schüssel verquirlen.' },
-          { stepNumber: 4, description: 'Nudeln abgießen und sofort mit der Eier-Käse-Mischung vermengen.' },
-          { stepNumber: 5, description: 'Pancetta und reichlich Pfeffer unterheben und sofort servieren.' }
-        ]
+      if (importType === 'url') {
+        content = url
+      } else if (importType === 'text') {
+        content = text
+      } else if (importType === 'screenshot') {
+        // For now, we'll show an error as screenshot upload is not fully implemented
+        alert('Screenshot-Import ist noch nicht vollständig implementiert. Bitte verwenden Sie URL oder Text.')
+        return
       }
+
+      if (!content.trim()) {
+        alert('Bitte geben Sie eine URL oder Text ein.')
+        return
+      }
+
+      // Get the current session for authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      setPreview(mockRecipe)
+      if (sessionError || !session) {
+        throw new Error('Sie müssen angemeldet sein, um KI-Import zu verwenden.')
+      }
+
+      // Call the Supabase edge function
+      const { data, error } = await supabase.functions.invoke('ai-import', {
+        body: {
+          type: importType,
+          content: content
+        },
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+
+      if (error) {
+        throw new Error(error.message || 'Fehler beim KI-Import')
+      }
+
+      if (!data) {
+        throw new Error('Keine Daten vom KI-Service erhalten')
+      }
+
+      setPreview(data)
     } catch (error) {
       console.error('Import failed:', error)
+      if (error instanceof Error) {
+        alert(`Import fehlgeschlagen: ${error.message}`)
+      } else {
+        alert('Import fehlgeschlagen. Bitte versuchen Sie es erneut.')
+      }
     } finally {
       setIsLoading(false)
     }

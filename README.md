@@ -71,6 +71,9 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
    npx prisma db pull
    # Migration erstellen (falls nötig)
    npx prisma migrate dev --name init
+
+   # Create types for supabase client
+   npx supabase gen types typescript --project-id <peoject-id> --schema public > database.types.ts
    ```
 
 5. **Entwicklungsserver starten**

@@ -30,13 +30,14 @@ model Recipe {
 }
 
 model Ingredient {
-  id       String  @id @default(cuid())
-  name     String
-  amount   Float?
-  unit     String?
-  notes    String?
-  recipeId String
-  recipe   Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  id        String  @id @default(cuid())
+  name      String
+  amount    Float?
+  unit      String?
+  notes     String?
+  component String? // Optional component grouping like "Dough", "Stuffing", etc.
+  recipeId  String
+  recipe    Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
 
 model Instruction {
