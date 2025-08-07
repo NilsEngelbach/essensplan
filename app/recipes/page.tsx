@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { 
   Plus, 
   Search, 
@@ -33,7 +34,8 @@ export default function RecipesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
-  const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'lastCooked' | 'created'>('created')
+  const [minRating, setMinRating] = useState<number>(0)
+  const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'lastCooked' | 'created' | 'rating'>('created')
   const [showAIImportModal, setShowAIImportModal] = useState(false)
   const [isStateInitialized, setIsStateInitialized] = useState(false)
 
@@ -57,6 +59,7 @@ export default function RecipesPage() {
       setSearchTerm(urlSearch || parsedState.searchTerm || '')
       setSelectedCategory(urlCategory || parsedState.selectedCategory || '')
       setSelectedTags(urlTags.length > 0 ? urlTags : parsedState.selectedTags || [])
+      setMinRating(parsedState.minRating || 0)
       setSortBy(urlSort || parsedState.sortBy || 'created')
 
       setIsStateInitialized(true)
@@ -84,11 +87,12 @@ export default function RecipesPage() {
         searchTerm,
         selectedCategory,
         selectedTags,
+        minRating,
         sortBy
       }
       localStorage.setItem('recipesPageState', JSON.stringify(stateToSave))
     }
-  }, [searchTerm, selectedCategory, selectedTags, sortBy, isStateInitialized])
+  }, [searchTerm, selectedCategory, selectedTags, minRating, sortBy, isStateInitialized])
 
   const handleCreateRecipe = () => {
     router.push('/recipes/new')
@@ -170,6 +174,7 @@ export default function RecipesPage() {
     setSearchTerm('')
     setSelectedCategory('')
     setSelectedTags([])
+    setMinRating(0)
     setSortBy('created')
     refreshRecipes('created')
   }, [refreshRecipes])
@@ -191,9 +196,10 @@ export default function RecipesPage() {
       const recipeTags = getTags(recipe)
       const matchesTags = selectedTags.length === 0 || 
                          selectedTags.some(tag => recipeTags.includes(tag))
-      return matchesCategory && matchesSearch && matchesTags
+      const matchesRating = minRating === 0 || (recipe.rating && recipe.rating >= minRating)
+      return matchesCategory && matchesSearch && matchesTags && matchesRating
     })
-  }, [recipes, searchTerm, selectedCategory, selectedTags, getTags])
+  }, [recipes, searchTerm, selectedCategory, selectedTags, minRating, getTags])
 
   // Show loading state while auth is loading or recipes are loading
   if (authLoading || loading) {
@@ -274,7 +280,7 @@ export default function RecipesPage() {
             </div>
 
             {/* Filter Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Category Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -292,6 +298,38 @@ export default function RecipesPage() {
                 </select>
               </div>
 
+              {/* Rating Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Mindestbewertung
+                </label>
+                <div className="flex items-center space-x-2">
+                  {[0, 1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      type="button"
+                      onClick={() => setMinRating(rating)}
+                      className={`p-1 transition-colors ${
+                        minRating >= rating && rating > 0
+                          ? 'text-yellow-400'
+                          : rating === 0 && minRating === 0
+                          ? 'text-primary-600'
+                          : 'text-gray-300 hover:text-yellow-300'
+                      }`}
+                      title={rating === 0 ? 'Alle anzeigen' : `Mindestens ${rating} Sterne`}
+                    >
+                      {rating === 0 ? (
+                        <span className="text-sm font-medium px-2">Alle</span>
+                      ) : (
+                        <Star className={`h-5 w-5 ${
+                          minRating >= rating ? 'fill-current' : ''
+                        }`} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Sort Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -300,7 +338,7 @@ export default function RecipesPage() {
                 <select
                   value={sortBy}
                   onChange={(e) => {
-                    const newSortBy = e.target.value as 'recent' | 'popular' | 'lastCooked' | 'created'
+                    const newSortBy = e.target.value as 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating'
                     setSortBy(newSortBy)
                     refreshRecipes(newSortBy)
                   }}
@@ -310,6 +348,7 @@ export default function RecipesPage() {
                   <option value="recent">Zuletzt erstellt</option>
                   <option value="popular">Beliebtheit</option>
                   <option value="lastCooked">Zuletzt gekocht</option>
+                  <option value="rating">Bewertung</option>
                 </select>
               </div>
             </div>
@@ -386,14 +425,16 @@ export default function RecipesPage() {
               return (
                 <div key={recipe.id} className="card hover:shadow-lg transition-shadow">
                   {/* Recipe Image */}
-                  <div className="aspect-w-16 aspect-h-9 mb-4">
-                    <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-lg h-48 flex items-center justify-center cursor-pointer"
+                  <div className="mb-4">
+                    <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-lg h-48 flex items-center justify-center cursor-pointer relative overflow-hidden"
                          onClick={() => handleViewRecipe(recipe.id)}>
                       {recipe.imageUrl ? (
-                        <img 
+                        <Image 
                           src={recipe.imageUrl} 
                           alt={recipe.title}
-                          className="w-full h-full object-cover rounded-lg"
+                          width={400}
+                          height={192}
+                          className="w-full h-full object-cover"
                         />
                       ) : (
                         <span className="text-white text-lg font-semibold">{recipe.title}</span>
@@ -451,6 +492,23 @@ export default function RecipesPage() {
                             <span>{recipe.difficulty}</span>
                           </div>
                         )}
+                        {recipe.rating && (
+                          <div className="flex items-center">
+                            <div className="flex">
+                              {[1, 2, 3, 4, 5].map((star) => (
+                                <Star
+                                  key={star}
+                                  className={`h-3 w-3 ${
+                                    star <= recipe.rating
+                                      ? 'text-yellow-400 fill-current'
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <span className="ml-1 text-xs">({recipe.rating})</span>
+                          </div>
+                        )}
                       </div>
                       
                       {/* Cooking Stats */}
@@ -478,9 +536,25 @@ export default function RecipesPage() {
                           {tags.slice(0, 2).map((tag: string, index: number) => (
                             <span 
                               key={index}
-                              className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
+                              className={`px-2 py-1 text-xs rounded-full ${
+                                tag === 'Cookidoo'
+                                  ? 'bg-orange-100 text-orange-800 font-medium'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}
                             >
                               {tag}
+                              {tag === 'Cookidoo' && recipe.sourceUrl && (
+                                <a 
+                                  href={recipe.sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-1 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                  title="Cookidoo-Rezept öffnen"
+                                >
+                                  ↗
+                                </a>
+                              )}
                             </span>
                           ))}
                           {tags.length > 2 && (

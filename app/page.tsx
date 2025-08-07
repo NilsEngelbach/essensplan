@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { CalendarDays, ChefHat, Plus, Search, Clock, Users, Star, LogIn, User, LogOut, TrendingUp, Calendar } from 'lucide-react'
 import { useAuth } from '../components/AuthProvider'
 import { useRecipes } from '../components/RecipeProvider'
@@ -198,13 +199,15 @@ export default function HomePage() {
                       <div key={recipe.id} className="card hover:shadow-lg transition-shadow cursor-pointer" 
                            onClick={() => router.push(`/recipes/${recipe.id}`)}>
                         {/* Recipe Image */}
-                        <div className="aspect-w-16 aspect-h-9 mb-4">
-                          <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-lg h-48 flex items-center justify-center">
+                        <div className="mb-4">
+                          <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-lg h-48 flex items-center justify-center relative overflow-hidden">
                             {recipe.imageUrl ? (
-                              <img 
+                              <Image 
                                 src={recipe.imageUrl} 
                                 alt={recipe.title}
-                                className="w-full h-full object-cover rounded-lg"
+                                width={400}
+                                height={192}
+                                className="w-full h-full object-cover"
                               />
                             ) : (
                               <span className="text-white text-lg font-semibold">{recipe.title}</span>
@@ -243,6 +246,22 @@ export default function HomePage() {
                                   <span>{recipe.difficulty}</span>
                                 </div>
                               )}
+                              {recipe.rating && (
+                                <div className="flex items-center">
+                                  <div className="flex">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`h-3 w-3 ${
+                                          star <= recipe.rating
+                                            ? 'text-yellow-400 fill-current'
+                                            : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             
                             {/* Cooking Stats */}
@@ -266,7 +285,11 @@ export default function HomePage() {
                             {tags.slice(0, 2).map((tag: string, index: number) => (
                               <span 
                                 key={index}
-                                className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full"
+                                className={`px-2 py-1 text-xs rounded-full ${
+                                  tag === 'Cookidoo'
+                                    ? 'bg-orange-100 text-orange-800 font-medium'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
                               >
                                 {tag}
                               </span>
@@ -344,11 +367,13 @@ export default function HomePage() {
                       >
                         {mealPlan?.recipe ? (
                           <div className="text-center">
-                            <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mx-auto mb-2 flex items-center justify-center shadow-sm">
+                            <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full mx-auto mb-2 flex items-center justify-center shadow-sm relative overflow-hidden">
                               {mealPlan.recipe.imageUrl ? (
-                                <img 
+                                <Image 
                                   src={mealPlan.recipe.imageUrl} 
                                   alt={mealPlan.recipe.title}
+                                  width={40}
+                                  height={40}
                                   className="w-10 h-10 rounded-full object-cover"
                                 />
                               ) : (

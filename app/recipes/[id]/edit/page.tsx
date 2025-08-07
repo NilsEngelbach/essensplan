@@ -80,6 +80,8 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
     cookingTime: recipe.cookingTime?.toString() || '',
     servings: recipe.servings?.toString() || '',
     difficulty: recipe.difficulty || '',
+    rating: recipe.rating?.toString() || '',
+    sourceUrl: recipe.sourceUrl || '',
     imageUrl: recipe.imageUrl || '',
     ingredients: recipe.ingredients.map(ing => ({
       id: ing.id,

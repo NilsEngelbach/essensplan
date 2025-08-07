@@ -61,8 +61,6 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
 
 4. **Datenbank einrichten**
    ```bash
-   # Prisma Client generieren
-   npx prisma generate
    # Schema zur Datenbank pushen
    npx prisma db push
    # Prisma Studio öffnen (für Datenbank-Management)

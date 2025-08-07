@@ -21,6 +21,8 @@ model Recipe {
   cookingTime Int?     // in minutes
   servings    Int?
   difficulty  String?  // einfach, mittel, schwer
+  rating      Int?     // User star rating 1-5
+  sourceUrl   String?  // External URL (e.g. Cookidoo, other recipe sites)
   userId      String   // Supabase user ID
   ingredients Ingredient[]
   instructions Instruction[]

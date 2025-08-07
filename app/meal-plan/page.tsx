@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { 
   Calendar, 
   Plus, 
@@ -259,13 +260,15 @@ export default function MealPlanPage() {
                     <div className="space-y-3">
                       {/* Recipe Image */}
                       <div 
-                        className="aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500 cursor-pointer hover:opacity-90 transition-opacity"
+                        className="relative w-full h-32 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500 cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => router.push(`/recipes/${mealPlan.recipe.id}`)}
                       >
                         {mealPlan.recipe.imageUrl ? (
-                          <img 
+                          <Image 
                             src={mealPlan.recipe.imageUrl} 
                             alt={mealPlan.recipe.title}
+                            width={300}
+                            height={128}
                             className="w-full h-full object-cover"
                           />
                         ) : (

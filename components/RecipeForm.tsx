@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Plus, X, Upload, Camera, ImageIcon } from 'lucide-react'
+import Image from 'next/image'
+import { Plus, X, Upload, Camera, ImageIcon, Star } from 'lucide-react'
 import { useRecipes } from './RecipeProvider'
 
 interface Ingredient {
@@ -34,6 +35,8 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
   const [cookingTime, setCookingTime] = useState(initialData?.cookingTime || '')
   const [servings, setServings] = useState(initialData?.servings || '')
   const [difficulty, setDifficulty] = useState(initialData?.difficulty || '')
+  const [rating, setRating] = useState(initialData?.rating?.toString() || '')
+  const [sourceUrl, setSourceUrl] = useState(initialData?.sourceUrl || '')
   const [imageUrl, setImageUrl] = useState(initialData?.imageUrl || '')
   const [ingredients, setIngredients] = useState<Ingredient[]>(initialData?.ingredients || [])
   const [instructions, setInstructions] = useState<Instruction[]>(initialData?.instructions || [])
@@ -41,7 +44,7 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
 
   const categories = ['Hauptspeise', 'Salat', 'Dessert', 'Suppe', 'Beilage', 'Frühstück', 'Snack']
   const difficulties = ['Einfach', 'Mittel', 'Schwer']
-  const commonTags = ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß']
+  const commonTags = ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß', 'Cookidoo']
 
   const addIngredient = () => {
     const newIngredient: Ingredient = {
@@ -56,9 +59,21 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
   }
 
   const updateIngredient = (id: string, field: keyof Ingredient, value: any) => {
-    setIngredients(ingredients.map(ing => 
+    const updatedIngredients = ingredients.map(ing => 
       ing.id === id ? { ...ing, [field]: value } : ing
-    ))
+    )
+    setIngredients(updatedIngredients)
+    
+    // Auto-add new ingredient if this is the last one and has content
+    const currentIndex = ingredients.findIndex(ing => ing.id === id)
+    const isLastIngredient = currentIndex === ingredients.length - 1
+    const hasContent = value.toString().trim() !== ''
+    
+    if (isLastIngredient && hasContent && field === 'name') {
+      setTimeout(() => {
+        addIngredient()
+      }, 100)
+    }
   }
 
   const removeIngredient = (id: string) => {
@@ -75,9 +90,21 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
   }
 
   const updateInstruction = (id: string, field: keyof Instruction, value: any) => {
-    setInstructions(instructions.map(inst => 
+    const updatedInstructions = instructions.map(inst => 
       inst.id === id ? { ...inst, [field]: value } : inst
-    ))
+    )
+    setInstructions(updatedInstructions)
+    
+    // Auto-add new instruction if this is the last one and has content
+    const currentIndex = instructions.findIndex(inst => inst.id === id)
+    const isLastInstruction = currentIndex === instructions.length - 1
+    const hasContent = value.toString().trim() !== ''
+    
+    if (isLastInstruction && hasContent && field === 'description') {
+      setTimeout(() => {
+        addInstruction()
+      }, 100)
+    }
   }
 
   const removeInstruction = (id: string) => {
@@ -157,6 +184,8 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
       cookingTime: parseInt(cookingTime) || 0,
       servings: parseInt(servings) || 0,
       difficulty,
+      rating: rating ? parseInt(rating) : null,
+      sourceUrl: sourceUrl.trim() || null,
       imageUrl,
       ingredients: ingredients.filter(ing => ing.name.trim() !== '').map(ing => ({
         ...ing,
@@ -297,6 +326,58 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
             </div>
           </div>
 
+          {/* Rating and Source URL */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bewertung (1-5 Sterne)
+              </label>
+              <div className="flex items-center space-x-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star.toString())}
+                    className={`p-1 transition-colors ${
+                      rating && parseInt(rating) >= star
+                        ? 'text-yellow-400'
+                        : 'text-gray-300 hover:text-yellow-300'
+                    }`}
+                  >
+                    <Star className={`h-6 w-6 ${
+                      rating && parseInt(rating) >= star ? 'fill-current' : ''
+                    }`} />
+                  </button>
+                ))}
+                {rating && (
+                  <button
+                    type="button"
+                    onClick={() => setRating('')}
+                    className="text-gray-400 hover:text-gray-600 ml-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quell-URL (optional)
+              </label>
+              <input
+                type="url"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                className="input-field"
+                placeholder="https://cookidoo.de/recipes/..."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Link zu Cookidoo oder anderen Rezeptquellen
+              </p>
+            </div>
+          </div>
+
           {/* Image Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -315,16 +396,18 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
             <div className="space-y-4">
               {/* Aktuelles Bild anzeigen */}
               {imageUrl && (
-                <div className="relative">
-                  <img
+                <div className="relative inline-block">
+                  <Image
                     src={imageUrl}
                     alt="Rezept Bild"
+                    width={128}
+                    height={128}
                     className="w-32 h-32 object-cover rounded-lg border"
                   />
                   <button
                     type="button"
                     onClick={() => setImageUrl('')}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 z-10"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -372,8 +455,19 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
             </div>
             <div className="space-y-3">
               {ingredients.map((ingredient, index) => (
-                <div key={ingredient.id} className="grid grid-cols-12 gap-3 items-center">
-                  <div className="col-span-3">
+                <div key={ingredient.id} className="space-y-3 md:space-y-0">
+                  {/* Mobile Layout */}
+                  <div className="grid grid-cols-1 gap-3 md:hidden border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Zutat {index + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeIngredient(ingredient.id)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                     <input
                       type="text"
                       value={ingredient.name}
@@ -381,26 +475,22 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                       className="input-field"
                       placeholder="Zutat"
                     />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      value={ingredient.amount}
-                      onChange={(e) => updateIngredient(ingredient.id, 'amount', e.target.value)}
-                      className="input-field"
-                      placeholder="Menge"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <input
-                      type="text"
-                      value={ingredient.unit}
-                      onChange={(e) => updateIngredient(ingredient.id, 'unit', e.target.value)}
-                      className="input-field"
-                      placeholder="Einheit"
-                    />
-                  </div>
-                  <div className="col-span-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="number"
+                        value={ingredient.amount}
+                        onChange={(e) => updateIngredient(ingredient.id, 'amount', e.target.value)}
+                        className="input-field"
+                        placeholder="Menge"
+                      />
+                      <input
+                        type="text"
+                        value={ingredient.unit}
+                        onChange={(e) => updateIngredient(ingredient.id, 'unit', e.target.value)}
+                        className="input-field"
+                        placeholder="Einheit"
+                      />
+                    </div>
                     <input
                       type="text"
                       value={ingredient.component || ''}
@@ -408,8 +498,6 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                       className="input-field"
                       placeholder="Komponente (z.B. Teig)"
                     />
-                  </div>
-                  <div className="col-span-2">
                     <input
                       type="text"
                       value={ingredient.notes}
@@ -418,14 +506,63 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                       placeholder="Notizen (optional)"
                     />
                   </div>
-                  <div className="col-span-1">
-                    <button
-                      type="button"
-                      onClick={() => removeIngredient(ingredient.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                  
+                  {/* Desktop Layout */}
+                  <div className="hidden md:grid md:grid-cols-12 gap-3 items-center">
+                    <div className="col-span-3">
+                      <input
+                        type="text"
+                        value={ingredient.name}
+                        onChange={(e) => updateIngredient(ingredient.id, 'name', e.target.value)}
+                        className="input-field"
+                        placeholder="Zutat"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        value={ingredient.amount}
+                        onChange={(e) => updateIngredient(ingredient.id, 'amount', e.target.value)}
+                        className="input-field"
+                        placeholder="Menge"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="text"
+                        value={ingredient.unit}
+                        onChange={(e) => updateIngredient(ingredient.id, 'unit', e.target.value)}
+                        className="input-field"
+                        placeholder="Einheit"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="text"
+                        value={ingredient.component || ''}
+                        onChange={(e) => updateIngredient(ingredient.id, 'component', e.target.value)}
+                        className="input-field"
+                        placeholder="Komponente (z.B. Teig)"
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="text"
+                        value={ingredient.notes}
+                        onChange={(e) => updateIngredient(ingredient.id, 'notes', e.target.value)}
+                        className="input-field"
+                        placeholder="Notizen (optional)"
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <button
+                        type="button"
+                        onClick={() => removeIngredient(ingredient.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -450,7 +587,34 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
             <div className="space-y-6">
               {instructions.map((instruction) => (
                 <div key={instruction.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex space-x-3 mb-4">
+                  {/* Mobile Layout */}
+                  <div className="md:hidden space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-shrink-0 w-6 h-6 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-xs font-medium">
+                          {instruction.stepNumber}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">Schritt {instruction.stepNumber}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeInstruction(instruction.id)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <textarea
+                      value={instruction.description}
+                      onChange={(e) => updateInstruction(instruction.id, 'description', e.target.value)}
+                      className="input-field w-full"
+                      rows={3}
+                      placeholder="Beschreiben Sie diesen Schritt..."
+                    />
+                  </div>
+                  
+                  {/* Desktop Layout */}
+                  <div className="hidden md:flex space-x-3 mb-4">
                     <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center text-sm font-medium">
                       {instruction.stepNumber}
                     </div>
@@ -473,7 +637,7 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                   </div>
                   
                   {/* Step Image */}
-                  <div className="ml-11">
+                  <div className="md:ml-11">
                     <input
                       type="file"
                       id={`instruction-image-${instruction.id}`}
@@ -489,9 +653,11 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
                     
                     {instruction.imageUrl ? (
                       <div className="relative inline-block">
-                        <img
+                        <Image
                           src={instruction.imageUrl}
                           alt={`Schritt ${instruction.stepNumber}`}
+                          width={128}
+                          height={128}
                           className="w-32 h-32 object-cover rounded-lg border"
                         />
                         <button

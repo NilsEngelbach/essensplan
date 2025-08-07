@@ -128,7 +128,9 @@ export type Database = {
           difficulty: string | null
           id: string
           imageUrl: string | null
+          rating: number | null
           servings: number | null
+          sourceUrl: string | null
           tags: string
           title: string
           updatedAt: string
@@ -142,7 +144,9 @@ export type Database = {
           difficulty?: string | null
           id: string
           imageUrl?: string | null
+          rating?: number | null
           servings?: number | null
+          sourceUrl?: string | null
           tags: string
           title: string
           updatedAt: string
@@ -156,7 +160,9 @@ export type Database = {
           difficulty?: string | null
           id?: string
           imageUrl?: string | null
+          rating?: number | null
           servings?: number | null
+          sourceUrl?: string | null
           tags?: string
           title?: string
           updatedAt?: string

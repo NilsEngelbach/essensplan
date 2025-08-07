@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { Search, Clock, Users, ChefHat, X } from 'lucide-react'
 import type { RecipeWithRelations } from '../lib/supabase'
 
@@ -81,9 +82,11 @@ export default function RecipeSelector({
             <div className="flex items-center space-x-3 flex-1">
               <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500 flex-shrink-0">
                 {selectedRecipe.imageUrl ? (
-                  <img 
+                  <Image 
                     src={selectedRecipe.imageUrl} 
                     alt={selectedRecipe.title}
+                    width={48}
+                    height={48}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -152,9 +155,11 @@ export default function RecipeSelector({
                           {/* Recipe Image */}
                           <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500 flex-shrink-0">
                             {recipe.imageUrl ? (
-                              <img 
+                              <Image 
                                 src={recipe.imageUrl} 
                                 alt={recipe.title}
+                                width={48}
+                                height={48}
                                 className="w-full h-full object-cover"
                               />
                             ) : (

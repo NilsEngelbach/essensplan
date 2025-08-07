@@ -205,13 +205,14 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
           <div className="flex flex-col md:flex-row gap-6">
             {/* Recipe Image */}
             <div className="md:w-1/3">
-              <div className="relative aspect-w-16 aspect-h-9 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500">
+              <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500">
                 {recipe.imageUrl ? (
                   <Image 
                     src={recipe.imageUrl} 
                     alt={recipe.title}
-                    fill
-                    className="object-cover"
+                    width={400}
+                    height={256}
+                    className="object-cover w-full h-full"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -250,6 +251,23 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                       <span className="text-gray-700">{recipe.difficulty}</span>
                     </div>
                   )}
+                  {recipe.rating && (
+                    <div className="flex items-center">
+                      <div className="flex mr-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-4 w-4 ${
+                              star <= recipe.rating
+                                ? 'text-yellow-400 fill-current'
+                                : 'text-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-gray-700">{recipe.rating}/5 Bewertung</span>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Cooking Statistics */}
@@ -286,9 +304,24 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                     {tags.length > 0 && tags.map((tag: string, index: number) => (
                       <span 
                         key={index}
-                        className="px-3 py-1 bg-gray-100 text-gray-800 text-sm rounded-full"
+                        className={`px-3 py-1 text-sm rounded-full ${
+                          tag === 'Cookidoo'
+                            ? 'bg-orange-100 text-orange-800 font-medium'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
                       >
                         {tag}
+                        {tag === 'Cookidoo' && recipe.sourceUrl && (
+                          <a 
+                            href={recipe.sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 hover:underline"
+                            title="Cookidoo-Rezept öffnen"
+                          >
+                            ↗
+                          </a>
+                        )}
                       </span>
                     ))}
                   </div>
@@ -437,12 +470,13 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                 <div className="flex-1">
                   <p className="text-gray-700">{instruction.description}</p>
                   {instruction.imageUrl && (
-                    <div className="relative mt-3 rounded-lg max-w-xs h-48">
+                    <div className="mt-3 max-w-xs">
                       <Image 
                         src={instruction.imageUrl} 
                         alt={`Schritt ${instruction.stepNumber}`}
-                        fill
-                        className="object-cover rounded-lg"
+                        width={300}
+                        height={200}
+                        className="object-cover rounded-lg w-full h-48"
                       />
                     </div>
                   )}
