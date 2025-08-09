@@ -21,8 +21,10 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../components/AuthProvider'
 import { useRecipes } from '../../components/RecipeProvider'
+import { useMealPlans } from '../../components/MealPlanProvider'
 import Navigation from '../../components/Navigation'
 import AIImportModal from '../../components/AIImportModal'
+import DatePickerModal from '../../components/DatePickerModal'
 import toast from 'react-hot-toast'
 import type { RecipeWithRelations } from '../../lib/supabase'
 
@@ -31,12 +33,15 @@ export default function RecipesPage() {
   const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
   const { recipes, loading, removeRecipe, refreshRecipes, addRecipe } = useRecipes()
+  const { addOrUpdateMealPlan, mealPlans } = useMealPlans()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [minRating, setMinRating] = useState<number>(0)
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'lastCooked' | 'created' | 'rating'>('created')
   const [showAIImportModal, setShowAIImportModal] = useState(false)
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false)
+  const [selectedRecipeForPlanning, setSelectedRecipeForPlanning] = useState<string | null>(null)
   const [isStateInitialized, setIsStateInitialized] = useState(false)
 
   const categories = ['Hauptspeise', 'Salat', 'Dessert', 'Suppe', 'Beilage', 'Frühstück', 'Snack']
@@ -160,6 +165,30 @@ export default function RecipesPage() {
       console.error('Error deleting recipe:', error)
       toast.error('Fehler beim Löschen des Rezepts')
     }
+  }
+
+  const handlePlanRecipe = (recipeId: string) => {
+    setSelectedRecipeForPlanning(recipeId)
+    setShowDatePickerModal(true)
+  }
+
+  const handleDateSelect = async (date: string) => {
+    if (selectedRecipeForPlanning) {
+      try {
+        await addOrUpdateMealPlan(date, selectedRecipeForPlanning)
+        toast.success('Rezept erfolgreich geplant')
+      } catch (error) {
+        console.error('Error planning recipe:', error)
+        toast.error('Fehler beim Planen des Rezepts')
+      }
+    }
+    setShowDatePickerModal(false)
+    setSelectedRecipeForPlanning(null)
+  }
+
+  const handleCloseDatePicker = () => {
+    setShowDatePickerModal(false)
+    setSelectedRecipeForPlanning(null)
   }
 
   const toggleTag = useCallback((tag: string) => {
@@ -466,14 +495,23 @@ export default function RecipesPage() {
                       </h3>
                       <div className="flex items-center space-x-2">
                         <button
+                          onClick={() => handlePlanRecipe(recipe.id)}
+                          className="text-gray-400 hover:text-green-600"
+                          title="Rezept planen"
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => handleEditRecipe(recipe.id)}
                           className="text-gray-400 hover:text-gray-600"
+                          title="Rezept bearbeiten"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteRecipe(recipe.id, recipe.title, recipe.imageUrl)}
                           className="text-gray-400 hover:text-red-600"
+                          title="Rezept löschen"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -493,18 +531,18 @@ export default function RecipesPage() {
                       {/* Recipe Stats */}
                       <div className="space-y-2">
                         <div className="flex items-center text-sm text-gray-600 space-x-4">
-                          {recipe.cookingTime && (
+                          {recipe.cookingTime && Number(recipe.cookingTime) > 0 ? (
                             <div className="flex items-center">
                               <Clock className="h-4 w-4 mr-1" />
                               <span>{recipe.cookingTime} Min</span>
                             </div>
-                          )}
-                          {recipe.servings && (
+                          ): (<></>)}
+                          {recipe.servings && Number(recipe.servings) > 0 ? (
                             <div className="flex items-center">
                               <Users className="h-4 w-4 mr-1" />
                               <span>{recipe.servings} Personen</span>
                             </div>
-                          )}
+                          ): (<></>)}
                           {recipe.difficulty && (
                             <div className="flex items-center">
                               <ChefHat className="h-4 w-4 mr-1" />
@@ -581,6 +619,15 @@ export default function RecipesPage() {
         isOpen={showAIImportModal}
         onClose={() => setShowAIImportModal(false)}
         onImport={handleAIImport}
+      />
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        isOpen={showDatePickerModal}
+        onClose={handleCloseDatePicker}
+        onDateSelect={handleDateSelect}
+        title="Rezept planen"
+        plannedDates={mealPlans.map(mp => typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date)}
       />
     </div>
   )

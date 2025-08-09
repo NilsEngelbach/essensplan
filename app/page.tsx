@@ -3,12 +3,13 @@
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { CalendarDays, ChefHat, Plus, Search, Clock, Users, Star, LogIn, User, LogOut, TrendingUp, Calendar } from 'lucide-react'
+import { CalendarDays, ChefHat, Plus, Search, Clock, Users, Star, LogIn, User, LogOut, TrendingUp, Calendar, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../components/AuthProvider'
 import { useRecipes } from '../components/RecipeProvider'
 import { useMealPlans } from '../components/MealPlanProvider'
 import LoginModal from '../components/LoginModal'
 import SignUpModal from '../components/SignUpModal'
+import DatePickerModal from '../components/DatePickerModal'
 import Navigation from '../components/Navigation'
 import toast from 'react-hot-toast'
 
@@ -16,9 +17,11 @@ export default function HomePage() {
   const router = useRouter()
   const { user, loading, signOut } = useAuth()
   const { recipes } = useRecipes()
-  const { getMealPlanForDate, addOrUpdateMealPlan } = useMealPlans()
+  const { getMealPlanForDate, addOrUpdateMealPlan, mealPlans } = useMealPlans()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showSignUpModal, setShowSignUpModal] = useState(false)
+  const [showDatePickerModal, setShowDatePickerModal] = useState(false)
+  const [selectedRecipeForPlanning, setSelectedRecipeForPlanning] = useState<string | null>(null)
   
   // Get up to 3 random recipes
   const randomRecipes = useMemo(() => {
@@ -86,6 +89,30 @@ export default function HomePage() {
     }
   }
 
+  const handlePlanRecipe = (recipeId: string) => {
+    setSelectedRecipeForPlanning(recipeId)
+    setShowDatePickerModal(true)
+  }
+
+  const handleDateSelect = async (date: string) => {
+    if (selectedRecipeForPlanning) {
+      try {
+        await addOrUpdateMealPlan(date, selectedRecipeForPlanning)
+        toast.success('Rezept erfolgreich geplant')
+      } catch (error) {
+        console.error('Error planning recipe:', error)
+        toast.error('Fehler beim Planen des Rezepts')
+      }
+    }
+    setShowDatePickerModal(false)
+    setSelectedRecipeForPlanning(null)
+  }
+
+  const handleCloseDatePicker = () => {
+    setShowDatePickerModal(false)
+    setSelectedRecipeForPlanning(null)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -139,7 +166,7 @@ export default function HomePage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
               <div 
                 onClick={() => router.push('/recipes/new')}
                 className="card hover:shadow-lg transition-shadow cursor-pointer"
@@ -177,6 +204,19 @@ export default function HomePage() {
                   <h3 className="ml-3 text-lg font-semibold">Essensplan</h3>
                 </div>
                 <p className="text-gray-600">Planen Sie Ihre Mahlzeiten für die Woche und verfolgen Sie Ihre Kochhistorie.</p>
+              </div>
+
+              <div 
+                onClick={() => router.push('/grocery-list')}
+                className="card hover:shadow-lg transition-shadow cursor-pointer"
+              >
+                <div className="flex items-center mb-4">
+                  <div className="bg-orange-100 p-3 rounded-lg">
+                    <ShoppingCart className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <h3 className="ml-3 text-lg font-semibold">Einkaufsliste</h3>
+                </div>
+                <p className="text-gray-600">Automatisch generierte Einkaufsliste basierend auf Ihren geplanten Rezepten.</p>
               </div>
             </div>
 
@@ -232,7 +272,19 @@ export default function HomePage() {
 
                         {/* Recipe Info */}
                         <div className="space-y-3 flex-1 flex flex-col">
-                          <h3 className="font-semibold text-gray-900">{recipe.title}</h3>
+                          <div className="flex items-center justify-between">
+                            <h3 className="font-semibold text-gray-900">{recipe.title}</h3>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handlePlanRecipe(recipe.id)
+                              }}
+                              className="text-gray-400 hover:text-green-600"
+                              title="Rezept planen"
+                            >
+                              <Calendar className="h-4 w-4" />
+                            </button>
+                          </div>
                           
                           <div className="h-10 flex-shrink-0">
                             {recipe.description && (
@@ -247,18 +299,18 @@ export default function HomePage() {
                             {/* Recipe Stats */}
                             <div className="space-y-2">
                               <div className="flex items-center text-sm text-gray-600 space-x-4">
-                                {recipe.cookingTime && (
+                                {recipe.cookingTime && Number(recipe.cookingTime) > 0 ? (
                                   <div className="flex items-center">
                                     <Clock className="h-4 w-4 mr-1" />
                                     <span>{recipe.cookingTime} Min</span>
                                   </div>
-                                )}
-                                {recipe.servings && (
+                                ): (<></>)}
+                                {recipe.servings && Number(recipe.servings) > 0 ? (
                                   <div className="flex items-center">
                                     <Users className="h-4 w-4 mr-1" />
-                                    <span>{recipe.servings}</span>
+                                    <span>{recipe.servings} Personen</span>
                                   </div>
-                                )}
+                                ): (<></>)}
                                 {recipe.difficulty && (
                                   <div className="flex items-center">
                                     <ChefHat className="h-4 w-4 mr-1" />
@@ -387,9 +439,6 @@ export default function HomePage() {
                             <div className="text-xs font-semibold text-gray-900 line-clamp-2 mb-1">
                               {mealPlan.recipe.title}
                             </div>
-                            <div className="text-xs text-primary-600 font-medium">
-                              Klicken für Details
-                            </div>
                           </div>
                         ) : (
                           <div className="text-xs text-center text-gray-400">
@@ -479,6 +528,15 @@ export default function HomePage() {
           setShowSignUpModal(false)
           setShowLoginModal(true)
         }}
+      />
+
+      {/* Date Picker Modal */}
+      <DatePickerModal
+        isOpen={showDatePickerModal}
+        onClose={handleCloseDatePicker}
+        onDateSelect={handleDateSelect}
+        title="Rezept planen"
+        plannedDates={mealPlans.map(mp => typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date)}
       />
     </div>
   )

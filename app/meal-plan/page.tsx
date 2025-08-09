@@ -289,33 +289,19 @@ export default function MealPlanPage() {
                         
                         {/* Recipe Stats */}
                         <div className="flex items-center text-xs text-gray-600 mt-2 space-x-2">
-                          {mealPlan.recipe.cookingTime && (
+                          {mealPlan.recipe.cookingTime && Number(mealPlan.recipe.cookingTime) > 0 ? (
                             <div className="flex items-center">
                               <Clock className="h-3 w-3 mr-1" />
                               <span>{mealPlan.recipe.cookingTime}</span>
                             </div>
-                          )}
-                          {mealPlan.recipe.servings && (
+                          ) : (<></>)}
+                          {mealPlan.recipe.servings && Number(mealPlan.recipe.servings) > 0 ? (
                             <div className="flex items-center">
                               <Users className="h-3 w-3 mr-1" />
                               <span>{mealPlan.recipe.servings}</span>
                             </div>
-                          )}
+                          ): (<></>)}
                         </div>
-
-                        {/* Tags */}
-                        {getTags(mealPlan.recipe).length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {getTags(mealPlan.recipe).slice(0, 2).map((tag: string, index: number) => (
-                              <span 
-                                key={index}
-                                className="px-1 py-0.5 bg-gray-100 text-gray-800 text-xs rounded"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
                       </div>
 
                       {/* Remove Button */}

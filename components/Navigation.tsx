@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { 
   ChefHat, 
   Calendar, 
+  ShoppingCart,
   Plus,
   User,
   LogOut,
@@ -50,6 +51,12 @@ export default function Navigation() {
       href: '/meal-plan',
       icon: Calendar,
       current: pathname === '/meal-plan'
+    },
+    {
+      name: 'Einkaufsliste',
+      href: '/grocery-list',
+      icon: ShoppingCart,
+      current: pathname === '/grocery-list'
     }
   ]
 

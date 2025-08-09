@@ -180,9 +180,14 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
                     <p className="text-gray-600 mb-2">
                       Ziehen Sie ein Foto hierher oder klicken Sie zum Auswählen
                     </p>
-                    <button className="btn-primary">
-                      Foto auswählen
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 justify-center">
+                      <button className="btn-primary">
+                        Bild hochladen
+                      </button>
+                      <button className="btn-secondary">
+                        Foto machen
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -203,7 +208,7 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
               )}
 
               {/* Import Button */}
-              <div className="flex justify-end space-x-4">
+              <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
                 <button
                   type="button"
                   onClick={onClose}
@@ -215,7 +220,7 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
                   type="button"
                   onClick={handleImport}
                   disabled={isLoading || (!url && !text)}
-                  className="btn-primary flex items-center"
+                  className="btn-primary flex items-center justify-center"
                 >
                   {isLoading ? (
                     <>
@@ -295,7 +300,7 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-4">
+              <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
                 <button
                   type="button"
                   onClick={() => setPreview(null)}

@@ -233,18 +233,18 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
               {/* Recipe Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="space-y-3">
-                  {recipe.cookingTime && (
+                  {recipe.cookingTime && Number(recipe.cookingTime) > 0 ? (
                     <div className="flex items-center">
                       <Clock className="h-5 w-5 text-gray-400 mr-2" />
                       <span className="text-gray-700">{recipe.cookingTime} Min</span>
                     </div>
-                  )}
-                  {recipe.servings && (
+                  ): (<></>)}
+                  {recipe.servings && Number(recipe.servings) ? (
                     <div className="flex items-center">
                       <Users className="h-5 w-5 text-gray-400 mr-2" />
                       <span className="text-gray-700">{recipe.servings} Personen</span>
                     </div>
-                  )}
+                  ): (<></>)}
                   {recipe.difficulty && (
                     <div className="flex items-center">
                       <ChefHat className="h-5 w-5 text-gray-400 mr-2" />

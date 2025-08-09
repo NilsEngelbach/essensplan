@@ -10,6 +10,7 @@ interface DatePickerModalProps {
   title?: string
   minDate?: Date
   preselectedDate?: string // YYYY-MM-DD format
+  plannedDates?: string[] // Array of YYYY-MM-DD dates that have meals planned
 }
 
 export default function DatePickerModal({ 
@@ -18,7 +19,8 @@ export default function DatePickerModal({
   onDateSelect, 
   title = "Datum auswählen",
   minDate,
-  preselectedDate
+  preselectedDate,
+  plannedDates = []
 }: DatePickerModalProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -61,6 +63,11 @@ export default function DatePickerModal({
 
   const isSameDay = (date1: Date, date2: Date) => {
     return date1.toDateString() === date2.toDateString()
+  }
+
+  const isDatePlanned = (date: Date) => {
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    return plannedDates.includes(dateString)
   }
 
   const formatMonth = (date: Date) => {
@@ -197,6 +204,7 @@ export default function DatePickerModal({
               const isDisabled = isDateDisabled(date)
               const isSelected = selectedDate && isSameDay(date, selectedDate)
               const isToday = isSameDay(date, today)
+              const hasPlannedMeal = isDatePlanned(date)
               
               return (
                 <button
@@ -204,7 +212,7 @@ export default function DatePickerModal({
                   onClick={() => handleDateClick(date)}
                   disabled={isDisabled}
                   className={`
-                    p-2 text-sm rounded-lg transition-all duration-200 
+                    relative p-2 text-sm rounded-lg transition-all duration-200 
                     ${isSelected 
                       ? 'bg-primary-600 text-white shadow-md' 
                       : isToday 
@@ -217,6 +225,11 @@ export default function DatePickerModal({
                   `}
                 >
                   {date.getDate()}
+                  {hasPlannedMeal && (
+                    <div className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
+                      isSelected ? 'bg-white' : 'bg-green-500'
+                    }`}></div>
+                  )}
                 </button>
               )
             })}

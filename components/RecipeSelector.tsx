@@ -100,18 +100,18 @@ export default function RecipeSelector({
                   {selectedRecipe.title}
                 </p>
                 <div className="flex items-center space-x-3 mt-1">
-                  {selectedRecipe.cookingTime && (
+                  {selectedRecipe.cookingTime && Number(selectedRecipe.cookingTime) > 0 ? (
                     <div className="flex items-center text-xs text-gray-500">
                       <Clock className="h-3 w-3 mr-1" />
                       {selectedRecipe.cookingTime} Min
                     </div>
-                  )}
-                  {selectedRecipe.servings && (
+                  ): (<></>)}
+                  {selectedRecipe.servings && Number(selectedRecipe.servings) > 0 ? (
                     <div className="flex items-center text-xs text-gray-500">
                       <Users className="h-3 w-3 mr-1" />
                       {selectedRecipe.servings}
                     </div>
-                  )}
+                  ): (<></>)}
                 </div>
               </div>
             </div>
@@ -180,18 +180,18 @@ export default function RecipeSelector({
                             
                             {/* Recipe Stats */}
                             <div className="flex items-center space-x-3 mt-1">
-                              {recipe.cookingTime && (
+                              {recipe.cookingTime && Number(recipe.cookingTime) > 0 ? (
                                 <div className="flex items-center text-xs text-gray-500">
                                   <Clock className="h-3 w-3 mr-1" />
                                   {recipe.cookingTime} Min
                                 </div>
-                              )}
-                              {recipe.servings && (
+                              ): (<></>)}
+                              {recipe.servings && Number(recipe.servings) > 0 ? (
                                 <div className="flex items-center text-xs text-gray-500">
                                   <Users className="h-3 w-3 mr-1" />
                                   {recipe.servings}
                                 </div>
-                              )}
+                              ): (<></>)}
                               {recipe.difficulty && (
                                 <span className="text-xs text-gray-500">
                                   {recipe.difficulty}
