@@ -55,6 +55,15 @@ export default function MealPlanPage() {
     }
   }, [user, weekDates, refreshMealPlans])
 
+  // Get planned dates for calendar indicators
+  const plannedDates = useMemo(() => {
+    return mealPlans.map(mp => {
+      // Handle both date string formats
+      const mealPlanDate = typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date
+      return mealPlanDate
+    })
+  }, [mealPlans])
+
   // Handle URL parameters for auto-opening modal with specific date
   useEffect(() => {
     const dateParam = searchParams.get('date')
@@ -405,6 +414,7 @@ export default function MealPlanPage() {
         onDateSelect={handleDateSelect}
         title="Datum für Essensplan auswählen"
         preselectedDate={selectedDate}
+        plannedDates={plannedDates}
       />
     </div>
   )
