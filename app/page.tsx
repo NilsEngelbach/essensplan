@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { CalendarDays, ChefHat, Plus, Search, Clock, Users, Star, LogIn, User, LogOut, TrendingUp, Calendar, ShoppingCart } from 'lucide-react'
+import { CalendarDays, ChefHat, Plus, Search, LogIn, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../components/AuthProvider'
 import { useRecipes } from '../components/RecipeProvider'
 import { useMealPlans } from '../components/MealPlanProvider'
@@ -11,6 +11,7 @@ import LoginModal from '../components/LoginModal'
 import SignUpModal from '../components/SignUpModal'
 import DatePickerModal from '../components/DatePickerModal'
 import Navigation from '../components/Navigation'
+import RecipeCard from '../components/RecipeCard'
 import toast from 'react-hot-toast'
 
 export default function HomePage() {
@@ -29,15 +30,6 @@ export default function HomePage() {
     const shuffled = [...recipes].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, 3);
   }, [recipes]);
-  
-  const getTags = (recipe: any) => {
-    if (!recipe?.tags) return [];
-    try {
-      return JSON.parse(recipe.tags);
-    } catch {
-      return [];
-    }
-  };
 
   // Get next 7 days for meal plan preview
   const weekDates = useMemo(() => {
@@ -233,128 +225,16 @@ export default function HomePage() {
               </div>
               {randomRecipes.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {randomRecipes.map((recipe) => {
-                    const tags = getTags(recipe);
-                    return (
-                      <div key={recipe.id} className="card hover:shadow-lg transition-shadow cursor-pointer flex flex-col h-full" 
-                           onClick={() => router.push(`/recipes/${recipe.id}`)}>
-                        {/* Recipe Image */}
-                        <div className="mb-4">
-                          <div className="bg-gradient-to-br from-orange-400 to-red-500 rounded-lg h-48 flex items-center justify-center relative overflow-hidden">
-                            {recipe.imageUrl ? (
-                              <Image 
-                                src={recipe.imageUrl} 
-                                alt={recipe.title}
-                                width={400}
-                                height={192}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-white text-lg font-semibold">{recipe.title}</span>
-                            )}
-                            {/* Rating Overlay */}
-                            {recipe.rating && (
-                              <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 rounded-md px-2 py-1 flex items-center space-x-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    className={`h-3 w-3 ${
-                                      star <= recipe.rating
-                                        ? 'text-yellow-400 fill-current'
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Recipe Info */}
-                        <div className="space-y-3 flex-1 flex flex-col">
-                          <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-gray-900">{recipe.title}</h3>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handlePlanRecipe(recipe.id)
-                              }}
-                              className="text-gray-400 hover:text-green-600"
-                              title="Rezept planen"
-                            >
-                              <Calendar className="h-4 w-4" />
-                            </button>
-                          </div>
-                          
-                          <div className="h-10 flex-shrink-0">
-                            {recipe.description && (
-                              <p className="text-sm text-gray-600 line-clamp-2">
-                                {recipe.description}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Bottom Content - pushed to bottom */}
-                          <div className="mt-auto space-y-3">
-                            {/* Recipe Stats */}
-                            <div className="space-y-2">
-                              <div className="flex items-center text-sm text-gray-600 space-x-4">
-                                {recipe.cookingTime && Number(recipe.cookingTime) > 0 ? (
-                                  <div className="flex items-center">
-                                    <Clock className="h-4 w-4 mr-1" />
-                                    <span>{recipe.cookingTime} Min</span>
-                                  </div>
-                                ): (<></>)}
-                                {recipe.servings && Number(recipe.servings) > 0 ? (
-                                  <div className="flex items-center">
-                                    <Users className="h-4 w-4 mr-1" />
-                                    <span>{recipe.servings} Personen</span>
-                                  </div>
-                                ): (<></>)}
-                                {recipe.difficulty && (
-                                  <div className="flex items-center">
-                                    <ChefHat className="h-4 w-4 mr-1" />
-                                    <span>{recipe.difficulty}</span>
-                                  </div>
-                                )}
-                              </div>
-                              
-                              {/* Cooking Stats */}
-                              <div className="flex items-center text-xs text-gray-500 space-x-3">
-                                <div className="flex items-center">
-                                  <TrendingUp className="h-3 w-3 mr-1" />
-                                  <span>{recipe.cookingStats?.timesCooked || 0}x</span>
-                                </div>
-                                <div className="flex items-center">
-                                  <Calendar className="h-3 w-3 mr-1" />
-                                  <span>{formatLastCooked(recipe.cookingStats?.lastCooked || null)}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Category and Tags */}
-                            <div className="flex flex-wrap gap-1">
-                            <span className="px-2 py-1 bg-primary-100 text-primary-800 text-xs rounded-full">
-                              {recipe.category}
-                            </span>
-                            {tags.slice(0, 2).map((tag: string, index: number) => (
-                              <span 
-                                key={index}
-                                className={`px-2 py-1 text-xs rounded-full ${
-                                  tag === 'Cookidoo'
-                                    ? 'bg-orange-100 text-orange-800 font-medium'
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {randomRecipes.map((recipe) => (
+                    <RecipeCard
+                      key={recipe.id}
+                      recipe={recipe}
+                      onPlanRecipe={handlePlanRecipe}
+                      formatLastCooked={formatLastCooked}
+                      onClick={(recipeId) => router.push(`/recipes/${recipeId}`)}
+                      mealPlans={mealPlans.map(mp => ({ date: typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date, recipeId: mp.recipeId || '' })).filter(mp => mp.recipeId)}
+                    />
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-12">

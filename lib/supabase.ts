@@ -21,7 +21,10 @@ export type MealPlanUpdate = TablesUpdate<'MealPlan'>
 
 // Extended types for relations
 export type MealPlanWithRecipe = MealPlan & {
-  recipe: Recipe | null
+  recipe: (Recipe & {
+    ingredients: Ingredient[]
+    instructions: Instruction[]
+  }) | null
 }
 
 export type RecipeWithRelations = Recipe & {
@@ -495,7 +498,11 @@ export class SupabaseService {
         .eq('id', existingMealPlan.id)
         .select(`
           *,
-          recipe:Recipe(*)
+          recipe:Recipe(
+            *,
+            ingredients:Ingredient(*),
+            instructions:Instruction(*)
+          )
         `)
         .single()
 
@@ -503,7 +510,14 @@ export class SupabaseService {
         throw new Error(`Failed to update meal plan: ${error.message}`)
       }
 
-      return data
+      // Sort instructions by stepNumber for the recipe
+      return {
+        ...data,
+        recipe: data.recipe ? {
+          ...data.recipe,
+          instructions: data.recipe.instructions?.sort((a, b) => a.stepNumber - b.stepNumber)
+        } : null
+      }
     } else {
       // Create new meal plan
       const { data, error } = await this.client
@@ -515,7 +529,11 @@ export class SupabaseService {
         })
         .select(`
           *,
-          recipe:Recipe(*)
+          recipe:Recipe(
+            *,
+            ingredients:Ingredient(*),
+            instructions:Instruction(*)
+          )
         `)
         .single()
 
@@ -523,7 +541,14 @@ export class SupabaseService {
         throw new Error(`Failed to create meal plan: ${error.message}`)
       }
 
-      return data
+      // Sort instructions by stepNumber for the recipe
+      return {
+        ...data,
+        recipe: data.recipe ? {
+          ...data.recipe,
+          instructions: data.recipe.instructions?.sort((a, b) => a.stepNumber - b.stepNumber)
+        } : null
+      }
     }
   }
 

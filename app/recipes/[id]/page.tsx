@@ -290,7 +290,7 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
               </div>
 
               {/* Category and Tags */}
-              {(recipe.category || tags.length > 0) && (
+              {(recipe.category || tags.length > 0 || recipe.sourceUrl) && (
                 <div className="mb-6">
                   <div className="flex flex-wrap gap-2">
                     {recipe.category && (
@@ -299,28 +299,37 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                       </span>
                     )}
                     {tags.length > 0 && tags.map((tag: string, index: number) => (
-                      <span 
-                        key={index}
-                        className={`px-3 py-1 text-sm rounded-full ${
-                          tag === 'Cookidoo'
-                            ? 'bg-orange-100 text-orange-800 font-medium'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {tag}
-                        {tag === 'Cookidoo' && recipe.sourceUrl && (
-                          <a 
-                            href={recipe.sourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-2 hover:underline"
-                            title="Cookidoo-Rezept öffnen"
-                          >
-                            ↗
-                          </a>
-                        )}
-                      </span>
+                      tag === 'Cookidoo' && recipe.sourceUrl ? (
+                        <a
+                          key={index}
+                          href={recipe.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1 bg-orange-100 text-orange-800 text-sm rounded-full font-medium hover:bg-orange-200 transition-colors flex items-center"
+                          title="Cookidoo-Rezept öffnen"
+                        >
+                          {tag} ↗
+                        </a>
+                      ) : (
+                        <span 
+                          key={index}
+                          className="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-800"
+                        >
+                          {tag}
+                        </span>
+                      )
                     ))}
+                    {recipe.sourceUrl && !tags.includes('Cookidoo') && (
+                      <a 
+                        href={recipe.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full hover:bg-blue-200 transition-colors font-medium flex items-center"
+                        title="Externes Rezept öffnen"
+                      >
+                        Quelle ↗
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
