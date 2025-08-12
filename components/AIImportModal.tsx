@@ -1,8 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
-import { X, Upload, Link, Camera, FileText, Loader2 } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import React, { useState, useRef } from 'react'
+import { X, Loader2, Upload } from 'lucide-react'
+import { supabase, supabaseService } from '../lib/supabase'
+import ImportTypeSelector from './ai-import/ImportTypeSelector'
+import ImportPreview from './ai-import/ImportPreview'
+import URLImportInput from './ai-import/URLImportInput'
+import ScreenshotImportInput from './ai-import/ScreenshotImportInput'
 
 interface AIImportModalProps {
   isOpen: boolean
@@ -11,11 +15,51 @@ interface AIImportModalProps {
 }
 
 export default function AIImportModal({ isOpen, onClose, onImport }: AIImportModalProps) {
-  const [importType, setImportType] = useState<'url' | 'screenshot' | 'text'>('url')
+  const [importType, setImportType] = useState<'url' | 'screenshot'>('url')
   const [url, setUrl] = useState('')
   const [text, setText] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [preview, setPreview] = useState<any>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+
+  // Helper function to convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = error => reject(error)
+    })
+  }
+
+  // Helper function to download image from URL and upload to Supabase
+  const downloadAndUploadImage = async (imageUrl: string, userId: string): Promise<string> => {
+    try {
+      const response = await fetch(imageUrl)
+      if (!response.ok) throw new Error('Failed to fetch image')
+      
+      const blob = await response.blob()
+      const file = new File([blob], 'imported-image.jpg', { type: blob.type || 'image/jpeg' })
+      
+      return await supabaseService.uploadImage(file, userId)
+    } catch (error) {
+      console.error('Error downloading and uploading image:', error)
+      throw error
+    }
+  }
+
+  // Handle file selection
+  const handleFileSelect = async (file: File) => {
+    setSelectedFile(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setPreviewImage(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const handleImport = async () => {
     setIsLoading(true)
@@ -24,17 +68,17 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
       
       if (importType === 'url') {
         content = url
-      } else if (importType === 'text') {
-        content = text
+        if (!content.trim()) {
+          alert('Bitte geben Sie eine URL ein.')
+          return
+        }
       } else if (importType === 'screenshot') {
-        // For now, we'll show an error as screenshot upload is not fully implemented
-        alert('Screenshot-Import ist noch nicht vollständig implementiert. Bitte verwenden Sie URL oder Text.')
-        return
-      }
-
-      if (!content.trim()) {
-        alert('Bitte geben Sie eine URL oder Text ein.')
-        return
+        if (!selectedFile) {
+          alert('Bitte wählen Sie ein Bild aus.')
+          return
+        }
+        // Convert file to base64 for AI processing
+        content = await fileToBase64(selectedFile)
       }
 
       // Get the current session for authentication
@@ -63,7 +107,37 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
         throw new Error('Keine Daten vom KI-Service erhalten')
       }
 
-      setPreview(data)
+      // Process image upload based on response type
+      let processedData = { ...data }
+
+      if (data.imageUrl && session.user) {
+        // For URL imports: download image and upload to Supabase
+        try {
+          const uploadedImageUrl = await downloadAndUploadImage(data.imageUrl, session.user.id)
+          processedData.imageUrl = uploadedImageUrl
+        } catch (error) {
+          console.warn('Failed to upload image from URL:', error)
+          // Continue without image rather than failing the whole import
+          delete processedData.imageUrl
+        }
+      } else if (data.imageData && selectedFile && session.user) {
+        // For screenshot imports: upload the processed image data to Supabase
+        try {
+          // Convert base64 back to file for upload
+          const response = await fetch(data.imageData)
+          const blob = await response.blob()
+          const file = new File([blob], selectedFile.name, { type: selectedFile.type })
+          
+          const uploadedImageUrl = await supabaseService.uploadImage(file, session.user.id)
+          processedData.imageUrl = uploadedImageUrl
+          delete processedData.imageData // Remove base64 data from final result
+        } catch (error) {
+          console.warn('Failed to upload processed image:', error)
+          // Continue without image rather than failing the whole import
+        }
+      }
+
+      setPreview(processedData)
     } catch (error) {
       console.error('Import failed:', error)
       if (error instanceof Error) {
@@ -83,8 +157,20 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
       setPreview(null)
       setUrl('')
       setText('')
+      setSelectedFile(null)
+      setPreviewImage(null)
     }
   }
+
+  const resetForm = () => {
+    setPreview(null)
+    setUrl('')
+    setText('')
+    setSelectedFile(null)
+    setPreviewImage(null)
+    setImportType('url')
+  }
+
 
   if (!isOpen) return null
 
@@ -95,7 +181,10 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Rezept mit KI importieren</h2>
             <button
-              onClick={onClose}
+              onClick={() => {
+                resetForm()
+                onClose()
+              }}
               className="text-gray-400 hover:text-gray-600"
             >
               <X className="h-6 w-6" />
@@ -104,114 +193,31 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
 
           {!preview ? (
             <div className="space-y-6">
-              {/* Import Type Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Import-Quelle wählen
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setImportType('url')}
-                    className={`p-4 border-2 rounded-lg text-center transition-colors ${
-                      importType === 'url'
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <Link className="h-8 w-8 mx-auto mb-2" />
-                    <div className="font-medium">URL</div>
-                    <div className="text-sm text-gray-500">Von einer Website</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setImportType('screenshot')}
-                    className={`p-4 border-2 rounded-lg text-center transition-colors ${
-                      importType === 'screenshot'
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <Camera className="h-8 w-8 mx-auto mb-2" />
-                    <div className="font-medium">Screenshot</div>
-                    <div className="text-sm text-gray-500">Foto eines Rezepts</div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setImportType('text')}
-                    className={`p-4 border-2 rounded-lg text-center transition-colors ${
-                      importType === 'text'
-                        ? 'border-primary-500 bg-primary-50 text-primary-700'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <FileText className="h-8 w-8 mx-auto mb-2" />
-                    <div className="font-medium">Text</div>
-                    <div className="text-sm text-gray-500">Rezepttext eingeben</div>
-                  </button>
-                </div>
-              </div>
+              <ImportTypeSelector importType={importType} setImportType={setImportType} />
 
               {/* Input Fields */}
               {importType === 'url' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Website-URL
-                  </label>
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    className="input-field"
-                    placeholder="https://example.com/rezept"
-                  />
-                </div>
+                <URLImportInput url={url} setUrl={setUrl} />
               )}
 
               {importType === 'screenshot' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Foto hochladen
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <p className="text-gray-600 mb-2">
-                      Ziehen Sie ein Foto hierher oder klicken Sie zum Auswählen
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 justify-center">
-                      <button className="btn-primary">
-                        Bild hochladen
-                      </button>
-                      <button className="btn-secondary">
-                        Foto machen
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {importType === 'text' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rezepttext
-                  </label>
-                  <textarea
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    className="input-field"
-                    rows={8}
-                    placeholder="Fügen Sie hier den Rezepttext ein..."
-                  />
-                </div>
+                <ScreenshotImportInput
+                  selectedFile={selectedFile}
+                  previewImage={previewImage}
+                  handleFileSelect={handleFileSelect}
+                  setSelectedFile={setSelectedFile}
+                  setPreviewImage={setPreviewImage}
+                />
               )}
 
               {/* Import Button */}
               <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={() => {
+                    resetForm()
+                    onClose()
+                  }}
                   className="btn-secondary"
                 >
                   Abbrechen
@@ -219,7 +225,7 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
                 <button
                   type="button"
                   onClick={handleImport}
-                  disabled={isLoading || (!url && !text)}
+                  disabled={isLoading || (importType === 'url' && !url.trim()) || (importType === 'screenshot' && !selectedFile)}
                   className="btn-primary flex items-center justify-center"
                 >
                   {isLoading ? (
@@ -237,86 +243,11 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
               </div>
             </div>
           ) : (
-            /* Preview Section */
-            <div className="space-y-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <div className="h-4 w-4 bg-green-600 rounded-full"></div>
-                    </div>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-green-800">
-                      Rezept erfolgreich erkannt!
-                    </h3>
-                    <p className="text-sm text-green-700 mt-1">
-                      Überprüfen Sie die Details und bestätigen Sie den Import.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="card">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">{preview.title}</h3>
-                <p className="text-gray-600 mb-4">{preview.description}</p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Kategorie</span>
-                    <p className="text-gray-900">{preview.category}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Kochzeit</span>
-                    <p className="text-gray-900">{preview.cookingTime} Min</p>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500">Portionen</span>
-                    <p className="text-gray-900">{preview.servings}</p>
-                  </div>
-                </div>
-
-                <div className="mb-6">
-                  <h4 className="font-medium text-gray-900 mb-2">Zutaten</h4>
-                  <ul className="space-y-1">
-                    {preview.ingredients.map((ingredient: any, index: number) => (
-                      <li key={index} className="text-sm text-gray-600">
-                        {ingredient.amount} {ingredient.unit} {ingredient.name}
-                        {ingredient.notes && ` (${ingredient.notes})`}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Zubereitung</h4>
-                  <ol className="space-y-2">
-                    {preview.instructions.map((instruction: any) => (
-                      <li key={instruction.stepNumber} className="text-sm text-gray-600">
-                        <span className="font-medium">{instruction.stepNumber}.</span> {instruction.description}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
-                <button
-                  type="button"
-                  onClick={() => setPreview(null)}
-                  className="btn-secondary"
-                >
-                  Zurück
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirm}
-                  className="btn-primary"
-                >
-                  Rezept speichern
-                </button>
-              </div>
-            </div>
+            <ImportPreview 
+              preview={preview}
+              onBack={() => setPreview(null)}
+              onConfirm={handleConfirm}
+            />
           )}
         </div>
       </div>

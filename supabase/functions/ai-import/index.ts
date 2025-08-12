@@ -1,9 +1,107 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import OpenAI from 'jsr:@openai/openai@^5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Function to parse recipe from URL using GPT-5
+async function parseRecipeFromURL(openai: OpenAI, url: string): Promise<string> {
+  const response = await openai.responses.create({
+    model: 'gpt-5',
+    tools: [
+      { type: "web_search_preview" },
+    ],
+    input: `
+      Du bist ein Experte für Rezepte. Extrahiere strukturierte Rezeptdaten von Webseiten.
+      Gib die Antwort IMMER als gültiges JSON zurück mit der Struktur:
+      {
+        "title": "Rezepttitel",
+        "description": "Kurze Beschreibung",
+        "category": "Hauptspeise/Salat/Dessert/Suppe/Beilage/Frühstück/Snack",
+        "tags": ["vegetarisch", "vegan", "glutenfrei", "schnell", "gesund", etc],
+        "cookingTime": 30,
+        "servings": 4,
+        "difficulty": "Einfach/Mittel/Schwer",
+        "sourceUrl": "${url}",
+        "imageUrl": "https://example.com/image.jpg",
+        "ingredients": [
+          {"name": "Zutat", "amount": 100, "unit": "g", "notes": "optional", "component": "optional component like Teig/Füllung"}
+        ],
+        "instructions": [
+          {"stepNumber": 1, "description": "Schritt 1"}
+        ]
+      }
+      Besuche diese URL und extrahiere das Rezept: ${url}.
+      Gib nur das JSON zurück, keine zusätzlichen Erklärungen.
+    `
+  })
+  
+  console.log('OpenAI response:', response.output_text)
+
+  return response.output_text
+}
+
+// Function to analyze recipe from image using GPT-5 with Vision
+async function analyzeRecipeFromImage(openai: OpenAI, imageContent: string): Promise<string> {
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    {
+      role: 'system',
+      content: `Du bist ein Experte für Rezepte. Analysiere Bilder und extrahiere strukturierte Rezeptdaten.
+      Gib die Antwort IMMER als gültiges JSON zurück mit der Struktur:
+      {
+        "title": "Rezepttitel",
+        "description": "Kurze Beschreibung",
+        "category": "Hauptspeise/Salat/Dessert/Suppe/Beilage/Frühstück/Snack",
+        "tags": ["vegetarisch", "vegan", "glutenfrei", "schnell", "gesund", etc],
+        "cookingTime": 30,
+        "servings": 4,
+        "difficulty": "Einfach/Mittel/Schwer",
+        "imageData": "base64-encoded-image-data",
+        "ingredients": [
+          {"name": "Zutat", "amount": 100, "unit": "g", "notes": "optional", "component": "optional component like Teig/Füllung"}
+        ],
+        "instructions": [
+          {"stepNumber": 1, "description": "Schritt 1"}
+        ]
+      }
+      
+      Wichtige Hinweise:
+      - Erkenne Zutaten und Mengenangaben genau
+      - Schätze Kochzeit und Portionen realistisch ein
+      - Gib sinnvolle deutsche Tags an
+      - Erstelle klare, schrittweise Anweisungen
+      - Falls das Bild kein Rezept enthält, gib einen Fehler zurück`
+    },
+    {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: 'Analysiere dieses Bild und extrahiere das Rezept. Wenn es sich um ein handgeschriebenes Rezept, einen Screenshot oder ein Foto eines Rezepts handelt, lies alle Details sorgfältig ab. Gib nur das JSON zurück, keine zusätzlichen Erklärungen.'
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: imageContent,
+            detail: 'high'
+          }
+        }
+      ]
+    }
+  ]
+  
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-5',
+    messages,
+    temperature: 0.2,
+    max_tokens: 4000,
+    response_format: { type: 'json_object' }
+  })
+  
+  return completion.choices[0]?.message?.content || ''
 }
 
 serve(async (req) => {
@@ -15,7 +113,8 @@ serve(async (req) => {
   try {
     // Get authorization header
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
+    const token = authHeader?.replace('Bearer ', '')
+    if (!authHeader || !token) {
       return new Response(
         JSON.stringify({ error: 'No authorization header' }),
         { 
@@ -28,17 +127,13 @@ serve(async (req) => {
     // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { 
-        global: { 
-          headers: { Authorization: authHeader } 
-        } 
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     // Verify user authentication
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
     if (authError || !user) {
+      console.log(authError || 'User not found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { 
@@ -73,75 +168,28 @@ serve(async (req) => {
       )
     }
 
-    let prompt = ''
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: openaiApiKey,
+    })
 
+    let response: string
+
+    // Route to appropriate handler based on import type
     switch (type) {
       case 'url':
-        prompt = `Extrahiere ein Rezept aus der folgenden URL. Gib die Antwort als JSON zurück mit der Struktur:
-        {
-          "title": "Rezepttitel",
-          "description": "Kurze Beschreibung",
-          "category": "Hauptspeise/Salat/Dessert/etc",
-          "tags": ["vegetarisch", "vegan", "schnell", etc],
-          "cookingTime": 30,
-          "servings": 4,
-          "difficulty": "Einfach/Mittel/Schwer",
-          "ingredients": [
-            {"name": "Zutat", "amount": 100, "unit": "g", "notes": "optional", "component": "optional component like Teig/Füllung"}
-          ],
-          "instructions": [
-            {"stepNumber": 1, "description": "Schritt 1"}
-          ]
-        }
-        
-        URL: ${content}`
-        break
-
-      case 'text':
-        prompt = `Extrahiere ein Rezept aus dem folgenden Text. Gib die Antwort als JSON zurück mit der Struktur:
-        {
-          "title": "Rezepttitel",
-          "description": "Kurze Beschreibung",
-          "category": "Hauptspeise/Salat/Dessert/etc",
-          "tags": ["vegetarisch", "vegan", "schnell", etc],
-          "cookingTime": 30,
-          "servings": 4,
-          "difficulty": "Einfach/Mittel/Schwer",
-          "ingredients": [
-            {"name": "Zutat", "amount": 100, "unit": "g", "notes": "optional", "component": "optional component like Teig/Füllung"}
-          ],
-          "instructions": [
-            {"stepNumber": 1, "description": "Schritt 1"}
-          ]
-        }
-        
-        Text: ${content}`
+        console.log('Processing URL import:', content)
+        response = await parseRecipeFromURL(openai, content)
         break
 
       case 'screenshot':
-        prompt = `Analysiere das folgende Bild und extrahiere ein Rezept. Gib die Antwort als JSON zurück mit der Struktur:
-        {
-          "title": "Rezepttitel",
-          "description": "Kurze Beschreibung",
-          "category": "Hauptspeise/Salat/Dessert/etc",
-          "tags": ["vegetarisch", "vegan", "schnell", etc],
-          "cookingTime": 30,
-          "servings": 4,
-          "difficulty": "Einfach/Mittel/Schwer",
-          "ingredients": [
-            {"name": "Zutat", "amount": 100, "unit": "g", "notes": "optional", "component": "optional component like Teig/Füllung"}
-          ],
-          "instructions": [
-            {"stepNumber": 1, "description": "Schritt 1"}
-          ]
-        }
-        
-        Bildinhalt: ${content}`
+        console.log('Processing image import, image size:', content.length)
+        response = await analyzeRecipeFromImage(openai, content)
         break
 
       default:
         return new Response(
-          JSON.stringify({ error: 'Invalid import type' }),
+          JSON.stringify({ error: 'Invalid import type. Supported types: url, screenshot' }),
           { 
             status: 400, 
             headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -149,40 +197,11 @@ serve(async (req) => {
         )
     }
 
-    // Call OpenAI API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'Du bist ein Experte für Rezepte. Extrahiere strukturierte Rezeptdaten aus verschiedenen Quellen.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 2000
-      })
-    })
-
-    if (!openaiResponse.ok) {
-      throw new Error(`OpenAI API error: ${openaiResponse.statusText}`)
-    }
-
-    const openaiData = await openaiResponse.json()
-    const response = openaiData.choices[0]?.message?.content
-
     if (!response) {
       throw new Error('No response from OpenAI')
     }
+
+    console.log('OpenAI response:', response)
 
     // Try to parse JSON response
     let recipe

@@ -79,6 +79,12 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
    npm run dev
    ```
 
+6. **Supabase Funktionen lokal testen**
+   ```bash
+   npx supabase start
+   npx supabase functions serve --env-file .env
+   ```
+
 ## Verwendung
 
 ### Erste Schritte

@@ -625,6 +625,44 @@ export class SupabaseService {
       throw new Error(`Failed to delete image: ${error.message}`)
     }
   }
+
+  /**
+   * Enhance a recipe image using AI
+   */
+  public async enhanceRecipeImage(
+    imageUrl: string, 
+    recipeTitle?: string, 
+    ingredients?: string[]
+  ): Promise<string> {
+    // Get the current session for authentication
+    const { data: { session }, error: sessionError } = await this.client.auth.getSession()
+    
+    if (sessionError || !session) {
+      throw new Error('Sie müssen angemeldet sein, um Bildverbesserung zu verwenden.')
+    }
+
+    // Call the Supabase edge function
+    const { data, error } = await this.client.functions.invoke('enhance-image', {
+      body: {
+        imageUrl,
+        recipeTitle,
+        ingredients
+      },
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    })
+
+    if (error) {
+      throw new Error(error.message || 'Fehler bei der Bildverbesserung')
+    }
+
+    if (!data?.enhancedImageUrl) {
+      throw new Error('Keine verbesserte Bildversion erhalten')
+    }
+
+    return data.enhancedImageUrl
+  }
 }
 
 // Export singleton instance - this is the main export to use

@@ -1,0 +1,36 @@
+POST http://localhost:54321/functions/v1/hello-world
+Accept: application/json
+Content-Type: application/json
+Apikey: {{$dotenv REST_CLIENT_API_KEY}}
+Authorization: Bearer {{$dotenv REST_CLIENT_BEARER_TOKEN}}
+
+{
+    "name": "World"
+}
+
+###
+
+POST http://localhost:54321/functions/v1/ai-import
+Accept: application/json
+Content-Type: application/json
+Apikey: {{$dotenv REST_CLIENT_API_KEY}}
+Authorization: Bearer {{$dotenv REST_CLIENT_BEARER_TOKEN}}
+
+{
+    "type": "url",
+    "content": "https://next.rezepte.engelba.ch/rezepte/suesskartoffelpommes"
+}
+
+###
+
+POST http://localhost:54321/functions/v1/enhance-image
+Accept: application/json
+Content-Type: application/json
+Apikey: {{$dotenv REST_CLIENT_API_KEY}}
+Authorization: Bearer {{$dotenv REST_CLIENT_BEARER_TOKEN}}
+
+{
+    "imageUrl": "https://example.com/recipe-image.jpg",
+    "recipeTitle": "Süßkartoffel Pommes",
+    "ingredients": ["Süßkartoffel", "Olivenöl", "Paprika", "Salz", "Pfeffer"]
+}

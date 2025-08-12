@@ -376,7 +376,7 @@ export default function HomePage() {
                   <Search className="h-8 w-8 text-green-600" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">KI-gestützter Import</h3>
-                <p className="text-gray-600">Importieren Sie Rezepte automatisch von Websites, Screenshots oder Texten.</p>
+                <p className="text-gray-600">Importieren Sie Rezepte automatisch von Websites oder Screenshots.</p>
               </div>
 
               <div className="card text-center">
