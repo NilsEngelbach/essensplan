@@ -1,12 +1,13 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { X, Loader2, Upload } from 'lucide-react'
+import { X, Upload } from 'lucide-react'
 import { supabase, supabaseService } from '../lib/supabase'
 import ImportTypeSelector from './ai-import/ImportTypeSelector'
 import ImportPreview from './ai-import/ImportPreview'
 import URLImportInput from './ai-import/URLImportInput'
 import ScreenshotImportInput from './ai-import/ScreenshotImportInput'
+import LoadingOverlay from './ai-import/LoadingOverlay'
 
 interface AIImportModalProps {
   isOpen: boolean
@@ -33,21 +34,6 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
     })
   }
 
-  // Helper function to download image from URL and upload to Supabase
-  const downloadAndUploadImage = async (imageUrl: string, userId: string): Promise<string> => {
-    try {
-      const response = await fetch(imageUrl)
-      if (!response.ok) throw new Error('Failed to fetch image')
-      
-      const blob = await response.blob()
-      const file = new File([blob], 'imported-image.jpg', { type: blob.type || 'image/jpeg' })
-      
-      return await supabaseService.uploadImage(file, userId)
-    } catch (error) {
-      console.error('Error downloading and uploading image:', error)
-      throw error
-    }
-  }
 
   // Handle file selection
   const handleFileSelect = async (file: File) => {
@@ -107,37 +93,31 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
         throw new Error('Keine Daten vom KI-Service erhalten')
       }
 
-      // Process image upload based on response type
-      let processedData = { ...data }
+      let recipe = { ...data.recipe }
+      let image = data.image
 
-      if (data.imageUrl && session.user) {
-        // For URL imports: download image and upload to Supabase
-        try {
-          const uploadedImageUrl = await downloadAndUploadImage(data.imageUrl, session.user.id)
-          processedData.imageUrl = uploadedImageUrl
-        } catch (error) {
-          console.warn('Failed to upload image from URL:', error)
-          // Continue without image rather than failing the whole import
-          delete processedData.imageUrl
-        }
-      } else if (data.imageData && selectedFile && session.user) {
-        // For screenshot imports: upload the processed image data to Supabase
+      delete recipe.imageUrl
+
+      if (image && session.user) {
+        // Handle base64 encoded image from function (both URL and screenshot imports)
         try {
           // Convert base64 back to file for upload
-          const response = await fetch(data.imageData)
+          const response = await fetch(image)
           const blob = await response.blob()
-          const file = new File([blob], selectedFile.name, { type: selectedFile.type })
+          
+          const fileName = selectedFile ? selectedFile.name : 'imported-recipe-image.jpg'
+          const fileType = selectedFile ? selectedFile.type : blob.type || 'image/jpeg'
+          
+          const file = new File([blob], fileName, { type: fileType })
           
           const uploadedImageUrl = await supabaseService.uploadImage(file, session.user.id)
-          processedData.imageUrl = uploadedImageUrl
-          delete processedData.imageData // Remove base64 data from final result
+          recipe.imageUrl = uploadedImageUrl
         } catch (error) {
-          console.warn('Failed to upload processed image:', error)
-          // Continue without image rather than failing the whole import
+          console.warn('Failed to upload image:', error)
         }
       }
 
-      setPreview(processedData)
+      setPreview(recipe)
     } catch (error) {
       console.error('Import failed:', error)
       if (error instanceof Error) {
@@ -176,7 +156,8 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
+        {isLoading && <LoadingOverlay />}
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Rezept mit KI importieren</h2>
@@ -228,17 +209,8 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
                   disabled={isLoading || (importType === 'url' && !url.trim()) || (importType === 'screenshot' && !selectedFile)}
                   className="btn-primary flex items-center justify-center"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Verarbeite...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Importieren
-                    </>
-                  )}
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importieren
                 </button>
               </div>
             </div>

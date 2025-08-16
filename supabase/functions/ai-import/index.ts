@@ -1,110 +1,93 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import OpenAI from 'jsr:@openai/openai@^5';
+import { createClient } from "supabase"
+import OpenAI from "openai";
+import { z } from "zod"
+import { zodTextFormat } from "npm:openai/helpers/zod";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Function to parse recipe from URL using GPT-5
-async function parseRecipeFromURL(openai: OpenAI, url: string): Promise<string> {
-  const response = await openai.responses.create({
+const Recipe = z.object({
+  title: z.string(),
+  description: z.string(),
+  category: z.enum(['Hauptspeise', 'Salat', 'Dessert', 'Suppe', 'Beilage', 'Frühstück', 'Snack']),
+  tags: z.array(z.enum(['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß'])),
+  cookingTime: z.number().int(),
+  servings: z.number().int(),
+  difficulty: z.enum(['Einfach', 'Mittel', 'Schwer']),
+  imageUrl: z.string().nullable(), // Optional image URL
+  sourceUrl: z.string().nullable(), // Optional source URL
+  ingredients: z.array(
+    z.object({
+      name: z.string(),
+      amount: z.number().int().min(0),
+      unit: z.string().nullable(),  // e.g. 'g', 'ml', 'Tasse'
+      notes: z.string().nullable(), // e.g. 'optional', 'nach Geschmack'
+      component: z.string().nullable(), // e.g. 'Teig', 'Füllung'
+    })
+  ),
+  instructions: z.array(
+    z.object({
+      stepNumber: z.number().int().min(1),
+      description: z.string(),
+    })
+  ),
+});
+
+type RecipeType = z.infer<typeof Recipe>;
+
+// Helper function to fetch image and convert to base64
+async function fetchImageAsBase64(imageUrl: string): Promise<string | null> {
+  try {
+    console.log('Fetching image from URL:', imageUrl);
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      console.warn('Failed to fetch image:', response.status, response.statusText);
+      return null;
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    
+    // Get content type from response headers
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    return null;
+  }
+}
+
+async function parseRecipeFromURL(openai: OpenAI, url: string): Promise<RecipeType | null> {
+  const response = await openai.responses.parse({
     model: 'gpt-5',
     tools: [
       { type: "web_search_preview" },
     ],
-    input: `
-      Du bist ein Experte für Rezepte. Extrahiere strukturierte Rezeptdaten von Webseiten.
-      Gib die Antwort IMMER als gültiges JSON zurück mit der Struktur:
-      {
-        "title": "Rezepttitel",
-        "description": "Kurze Beschreibung",
-        "category": "Hauptspeise/Salat/Dessert/Suppe/Beilage/Frühstück/Snack",
-        "tags": ["vegetarisch", "vegan", "glutenfrei", "schnell", "gesund", etc],
-        "cookingTime": 30,
-        "servings": 4,
-        "difficulty": "Einfach/Mittel/Schwer",
-        "sourceUrl": "${url}",
-        "imageUrl": "https://example.com/image.jpg",
-        "ingredients": [
-          {"name": "Zutat", "amount": 100, "unit": "g", "notes": "optional", "component": "optional component like Teig/Füllung"}
-        ],
-        "instructions": [
-          {"stepNumber": 1, "description": "Schritt 1"}
-        ]
-      }
-      Besuche diese URL und extrahiere das Rezept: ${url}.
-      Gib nur das JSON zurück, keine zusätzlichen Erklärungen.
-    `
-  })
-  
-  console.log('OpenAI response:', response.output_text)
-
-  return response.output_text
-}
-
-// Function to analyze recipe from image using GPT-5 with Vision
-async function analyzeRecipeFromImage(openai: OpenAI, imageContent: string): Promise<string> {
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-    {
-      role: 'system',
-      content: `Du bist ein Experte für Rezepte. Analysiere Bilder und extrahiere strukturierte Rezeptdaten.
-      Gib die Antwort IMMER als gültiges JSON zurück mit der Struktur:
-      {
-        "title": "Rezepttitel",
-        "description": "Kurze Beschreibung",
-        "category": "Hauptspeise/Salat/Dessert/Suppe/Beilage/Frühstück/Snack",
-        "tags": ["vegetarisch", "vegan", "glutenfrei", "schnell", "gesund", etc],
-        "cookingTime": 30,
-        "servings": 4,
-        "difficulty": "Einfach/Mittel/Schwer",
-        "imageData": "base64-encoded-image-data",
-        "ingredients": [
-          {"name": "Zutat", "amount": 100, "unit": "g", "notes": "optional", "component": "optional component like Teig/Füllung"}
-        ],
-        "instructions": [
-          {"stepNumber": 1, "description": "Schritt 1"}
-        ]
-      }
-      
+    instructions: `
+      Du bist ein Experte für Rezepte.
+      Extrahiere strukturierte Rezeptdaten von Webseiten.
       Wichtige Hinweise:
       - Erkenne Zutaten und Mengenangaben genau
       - Schätze Kochzeit und Portionen realistisch ein
       - Gib sinnvolle deutsche Tags an
       - Erstelle klare, schrittweise Anweisungen
-      - Falls das Bild kein Rezept enthält, gib einen Fehler zurück`
+      - Nutze keine Zitierungen für die Ausgabe in Texten
+    `,
+    text: {
+      format: zodTextFormat(Recipe, "recipe"),
     },
-    {
-      role: 'user',
-      content: [
-        {
-          type: 'text',
-          text: 'Analysiere dieses Bild und extrahiere das Rezept. Wenn es sich um ein handgeschriebenes Rezept, einen Screenshot oder ein Foto eines Rezepts handelt, lies alle Details sorgfältig ab. Gib nur das JSON zurück, keine zusätzlichen Erklärungen.'
-        },
-        {
-          type: 'image_url',
-          image_url: {
-            url: imageContent,
-            detail: 'high'
-          }
-        }
-      ]
-    }
-  ]
-  
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-5',
-    messages,
-    temperature: 0.2,
-    max_tokens: 4000,
-    response_format: { type: 'json_object' }
-  })
-  
-  return completion.choices[0]?.message?.content || ''
+    input: `Besuche diese URL und extrahiere das Rezept: ${url}.`
+  });
+  const input_tokens = response.usage?.input_tokens || 0;
+  const output_tokens = response.usage?.output_tokens || 0;
+  console.log(`Used ${input_tokens} input tokens and ${output_tokens} output tokens.`);
+  return response.output_parsed;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -173,7 +156,7 @@ serve(async (req) => {
       apiKey: openaiApiKey,
     })
 
-    let response: string
+    let response: RecipeType | null = null;
 
     // Route to appropriate handler based on import type
     switch (type) {
@@ -184,7 +167,8 @@ serve(async (req) => {
 
       case 'screenshot':
         console.log('Processing image import, image size:', content.length)
-        response = await analyzeRecipeFromImage(openai, content)
+        // TODO: Implement image analysis
+        // response = await analyzeRecipeFromImage(openai, content)
         break
 
       default:
@@ -203,22 +187,11 @@ serve(async (req) => {
 
     console.log('OpenAI response:', response)
 
-    // Try to parse JSON response
-    let recipe
-    try {
-      recipe = JSON.parse(response)
-    } catch (error) {
-      // If JSON parsing fails, try to extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        recipe = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('Could not parse recipe data')
-      }
-    }
-
     return new Response(
-      JSON.stringify(recipe),
+      JSON.stringify({
+        recipe: response,
+        image: response.imageUrl ? await fetchImageAsBase64(response.imageUrl) : null
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }

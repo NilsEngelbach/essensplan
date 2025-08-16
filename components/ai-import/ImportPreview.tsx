@@ -30,6 +30,15 @@ export default function ImportPreview({ preview, onBack, onConfirm }: ImportPrev
       </div>
 
       <div className="card">
+        {preview.imageUrl && (
+          <div className="mb-6">
+            <img
+              src={preview.imageUrl}
+              alt={preview.title}
+              className="w-full h-64 object-cover rounded-lg"
+            />
+          </div>
+        )}
         <h3 className="text-xl font-bold text-gray-900 mb-4">{preview.title}</h3>
         <p className="text-gray-600 mb-4">{preview.description}</p>
         
