@@ -21,6 +21,7 @@ import { useMealPlans } from '../../components/MealPlanProvider'
 import Navigation from '../../components/Navigation'
 import RecipeSelector from '../../components/RecipeSelector'
 import DatePickerModal from '../../components/DatePickerModal'
+import PageStateHandler from '../../components/PageStateHandler'
 import toast from 'react-hot-toast'
 
 export default function MealPlanPage() {
@@ -28,12 +29,13 @@ export default function MealPlanPage() {
   const searchParams = useSearchParams()
   const { user, loading: authLoading } = useAuth()
   const { recipes } = useRecipes()
-  const { mealPlans, loading, addOrUpdateMealPlan, removeMealPlan, getMealPlanForDate } = useMealPlans()
+  const { mealPlans, loading, addOrUpdateMealPlan, removeMealPlan, rescheduleMealPlan, getMealPlanForDate } = useMealPlans()
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedRecipe, setSelectedRecipe] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0)
+  const [mealPlanToReschedule, setMealPlanToReschedule] = useState<string | null>(null)
 
   // Get 7 days starting from today + offset
   const weekDates = useMemo(() => {
@@ -111,9 +113,30 @@ export default function MealPlanPage() {
     }
   }
 
-  const handleDateSelect = (dateString: string) => {
-    setSelectedDate(dateString)
-    setShowDatePicker(false)
+  const handleDateSelect = async (dateString: string) => {
+    if (mealPlanToReschedule) {
+      // Handle rescheduling
+      try {
+        // Check if target date already has a meal plan
+        const existingPlan = getMealPlanForDate(dateString)
+        if (existingPlan) {
+          toast.error('Dieser Tag hat bereits ein Rezept geplant')
+          return
+        }
+        
+        await rescheduleMealPlan(mealPlanToReschedule, dateString)
+        toast.success('Rezept erfolgreich umgeplant')
+        setMealPlanToReschedule(null)
+        setShowDatePicker(false)
+      } catch (error) {
+        console.error('Error rescheduling meal plan:', error)
+        toast.error('Fehler beim Umplanen des Rezepts')
+      }
+    } else {
+      // Handle normal date selection for adding new meal plan
+      setSelectedDate(dateString)
+      setShowDatePicker(false)
+    }
   }
 
   const handleCloseModal = () => {
@@ -121,6 +144,7 @@ export default function MealPlanPage() {
     setShowDatePicker(false)
     setSelectedDate('')
     setSelectedRecipe('')
+    setMealPlanToReschedule(null)
   }
 
   const handleRemoveFromMealPlan = async (mealPlanId: string) => {
@@ -131,6 +155,13 @@ export default function MealPlanPage() {
       console.error('Error removing from meal plan:', error)
       toast.error('Fehler beim Entfernen aus dem Essensplan')
     }
+  }
+
+  // Handle reschedule button click
+  const handleRescheduleClick = (mealPlanId: string) => {
+    setMealPlanToReschedule(mealPlanId)
+    setSelectedDate('') // Reset selected date
+    setShowDatePicker(true)
   }
 
   const getDayName = useCallback((dateString: string) => {
@@ -163,36 +194,15 @@ export default function MealPlanPage() {
     }
   }, [])
 
-  // Show loading state while auth is loading or data is loading
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Laden...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show message if not authenticated
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Bitte melden Sie sich an
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Sie müssen angemeldet sein, um Ihren Essensplan zu sehen.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   return (
+    <PageStateHandler
+      loading={authLoading || loading}
+      user={user}
+      loadingText="Essensplan wird geladen..."
+      icon={<CalendarDays className="h-12 w-12 text-gray-400 mx-auto mb-4" />}
+      title="Bitte melden Sie sich an"
+      subtitle="Sie müssen angemeldet sein, um Ihren Essensplan zu sehen."
+    >
     <div className="min-h-screen bg-gray-50">
       <Navigation />
 
@@ -245,9 +255,12 @@ export default function MealPlanPage() {
             const isToday = date === new Date().toISOString().split('T')[0]
             
             return (
-              <div key={date} className={`card min-h-[300px] ${
-                isToday ? 'ring-2 ring-primary-200' : ''
-              }`}>
+              <div 
+                key={date} 
+                className={`card min-h-[300px] ${
+                  isToday ? 'ring-2 ring-primary-200' : ''
+                }`}
+              >
                 {/* Date Header */}
                 <div className={`text-center mb-4 p-2 rounded-lg ${
                   isToday ? 'bg-primary-100 text-primary-800' : 'bg-gray-50 text-gray-700'
@@ -313,14 +326,24 @@ export default function MealPlanPage() {
                         </div>
                       </div>
 
-                      {/* Remove Button */}
-                      <button
-                        onClick={() => handleRemoveFromMealPlan(mealPlan.id)}
-                        className="w-full text-xs text-red-600 hover:text-red-800 flex items-center justify-center"
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Entfernen
-                      </button>
+                      {/* Action Buttons */}
+                      <div className="flex flex-col space-y-1">
+                        <button
+                          onClick={() => handleRescheduleClick(mealPlan.id)}
+                          className="w-full text-xs text-primary-600 hover:text-primary-800 flex items-center justify-center py-1"
+                        >
+                          <Calendar className="h-3 w-3 mr-1" />
+                          Umplanen
+                        </button>
+                        
+                        <button
+                          onClick={() => handleRemoveFromMealPlan(mealPlan.id)}
+                          className="w-full text-xs text-red-600 hover:text-red-800 flex items-center justify-center"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Entfernen
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div 
@@ -410,12 +433,17 @@ export default function MealPlanPage() {
       {/* Date Picker Modal */}
       <DatePickerModal
         isOpen={showDatePicker}
-        onClose={() => setShowDatePicker(false)}
+        onClose={() => {
+          setShowDatePicker(false)
+          setMealPlanToReschedule(null)
+        }}
         onDateSelect={handleDateSelect}
-        title="Datum für Essensplan auswählen"
+        title={mealPlanToReschedule ? "Neues Datum für Rezept auswählen" : "Datum für Essensplan auswählen"}
         preselectedDate={selectedDate}
         plannedDates={plannedDates}
       />
+
     </div>
+    </PageStateHandler>
   )
 } 

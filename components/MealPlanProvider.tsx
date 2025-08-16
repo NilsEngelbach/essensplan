@@ -11,6 +11,7 @@ interface MealPlanContextType {
   refreshMealPlans: (startDate?: string, endDate?: string) => Promise<void>;
   addOrUpdateMealPlan: (date: string, recipeId?: string) => Promise<void>;
   removeMealPlan: (id: string) => Promise<void>;
+  rescheduleMealPlan: (mealPlanId: string, newDate: string) => Promise<void>;
   getMealPlanForDate: (date: string) => MealPlanWithRecipe | undefined;
 }
 
@@ -97,6 +98,32 @@ export const MealPlanProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [fetchMealPlans]);
 
+  // Reschedule meal plan
+  const rescheduleMealPlan = useCallback(async (mealPlanId: string, newDate: string) => {
+    if (!user?.id) return;
+    
+    const mealPlan = mealPlans.find(mp => mp.id === mealPlanId);
+    if (!mealPlan) return;
+    
+    setLoading(true);
+    try {
+      // Remove the old meal plan
+      await supabaseService.deleteMealPlan(mealPlanId);
+      // Create a new meal plan with the same recipe on the new date
+      await supabaseService.createOrUpdateMealPlan({
+        date: newDate,
+        recipeId: mealPlan.recipe.id,
+        userId: user.id
+      });
+      await fetchMealPlans();
+    } catch (error) {
+      console.error('Failed to reschedule meal plan:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, mealPlans, fetchMealPlans]);
+
   // Get meal plan for specific date
   const getMealPlanForDate = useCallback((date: string) => {
     return mealPlans.find(mp => {
@@ -113,6 +140,7 @@ export const MealPlanProvider = ({ children }: { children: React.ReactNode }) =>
     refreshMealPlans: fetchMealPlans,
     addOrUpdateMealPlan,
     removeMealPlan,
+    rescheduleMealPlan,
     getMealPlanForDate,
   };
 

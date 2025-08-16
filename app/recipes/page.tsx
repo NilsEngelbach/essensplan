@@ -18,6 +18,7 @@ import Navigation from '../../components/Navigation'
 import AIImportModal from '../../components/AIImportModal'
 import DatePickerModal from '../../components/DatePickerModal'
 import RecipeCard from '../../components/RecipeCard'
+import PageStateHandler from '../../components/PageStateHandler'
 import toast from 'react-hot-toast'
 import type { RecipeWithRelations } from '../../lib/supabase'
 
@@ -223,36 +224,15 @@ export default function RecipesPage() {
     })
   }, [recipes, searchTerm, selectedCategory, selectedTags, minRating, getTags])
 
-  // Show loading state while auth is loading or recipes are loading
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Laden...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show message if not authenticated
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Bitte melden Sie sich an
-          </h3>
-          <p className="text-gray-600 mb-6">
-            Sie müssen angemeldet sein, um Ihre Rezepte zu sehen.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   return (
+    <PageStateHandler
+      loading={authLoading || loading}
+      user={user}
+      loadingText="Rezepte werden geladen..."
+      icon={<ChefHat className="h-12 w-12 text-gray-400 mx-auto mb-4" />}
+      title="Bitte melden Sie sich an"
+      subtitle="Sie müssen angemeldet sein, um Ihre Rezepte zu sehen."
+    >
     <div className="min-h-screen bg-gray-50">
       <Navigation />
 
@@ -485,5 +465,6 @@ export default function RecipesPage() {
         plannedDates={mealPlans.map(mp => typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date)}
       />
     </div>
+    </PageStateHandler>
   )
 } 
