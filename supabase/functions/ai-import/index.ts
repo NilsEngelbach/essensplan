@@ -16,8 +16,8 @@ const Recipe = z.object({
   cookingTime: z.number().int(),
   servings: z.number().int(),
   difficulty: z.enum(['Einfach', 'Mittel', 'Schwer']),
-  imageUrl: z.string().nullable(), // Optional image URL
-  sourceUrl: z.string().nullable(), // Optional source URL
+  imageUrl: z.string().nullable().optional(), // Optional image URL
+  sourceUrl: z.string().nullable().optional(), // Optional source URL
   ingredients: z.array(
     z.object({
       name: z.string(),
@@ -62,7 +62,7 @@ async function fetchImageAsBase64(imageUrl: string): Promise<string | null> {
 
 async function parseRecipeFromURL(openai: OpenAI, url: string): Promise<RecipeType | null> {
   const response = await openai.responses.parse({
-    model: 'gpt-5',
+    model: 'gpt-5-mini', // gpt-5
     tools: [
       { type: "web_search_preview" },
     ],
@@ -74,12 +74,54 @@ async function parseRecipeFromURL(openai: OpenAI, url: string): Promise<RecipeTy
       - Schätze Kochzeit und Portionen realistisch ein
       - Gib sinnvolle deutsche Tags an
       - Erstelle klare, schrittweise Anweisungen
-      - Nutze keine Zitierungen für die Ausgabe in Texten
+      - Nutze keine Zitierungen für die Ausgabe in Texten (Titel, Beschreibung, Anweisungen, ...)
+      - Versuche ein Bild des Rezepts zu extrahieren und in der property imageUrl zu setzen, wenn verfügbar
+      - Setze die property sourceUrl auf die URL die als Input zum parsen angegebene wurde
     `,
     text: {
       format: zodTextFormat(Recipe, "recipe"),
     },
     input: `Besuche diese URL und extrahiere das Rezept: ${url}.`
+  });
+  const input_tokens = response.usage?.input_tokens || 0;
+  const output_tokens = response.usage?.output_tokens || 0;
+  console.log(`Used ${input_tokens} input tokens and ${output_tokens} output tokens.`);
+  return response.output_parsed;
+}
+
+async function analyzeRecipeFromImage(openai: OpenAI, base64encodedImage: string): Promise<RecipeType | null> {
+  const response = await openai.responses.parse({
+    model: 'gpt-5-mini', // gpt-5
+    tools: [
+      { type: "web_search_preview" },
+    ],
+    instructions: `
+      Du bist ein Experte für Rezepte.
+      Extrahiere strukturierte Rezeptdaten von Webseiten.
+      Wichtige Hinweise:
+      - Erkenne Zutaten und Mengenangaben genau
+      - Schätze Kochzeit und Portionen realistisch ein
+      - Gib sinnvolle deutsche Tags an
+      - Erstelle klare, schrittweise Anweisungen
+      - Nutze keine Zitierungen für die Ausgabe in Texten (Titel, Beschreibung, Anweisungen, ...)
+      - Setze die properties "imageUrl" und "sourceUrl" auf null, da diese nicht aus dem Bild extrahiert werden können
+    `,
+    text: {
+      format: zodTextFormat(Recipe, "recipe"),
+    },
+    input: [
+        {
+            role: "user",
+            content: [
+                { type: "input_text", text: "Extrahiere das Rezept aus diesem Bild" },
+                {
+                    type: "input_image",
+                    image_url: `${base64encodedImage}`,
+                    detail: "high",
+                },
+            ],
+        },
+    ],
   });
   const input_tokens = response.usage?.input_tokens || 0;
   const output_tokens = response.usage?.output_tokens || 0;
@@ -163,14 +205,43 @@ Deno.serve(async (req) => {
       case 'url':
         console.log('Processing URL import:', content)
         response = await parseRecipeFromURL(openai, content)
-        break
+        if (!response) {
+          throw new Error('No response from OpenAI')
+        }
 
+        console.log('OpenAI response:', response)
+
+        return new Response(
+          JSON.stringify({
+            recipe: response,
+            image: response.imageUrl ? await fetchImageAsBase64(response.imageUrl) : null
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
       case 'screenshot':
         console.log('Processing image import, image size:', content.length)
-        // TODO: Implement image analysis
-        // response = await analyzeRecipeFromImage(openai, content)
-        break
+        response = await analyzeRecipeFromImage(openai, content)
 
+        if (!response) {
+          throw new Error('No response from OpenAI')
+        }
+
+        delete response?.sourceUrl
+        delete response?.imageUrl
+
+        console.log('OpenAI response:', response)
+
+        return new Response(
+          JSON.stringify({
+            recipe: response,
+            image: content
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid import type. Supported types: url, screenshot' }),
@@ -181,21 +252,7 @@ Deno.serve(async (req) => {
         )
     }
 
-    if (!response) {
-      throw new Error('No response from OpenAI')
-    }
 
-    console.log('OpenAI response:', response)
-
-    return new Response(
-      JSON.stringify({
-        recipe: response,
-        image: response.imageUrl ? await fetchImageAsBase64(response.imageUrl) : null
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    )
 
   } catch (error) {
     console.error('AI import error:', error)

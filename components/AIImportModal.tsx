@@ -98,23 +98,11 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
 
       delete recipe.imageUrl
 
-      if (image && session.user) {
-        // Handle base64 encoded image from function (both URL and screenshot imports)
-        try {
-          // Convert base64 back to file for upload
-          const response = await fetch(image)
-          const blob = await response.blob()
-          
-          const fileName = selectedFile ? selectedFile.name : 'imported-recipe-image.jpg'
-          const fileType = selectedFile ? selectedFile.type : blob.type || 'image/jpeg'
-          
-          const file = new File([blob], fileName, { type: fileType })
-          
-          const uploadedImageUrl = await supabaseService.uploadImage(file, session.user.id)
-          recipe.imageUrl = uploadedImageUrl
-        } catch (error) {
-          console.warn('Failed to upload image:', error)
-        }
+      // Store base64 image data for preview, don't upload yet
+      if (image) {
+        recipe.previewImageData = image
+        recipe.originalFileName = selectedFile?.name || 'imported-recipe-image.jpg'
+        recipe.originalFileType = selectedFile?.type || 'image/jpeg'
       }
 
       setPreview(recipe)
@@ -130,9 +118,41 @@ export default function AIImportModal({ isOpen, onClose, onImport }: AIImportMod
     }
   }
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (preview) {
-      onImport(preview)
+      let finalRecipe = { ...preview }
+      
+      // Upload image only when user confirms the import
+      if (preview.previewImageData) {
+        try {
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+          
+          if (sessionError || !session) {
+            console.warn('No session for image upload')
+          } else {
+            // Convert base64 back to file for upload
+            const response = await fetch(preview.previewImageData)
+            const blob = await response.blob()
+            
+            const fileName = preview.originalFileName || 'imported-recipe-image.jpg'
+            const fileType = preview.originalFileType || blob.type || 'image/jpeg'
+            
+            const file = new File([blob], fileName, { type: fileType })
+            
+            const uploadedImageUrl = await supabaseService.uploadImage(file, session.user.id)
+            finalRecipe.imageUrl = uploadedImageUrl
+          }
+        } catch (error) {
+          console.warn('Failed to upload image:', error)
+        }
+        
+        // Clean up preview data
+        delete finalRecipe.previewImageData
+        delete finalRecipe.originalFileName
+        delete finalRecipe.originalFileType
+      }
+      
+      onImport(finalRecipe)
       onClose()
       setPreview(null)
       setUrl('')

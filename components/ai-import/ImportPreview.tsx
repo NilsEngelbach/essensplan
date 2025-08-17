@@ -30,10 +30,10 @@ export default function ImportPreview({ preview, onBack, onConfirm }: ImportPrev
       </div>
 
       <div className="card">
-        {preview.imageUrl && (
+        {(preview.previewImageData) && (
           <div className="mb-6">
             <img
-              src={preview.imageUrl}
+              src={preview.previewImageData}
               alt={preview.title}
               className="w-full h-64 object-cover rounded-lg"
             />
