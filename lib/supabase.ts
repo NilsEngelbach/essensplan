@@ -628,6 +628,7 @@ export class SupabaseService {
 
   /**
    * Enhance a recipe image using AI
+   * Returns base64 encoded image data for preview before upload
    */
   public async enhanceRecipeImage(
     imageUrl: string, 
@@ -641,10 +642,31 @@ export class SupabaseService {
       throw new Error('Sie müssen angemeldet sein, um Bildverbesserung zu verwenden.')
     }
 
+    // Convert image URL to base64
+    let base64ImageData: string
+    try {
+      const response = await fetch(imageUrl)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.statusText}`)
+      }
+      
+      const blob = await response.blob()
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+      
+      base64ImageData = base64
+    } catch (fetchError) {
+      throw new Error(`Fehler beim Laden des Bildes: ${fetchError instanceof Error ? fetchError.message : 'Unbekannter Fehler'}`)
+    }
+
     // Call the Supabase edge function
     const { data, error } = await this.client.functions.invoke('enhance-image', {
       body: {
-        imageUrl,
+        base64ImageData,
         recipeTitle,
         ingredients
       },
@@ -657,11 +679,11 @@ export class SupabaseService {
       throw new Error(error.message || 'Fehler bei der Bildverbesserung')
     }
 
-    if (!data?.enhancedImageUrl) {
+    if (!data?.enhancedImageData) {
       throw new Error('Keine verbesserte Bildversion erhalten')
     }
 
-    return data.enhancedImageUrl
+    return data.enhancedImageData
   }
 }
 

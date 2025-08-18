@@ -4,6 +4,7 @@ import React from 'react'
 import Image from 'next/image'
 import { Upload, Camera, X, Sparkles } from 'lucide-react'
 import { supabaseService } from '../../lib/supabase'
+import ImageEnhancementModal from '../ImageEnhancementModal'
 
 interface ImageUploadSectionProps {
   imageUrl: string
@@ -23,6 +24,16 @@ export default function ImageUploadSection({
   ingredients
 }: ImageUploadSectionProps) {
   const [isEnhancing, setIsEnhancing] = React.useState(false)
+  const [enhancementModal, setEnhancementModal] = React.useState<{
+    isOpen: boolean
+    originalImageUrl: string
+    enhancedImageData: string
+  }>({
+    isOpen: false,
+    originalImageUrl: '',
+    enhancedImageData: ''
+  })
+  const [isUploadingEnhanced, setIsUploadingEnhanced] = React.useState(false)
 
   const handleImageUpload = async (file: File) => {
     if (!file) return
@@ -71,13 +82,18 @@ export default function ImageUploadSection({
         .filter(ing => ing.name.trim() !== '')
         .map(ing => ing.name.trim())
 
-      const enhancedImageUrl = await supabaseService.enhanceRecipeImage(
+      const enhancementResult = await supabaseService.enhanceRecipeImage(
         imageUrl,
         title.trim() || undefined,
         ingredientsList.length > 0 ? ingredientsList : undefined
       )
 
-      setImageUrl(enhancedImageUrl)
+      // Show enhancement modal with both images
+      setEnhancementModal({
+        isOpen: true,
+        originalImageUrl: imageUrl,
+        enhancedImageData: enhancementResult
+      })
     } catch (error) {
       console.error('Enhancement error:', error)
       if (error instanceof Error) {
@@ -88,6 +104,57 @@ export default function ImageUploadSection({
     } finally {
       setIsEnhancing(false)
     }
+  }
+
+  const handleEnhancementConfirm = async () => {
+    setIsUploadingEnhanced(true)
+    try {
+      // Convert base64 back to file for upload
+      const response = await fetch(enhancementModal.enhancedImageData)
+      const blob = await response.blob()
+      
+      const fileName = 'enhanced-recipe-image.jpg'
+      const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' })
+      
+      // Upload the enhanced image
+      const newImageUrl = await uploadImage(file)
+      
+      // Delete the old image if it exists
+      if (enhancementModal.originalImageUrl) {
+        try {
+          await supabaseService.deleteImage(enhancementModal.originalImageUrl)
+        } catch (deleteError) {
+          console.warn('Failed to delete old image:', deleteError)
+        }
+      }
+      
+      // Update the image URL
+      setImageUrl(newImageUrl)
+      
+      // Close the modal
+      setEnhancementModal({
+        isOpen: false,
+        originalImageUrl: '',
+        enhancedImageData: ''
+      })
+    } catch (error) {
+      console.error('Enhancement upload error:', error)
+      if (error instanceof Error) {
+        alert(`Fehler beim Speichern des verbesserten Bildes: ${error.message}`)
+      } else {
+        alert('Fehler beim Speichern des verbesserten Bildes. Bitte versuchen Sie es erneut.')
+      }
+    } finally {
+      setIsUploadingEnhanced(false)
+    }
+  }
+
+  const handleEnhancementCancel = () => {
+    setEnhancementModal({
+      isOpen: false,
+      originalImageUrl: '',
+      enhancedImageData: ''
+    })
   }
 
   return (
@@ -156,6 +223,16 @@ export default function ImageUploadSection({
           </button>
         </div>
       </div>
+
+      {/* Image Enhancement Modal */}
+      <ImageEnhancementModal
+        isOpen={enhancementModal.isOpen}
+        onClose={handleEnhancementCancel}
+        onConfirm={handleEnhancementConfirm}
+        originalImageUrl={enhancementModal.originalImageUrl}
+        enhancedImageData={enhancementModal.enhancedImageData}
+        isUploading={isUploadingEnhanced}
+      />
     </div>
   )
 }
