@@ -1,1 +1,2 @@
 - Analytics UI
+- Collect and display the used input / output tokens per users

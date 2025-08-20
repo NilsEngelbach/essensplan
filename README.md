@@ -13,30 +13,40 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
 ### 📅 Essensplanung
 - **Wochenplan**: Visueller Wochenplan mit Drag & Drop Funktionalität
 - **Rezepte zuweisen**: Einfaches Hinzufügen von Rezepten zu bestimmten Tagen
-- **Plan verwalten**: Rezepte aus dem Plan entfernen oder ändern
-- **Statistiken**: Übersicht über geplante Mahlzeiten und Kochzeiten
+- **Plan verwalten**: Rezepte einfach planen, umplanen oder entfernen
 
-### 🔐 Authentifizierung
-- **Supabase Integration**: Sichere Benutzerauthentifizierung
-- **Benutzerprofile**: Persönliche Rezeptsammlungen und Essenspläne
-- **Sitzungsverwaltung**: Automatische Anmeldung und Abmeldung
+### 🛒 Einkaufsliste
+- **Einkaufsliste**: Wähle die Rezepte aus, für die du alle Zutaten in einer übersichtlichen Liste angezeigt bekommen möchtest
 
-### 🎨 Benutzerfreundlichkeit
-- **Responsive Design**: Optimiert für Desktop, Tablet und Mobile
-- **Moderne UI**: Clean Design mit Tailwind CSS
-- **Intuitive Navigation**: Einfache Navigation zwischen allen Bereichen
-- **Toast-Benachrichtigungen**: Feedback für alle Aktionen
+### 🧙‍♂️ KI Integration
+- **Rezepte via URL importieren**: Die KI durchsucht die angegebene URL und extrahiert das Rezept - keine lästige manuelle Arbeit mehr!
+- **Rezepte via Foto importieren**: Ein Foto aus dem Kochbuch genügt um das Rezept komplett zu importieren.
+![](./docs/ai-import.png)
+- **Rezeptbilder mit KI verbessern**: Ein einfacher Schnappschuss kann mit einem Klick in ein professionelles Bild umgewandelt werden
+![](./docs/enhance-image.jpg)
 
-## Technologie-Stack
+## 🛠️ Technologie-Stack
 
 - **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS
-- **Datenbank**: PostgreSQL mit Prisma ORM
-- **Authentifizierung**: Supabase
-- **Icons**: Lucide React
-- **Notifications**: React Hot Toast
+- **Styling**: Tailwind CSS mit benutzerdefinierten Komponenten
+- **Datenbank**: PostgreSQL mit Prisma ORM (Supabase)
+- **Authentifizierung**: Supabase Auth mit Row Level Security
+- **Storage**: Supabase Storage für Rezeptbilder
+- **UI-Komponenten**: Headless UI, Heroicons, Lucide React
+- **Formulare**: React Hook Form mit Zod-Validierung
+- **Benachrichtigungen**: React Hot Toast
+- **API**: Supabase Edge Functions
+- **KI-Integration**: OpenAI für Rezept-Import
 
-## Installation
+## 🚀 Installation
+
+### Voraussetzungen
+- Node.js 18+ 
+- npm
+- Supabase
+- OpenAI API-Key (für AI-Features)
+
+### Setup-Schritte
 
 1. **Repository klonen**
    ```bash
@@ -56,7 +66,7 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
    DIRECT_URL="your-postgresql-direct-url"
    NEXT_PUBLIC_SUPABASE_URL="your-supabase-url"
    NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
-   SUPABASE_SERVICE_ROLE_KEY="your-supabase-service-role-key"
+   OPENAI_API_KEY="your-openai-api-key"
    ```
 
 4. **Datenbank einrichten**
@@ -71,7 +81,7 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
    npx prisma migrate dev --name init
 
    # Create types for supabase client
-   npx supabase gen types typescript --project-id <peoject-id> --schema public > database.types.ts
+   npx supabase gen types typescript --project-id <project-id> --schema public > lib/database.types.ts
    ```
 
 5. **Entwicklungsserver starten**
@@ -85,94 +95,85 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
    npx supabase functions serve --env-file .env
    ```
 
-## Verwendung
-
-### Erste Schritte
-1. Registrieren Sie sich mit Ihrer E-Mail-Adresse
-2. Erstellen Sie Ihr erstes Rezept über "Neues Rezept"
-3. Planen Sie Ihre Mahlzeiten im Essensplan
-
-### Rezepte verwalten
-- **Erstellen**: Verwenden Sie das Rezeptformular mit allen Details
-- **Bearbeiten**: Klicken Sie auf "Bearbeiten" in der Rezeptdetailansicht
-- **Löschen**: Bestätigen Sie das Löschen im Modal-Dialog
-- **Durchsuchen**: Nutzen Sie die Filteroptionen in der Rezeptübersicht
-
-### Essensplanung
-- **Woche auswählen**: Navigieren Sie zwischen den Wochen
-- **Rezept hinzufügen**: Wählen Sie aus Ihrer Rezeptsammlung
-- **Plan anpassen**: Entfernen oder ändern Sie geplante Mahlzeiten
-- **Übersicht**: Sehen Sie Statistiken und geplante Rezepte
-
-## API-Endpunkte
-
-### Rezepte
-- `GET /api/recipes` - Alle Rezepte eines Benutzers abrufen
-- `POST /api/recipes` - Neues Rezept erstellen
-- `GET /api/recipes/[id]` - Spezifisches Rezept abrufen
-- `PUT /api/recipes/[id]` - Rezept aktualisieren
-- `DELETE /api/recipes/[id]` - Rezept löschen
-
-### Essensplan
-- `GET /api/meal-plans` - Essensplan für einen Zeitraum abrufen
-- `POST /api/meal-plans` - Mahlzeit zum Plan hinzufügen
-- `DELETE /api/meal-plans/[id]` - Mahlzeit vom Plan entfernen
-
-## Datenbankschema
-
-### Recipe
-- `id`: Eindeutige ID
-- `title`: Rezepttitel
-- `description`: Beschreibung
-- `category`: Kategorie (Hauptspeise, Salat, etc.)
-- `tags`: JSON-Array von Tags
-- `cookingTime`: Kochzeit in Minuten
-- `servings`: Anzahl Portionen
-- `difficulty`: Schwierigkeitsgrad
-- `imageUrl`: URL zum Titelbild
-- `userId`: Supabase Benutzer-ID
-
-### Ingredient
-- `id`: Eindeutige ID
-- `name`: Zutatname
-- `amount`: Menge
-- `unit`: Einheit
-- `notes`: Notizen
-- `recipeId`: Referenz zum Rezept
-
-### Instruction
-- `id`: Eindeutige ID
-- `stepNumber`: Schrittnummer
-- `description`: Beschreibung des Schritts
-- `imageUrl`: Optionales Bild für den Schritt
-- `recipeId`: Referenz zum Rezept
-
-### MealPlan
-- `id`: Eindeutige ID
-- `date`: Datum
-- `recipeId`: Referenz zum Rezept (optional)
-- `userId`: Supabase Benutzer-ID
-
 ## Entwicklung
 
-### Skripte
-- `npm run dev` - Entwicklungsserver starten
+### Wichtige NPM Skripte
+- `npm run dev` - Entwicklungsserver starten (http://localhost:3000)
 - `npm run build` - Produktionsbuild erstellen
 - `npm run start` - Produktionsserver starten
-- `npm run lint` - Code-Linting
-- `npm run db:generate` - Prisma Client generieren
-- `npm run db:push` - Datenbankschema pushen
-- `npm run db:studio` - Prisma Studio öffnen
+- `npm run lint` - ESLint Code-Linting durchführen
+
+### Datenbank-Skripte
+- `npm run db:generate` - Prisma Client nach Schema-Änderungen generieren
+- `npm run db:push` - Prisma Schema-Änderungen zur Datenbank pushen
+- `npm run db:studio` - Prisma Studio für Datenbank-Management öffnen
+- `npx prisma db pull` - Datenbankschema-Änderungen pullen
+- `npx prisma migrate dev --name <name>` - Neue Migration erstellen und anwenden
 
 ### Ordnerstruktur
 ```
 essensplan/
-├── app/                    # Next.js App Router
-│   ├── api/               # API-Routen
-│   ├── recipes/           # Rezept-Seiten
-│   ├── meal-plan/         # Essensplan-Seite
-│   └── globals.css        # Globale Styles
+├── app/                   # Next.js App Router Seiten
+│   ├── meal-plan/         # Wochenplanung
+│   ├── recipes/           # Rezeptverwaltung
+│   ├── grocery-list/      # Einkaufsliste
+│   ├── globals.css        # Globale Styles
+│   ├── layout.tsx         # Root Layout
+│   └── page.tsx           # Startseite
 ├── components/            # React-Komponenten
-├── lib/                  # Utility-Funktionen
-└── prisma/               # Datenbankschema
+│   ├── AIImportModal.tsx  # AI Import Modal
+│   ├── AuthProvider.tsx   # Authentifizierung Context
+│   ├── Navigation.tsx     # Hauptnavigation
+│   ├── RecipeForm.tsx     # Rezeptformular
+│   └── ...                # Weitere Komponenten
+├── lib/                   # Utility-Funktionen
+│   ├── database.types.ts  # Supabase TypeScript Typen
+│   └── supabase.ts        # Supabase Client
+├── prisma/
+│   └── schema.prisma      # Prisma Schema
+└── supabase/
+    └── functions/         # Supabase Edge Functions
 ```
+
+## Deployment
+
+### Produktionsumgebung einrichten
+
+1. **Supabase Projekt erstellen**
+   - Dem [Guide](./SUPABASE_SETUP.md) folgen
+
+2. **Optional: OpenAI API Key erstellen (kostenpflichtig)**
+
+2. **Umgebungsvariablen für Produktion**
+   ```env
+   DATABASE_URL="postgresql://[user]:[password]@[host]/[database]"
+   DIRECT_URL="postgresql://[user]:[password]@[host]/[database]"
+   NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+   NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+   OPENAI_API_KEY="your-openai-api-key"
+   ```
+
+3. **Datenbank-Migration**
+   ```bash
+   # Schema zur Produktionsdatenbank migrieren
+   npx prisma migrate deploy
+   
+   # RLS Policies in Supabase einrichten (über Supabase Dashboard)
+   ```
+
+4. **Deployment**
+   - **Vercel** (empfohlen): `npm run build` und automatisches Deployment
+
+### Produktions-Checkliste
+- [ ] Alle Umgebungsvariablen konfiguriert
+- [ ] Datenbank-Migrationen angewendet
+- [ ] Row Level Security (RLS) Policies aktiviert
+- [ ] Supabase Storage Buckets eingerichtet
+- [ ] Supabase Functions deployed (optional)
+- [ ] OpenAI API-Key für AI-Import konfiguriert (optional)
+- [ ] Build erfolgreich durchgeführt (`npm run build`)
+- [ ] Linting ohne Fehler (`npm run lint`)
+
+---
+
+**Coded with ❤️ in THE LÄND.**
