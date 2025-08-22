@@ -32,9 +32,11 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
       )
       toast.success('Rezept erfolgreich aktualisiert')
       router.push(`/recipes/${params.id}`)
+      return recipe // Return existing recipe for consistency
     } catch (error) {
       console.error('Error updating recipe:', error)
       toast.error('Fehler beim Aktualisieren des Rezepts')
+      throw error
     }
   }
 

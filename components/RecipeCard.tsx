@@ -162,7 +162,7 @@ export default function RecipeCard({
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-white text-lg font-semibold">{recipe.title}</span>
+            <span className="text-white text-center text-lg font-semibold">{recipe.title}</span>
           )}
           {/* Rating Overlay */}
           {recipe.rating && (

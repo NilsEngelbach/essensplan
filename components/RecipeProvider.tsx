@@ -9,7 +9,7 @@ interface RecipeContextType {
   recipes: RecipeWithRelations[];
   loading: boolean;
   refreshRecipes: (sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating') => Promise<void>;
-  addRecipe: (recipe: RecipeInsert, ingredients?: IngredientInsert[], instructions?: InstructionInsert[]) => Promise<void>;
+  addRecipe: (recipe: RecipeInsert, ingredients?: IngredientInsert[], instructions?: InstructionInsert[]) => Promise<RecipeWithRelations>;
   editRecipe: (id: string, recipe: RecipeUpdate, ingredients?: IngredientInsert[], instructions?: InstructionInsert[], oldImageUrl?: string) => Promise<void>;
   removeRecipe: (id: string, imageUrl?: string) => Promise<void>;
   uploadImage: (file: File) => Promise<string>;
@@ -50,11 +50,12 @@ export const RecipeProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Add recipe
   const addRecipe = useCallback(async (recipe: RecipeInsert, ingredients?: IngredientInsert[], instructions?: InstructionInsert[]) => {
-    if (!user?.id) return;
+    if (!user?.id) throw new Error('User not authenticated');
     setLoading(true);
     try {
-      await supabaseService.createRecipe(recipe, ingredients, instructions);
+      const createdRecipe = await supabaseService.createRecipe(recipe, ingredients, instructions);
       await fetchAllRecipes();
+      return createdRecipe;
     } catch (error) {
       console.error('Failed to add recipe:', error);
       throw error;

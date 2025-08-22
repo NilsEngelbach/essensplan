@@ -1,14 +1,16 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { X } from 'lucide-react'
+import { X, Calendar } from 'lucide-react'
 import { useRecipes } from './RecipeProvider'
+import { useMealPlans } from './MealPlanProvider'
 import BasicInfoSection from './recipe-form/BasicInfoSection'
 import TagsSection from './recipe-form/TagsSection'
 import StarRating from './recipe-form/StarRating'
 import ImageUploadSection from './recipe-form/ImageUploadSection'
 import IngredientsSection from './recipe-form/IngredientsSection'
 import InstructionsSection from './recipe-form/InstructionsSection'
+import DatePickerModal from './DatePickerModal'
 
 interface Ingredient {
   id: string
@@ -27,7 +29,7 @@ interface Instruction {
 }
 
 interface RecipeFormProps {
-  onSubmit: (recipe: any) => void
+  onSubmit: (recipe: any) => Promise<any>
   onCancel: () => void
   initialData?: any
 }
@@ -49,7 +51,10 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [touchStartY, setTouchStartY] = useState<number | null>(null)
   const [isTouchDragging, setIsTouchDragging] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const [selectedMealPlanDate, setSelectedMealPlanDate] = useState('')
   const { uploadImage, isUploading } = useRecipes()
+  const { addOrUpdateMealPlan, mealPlans } = useMealPlans()
 
 
 
@@ -102,6 +107,57 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
     }
     onSubmit(recipe)
   }
+
+  const handleSaveAndPlan = (e: React.FormEvent) => {
+    e.preventDefault()
+    setShowDatePicker(true)
+  }
+
+  const handleDateSelect = async (dateString: string) => {
+    const recipe = {
+      title,
+      description,
+      category,
+      tags,
+      cookingTime: parseInt(cookingTime) || 0,
+      servings: parseInt(servings) || 0,
+      difficulty,
+      rating: rating ? parseInt(rating) : null,
+      sourceUrl: sourceUrl.trim() || null,
+      imageUrl,
+      ingredients: ingredients.filter(ing => ing.name.trim() !== '').map(ing => ({
+        ...ing,
+        amount: ing.amount === '' ? null : parseFloat(ing.amount) || null
+      })),
+      instructions: instructions.filter(inst => inst.description.trim() !== '')
+    }
+    
+    try {
+      // Save recipe first and get the created recipe with ID
+      const createdRecipe = await onSubmit(recipe)
+      
+      // Add to meal plan using the created recipe ID
+      if (createdRecipe && createdRecipe.id) {
+        await addOrUpdateMealPlan(dateString, createdRecipe.id)
+        import('react-hot-toast').then(({ default: toast }) => {
+          toast.success('Rezept erstellt und zum Essensplan hinzugefügt')
+        })
+      }
+      
+      setShowDatePicker(false)
+    } catch (error) {
+      console.error('Error in save and plan:', error)
+      import('react-hot-toast').then(({ default: toast }) => {
+        toast.error('Fehler beim Speichern und Planen des Rezepts')
+      })
+    }
+  }
+
+  // Get planned dates for calendar indicators
+  const plannedDates = mealPlans.map(mp => {
+    const mealPlanDate = typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date
+    return mealPlanDate
+  })
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -187,7 +243,7 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
           />
 
           {/* Submit Buttons */}
-          <div className="flex justify-end space-x-4 pt-6 border-t">
+          <div className="flex flex-col md:flex-row justify-end md:space-x-4 md:space-y-0 space-y-2 pt-6 border-t">
             <button
               type="button"
               onClick={onCancel}
@@ -195,6 +251,16 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
             >
               Abbrechen
             </button>
+            {!initialData && (
+              <button
+                type="button"
+                onClick={handleSaveAndPlan}
+                className="btn-secondary flex items-center justify-center text-center"
+              >
+                <Calendar className="h-4 w-4 mr-2" />
+                Speichern und Planen
+              </button>
+            )}
             <button
               type="submit"
               className="btn-primary"
@@ -203,6 +269,15 @@ export default function RecipeForm({ onSubmit, onCancel, initialData }: RecipeFo
             </button>
           </div>
         </form>
+
+        {/* Date Picker Modal */}
+        <DatePickerModal
+          isOpen={showDatePicker}
+          onClose={() => setShowDatePicker(false)}
+          onDateSelect={handleDateSelect}
+          title="Datum für Essensplan auswählen"
+          plannedDates={plannedDates}
+        />
       </div>
     </div>
   )

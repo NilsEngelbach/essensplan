@@ -513,6 +513,10 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
         onClose={() => setShowDatePicker(false)}
         onDateSelect={addToMealPlan}
         title="Zum Essensplan hinzufügen"
+        plannedDates={mealPlans.map(mp => {
+          const mealPlanDate = typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date
+          return mealPlanDate
+        })}
       />
     </div>
   )

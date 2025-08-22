@@ -15,7 +15,7 @@ export default function NewRecipePage() {
   const handleSubmit = async (recipe: any) => {
     try {
       const { ingredients, instructions, ...recipeData } = recipe
-      await addRecipe(
+      const createdRecipe = await addRecipe(
         {
           ...recipeData,
           userId: user!.id
@@ -25,9 +25,11 @@ export default function NewRecipePage() {
       )
       toast.success('Rezept erfolgreich erstellt')
       router.push('/recipes')
+      return createdRecipe
     } catch (error) {
       console.error('Error creating recipe:', error)
       toast.error('Fehler beim Erstellen des Rezepts')
+      throw error
     }
   }
 

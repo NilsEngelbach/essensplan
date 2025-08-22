@@ -255,7 +255,7 @@ export default function HomePage() {
 
             {/* Weekly Meal Plan Preview */}
             <div className="card">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col gap-2 md:flex-row items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold text-gray-900">Nächste 7 Tage</h3>
                 <button
                   onClick={() => router.push('/meal-plan')}
@@ -270,19 +270,21 @@ export default function HomePage() {
                   const isToday = date === new Date().toISOString().split('T')[0]
                   
                   return (
-                    <div key={date} className="text-center">
-                      <div className={`text-sm font-medium mb-2 ${
-                        isToday ? 'text-primary-600' : 'text-gray-500'
-                      }`}>
-                        {getShortDayName(date)}
-                      </div>
-                      <div className={`text-lg font-bold mb-2 ${
-                        isToday ? 'text-primary-800' : 'text-gray-900'
-                      }`}>
-                        {getDayNumber(date)}
+                    <div key={date} className="text-center flex flex-col">
+                      <div className="flex flex-row md:flex-col items-center justify-center gap-2 md:gap-0">
+                        <div className={`text-sm font-medium mb-2 ${
+                          isToday ? 'text-primary-600' : 'text-gray-500'
+                        }`}>
+                          {getShortDayName(date)}
+                        </div>
+                        <div className={`text-lg font-bold mb-2 ${
+                          isToday ? 'text-primary-800' : 'text-gray-900'
+                        }`}>
+                          {getDayNumber(date)}
+                        </div>
                       </div>
                       <div 
-                        className={`rounded-lg p-3 min-h-[100px] flex items-center justify-center cursor-pointer transition-all duration-200 ${
+                        className={`rounded-lg p-3 min-h-[100px] flex grow items-center justify-center cursor-pointer transition-all duration-200 ${
                           mealPlan?.recipe 
                             ? isToday 
                               ? 'bg-primary-50 border-2 border-primary-200 hover:shadow-md hover:scale-105' 

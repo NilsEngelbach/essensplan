@@ -249,7 +249,7 @@ export default function MealPlanPage() {
         </div>
 
         {/* Meal Plan Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
           {weekDates.map((date) => {
             const mealPlan = getMealPlanForDate(date)
             const isToday = date === new Date().toISOString().split('T')[0]
@@ -257,7 +257,7 @@ export default function MealPlanPage() {
             return (
               <div 
                 key={date} 
-                className={`card min-h-[300px] ${
+                className={`card min-h-[300px] flex flex-col ${
                   isToday ? 'ring-2 ring-primary-200' : ''
                 }`}
               >
@@ -277,9 +277,9 @@ export default function MealPlanPage() {
                 </div>
                 
                 {/* Meal Plan Content */}
-                <div>
+                <div className="flex flex-col flex-1">
                   {mealPlan?.recipe ? (
-                    <div className="space-y-3">
+                    <div className="flex flex-col h-full">
                       {/* Recipe Image */}
                       <div 
                         className="relative w-full h-32 rounded-lg overflow-hidden bg-gradient-to-br from-orange-400 to-red-500 cursor-pointer hover:opacity-90 transition-opacity"
@@ -300,54 +300,56 @@ export default function MealPlanPage() {
                         )}
                       </div>
 
-                      {/* Recipe Info */}
-                      <div>
-                        <h3 
-                          className="font-semibold text-gray-900 text-sm line-clamp-2 cursor-pointer hover:text-primary-600 transition-colors"
-                          onClick={() => router.push(`/recipes/${mealPlan.recipe.id}`)}
-                        >
-                          {mealPlan.recipe.title}
-                        </h3>
-                        
-                        {/* Recipe Stats */}
-                        <div className="flex items-center text-xs text-gray-600 mt-2 space-x-2">
-                          {mealPlan.recipe.cookingTime && Number(mealPlan.recipe.cookingTime) > 0 ? (
-                            <div className="flex items-center">
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>{mealPlan.recipe.cookingTime}</span>
-                            </div>
-                          ) : (<></>)}
-                          {mealPlan.recipe.servings && Number(mealPlan.recipe.servings) > 0 ? (
-                            <div className="flex items-center">
-                              <Users className="h-3 w-3 mr-1" />
-                              <span>{mealPlan.recipe.servings}</span>
-                            </div>
-                          ): (<></>)}
+                      {/* Recipe Info - This will grow to fill available space */}
+                      <div className="flex-1 flex flex-col justify-between mt-3">
+                        <div>
+                          <h3 
+                            className="font-semibold text-gray-900 text-sm line-clamp-2 cursor-pointer hover:text-primary-600 transition-colors"
+                            onClick={() => router.push(`/recipes/${mealPlan.recipe.id}`)}
+                          >
+                            {mealPlan.recipe.title}
+                          </h3>
+                          
+                          {/* Recipe Stats */}
+                          <div className="flex items-center text-xs text-gray-600 mt-2 space-x-2">
+                            {mealPlan.recipe.cookingTime && Number(mealPlan.recipe.cookingTime) > 0 ? (
+                              <div className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                <span>{mealPlan.recipe.cookingTime}</span>
+                              </div>
+                            ) : (<></>)}
+                            {mealPlan.recipe.servings && Number(mealPlan.recipe.servings) > 0 ? (
+                              <div className="flex items-center">
+                                <Users className="h-3 w-3 mr-1" />
+                                <span>{mealPlan.recipe.servings}</span>
+                              </div>
+                            ): (<></>)}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex flex-col space-y-1">
-                        <button
-                          onClick={() => handleRescheduleClick(mealPlan.id)}
-                          className="w-full text-xs text-primary-600 hover:text-primary-800 flex items-center justify-center py-1"
-                        >
-                          <Calendar className="h-3 w-3 mr-1" />
-                          Umplanen
-                        </button>
-                        
-                        <button
-                          onClick={() => handleRemoveFromMealPlan(mealPlan.id)}
-                          className="w-full text-xs text-red-600 hover:text-red-800 flex items-center justify-center"
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Entfernen
-                        </button>
+                        {/* Action Buttons - Always at bottom */}
+                        <div className="flex md:flex-col gap-2 justify-end mt-3">
+                          <button
+                            onClick={() => handleRescheduleClick(mealPlan.id)}
+                            className="btn-secondary flex items-center justify-center gap-1"
+                          >
+                            <Calendar className="h-3 w-3" />
+                            Umplanen
+                          </button>
+                          
+                          <button
+                            onClick={() => handleRemoveFromMealPlan(mealPlan.id)}
+                            className="btn-danger flex items-center justify-center gap-1"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Entfernen
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <div 
-                      className="text-center py-8 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors"
+                      className="flex-1 flex flex-col items-center justify-center text-center py-8 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors"
                       onClick={() => {
                         setSelectedDate(date)
                         setShowAddModal(true)

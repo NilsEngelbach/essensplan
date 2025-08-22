@@ -9,7 +9,10 @@ import {
   Wand2,
   Star,
   X,
-  RefreshCw
+  RefreshCw,
+  Filter,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import { useAuth } from '../../components/AuthProvider'
 import { useRecipes } from '../../components/RecipeProvider'
@@ -37,6 +40,7 @@ export default function RecipesPage() {
   const [showDatePickerModal, setShowDatePickerModal] = useState(false)
   const [selectedRecipeForPlanning, setSelectedRecipeForPlanning] = useState<string | null>(null)
   const [isStateInitialized, setIsStateInitialized] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
 
   const categories = ['Hauptspeise', 'Salat', 'Dessert', 'Suppe', 'Beilage', 'Frühstück', 'Snack']
   const commonTags = ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß']
@@ -264,137 +268,156 @@ export default function RecipesPage() {
         {/* Search and Filters */}
         <div className="card mb-8">
           <div className="space-y-6">
-            {/* Search */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Suche
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="input-field pl-10"
-                  placeholder="Rezepte durchsuchen..."
-                />
-              </div>
-            </div>
-
-            {/* Filter Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Category Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Kategorie
-                </label>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="">Alle Kategorien</option>
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Rating Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mindestbewertung
-                </label>
-                <div className="flex items-center space-x-2">
-                  {[0, 1, 2, 3, 4, 5].map((rating) => (
-                    <button
-                      key={rating}
-                      type="button"
-                      onClick={() => setMinRating(rating)}
-                      className={`p-1 transition-colors ${
-                        minRating >= rating && rating > 0
-                          ? 'text-yellow-400'
-                          : rating === 0 && minRating === 0
-                          ? 'text-primary-600'
-                          : 'text-gray-300 hover:text-yellow-300'
-                      }`}
-                      title={rating === 0 ? 'Alle anzeigen' : `Mindestens ${rating} Sterne`}
-                    >
-                      {rating === 0 ? (
-                        <span className="text-sm font-medium px-2">Alle</span>
-                      ) : (
-                        <Star className={`h-5 w-5 ${
-                          minRating >= rating ? 'fill-current' : ''
-                        }`} />
-                      )}
-                    </button>
-                  ))}
+            {/* Search and Filter Toggle Row */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              {/* Search */}
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input-field pl-10"
+                    placeholder="Rezepte durchsuchen..."
+                  />
                 </div>
               </div>
 
-              {/* Sort Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sortieren nach
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    const newSortBy = e.target.value as 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating'
-                    setSortBy(newSortBy)
-                    refreshRecipes(newSortBy)
-                  }}
-                  className="input-field"
-                >
-                  <option value="created">Erstellungsdatum</option>
-                  <option value="recent">Zuletzt erstellt</option>
-                  <option value="popular">Beliebtheit</option>
-                  <option value="lastCooked">Zuletzt gekocht</option>
-                  <option value="rating">Bewertung</option>
-                </select>
-              </div>
+              {/* Filter Toggle Button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="btn-secondary flex items-center justify-center whitespace-nowrap"
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filter
+                {showFilters ? (
+                  <ChevronUp className="h-4 w-4 ml-1" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 ml-1" />
+                )}
+              </button>
             </div>
 
-            {/* Tags Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tags
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {commonTags.map(tag => (
+            {/* Collapsible Filters */}
+            {showFilters && (
+              <div className="space-y-6 pt-4 border-t border-gray-200">
+                {/* Filter Row */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Category Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Kategorie
+                    </label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Alle Kategorien</option>
+                      {categories.map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Rating Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Mindestbewertung
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      {[0, 1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          type="button"
+                          onClick={() => setMinRating(rating)}
+                          className={`p-1 transition-colors ${
+                            minRating >= rating && rating > 0
+                              ? 'text-yellow-400'
+                              : rating === 0 && minRating === 0
+                              ? 'text-primary-600'
+                              : 'text-gray-300 hover:text-yellow-300'
+                          }`}
+                          title={rating === 0 ? 'Alle anzeigen' : `Mindestens ${rating} Sterne`}
+                        >
+                          {rating === 0 ? (
+                            <span className="text-sm font-medium px-2">Alle</span>
+                          ) : (
+                            <Star className={`h-5 w-5 ${
+                              minRating >= rating ? 'fill-current' : ''
+                            }`} />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sort Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sortieren nach
+                    </label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => {
+                        const newSortBy = e.target.value as 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating'
+                        setSortBy(newSortBy)
+                        refreshRecipes(newSortBy)
+                      }}
+                      className="input-field"
+                    >
+                      <option value="created">Erstellungsdatum</option>
+                      <option value="recent">Zuletzt erstellt</option>
+                      <option value="popular">Beliebtheit</option>
+                      <option value="lastCooked">Zuletzt gekocht</option>
+                      <option value="rating">Bewertung</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Tags Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {commonTags.map(tag => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                          selectedTags.includes(tag)
+                            ? 'bg-primary-100 text-primary-800'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Apply Filters Button */}
+                <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
                   <button
-                    key={tag}
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                      selectedTags.includes(tag)
-                        ? 'bg-primary-100 text-primary-800'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                    onClick={resetFilters}
+                    className="btn-secondary flex items-center justify-center"
                   >
-                    {tag}
+                    <X className="h-4 w-4 mr-2" />
+                    Filter zurücksetzen
                   </button>
-                ))}
+                  <button
+                    onClick={() => refreshRecipes(sortBy)}
+                    className="btn-primary flex items-center justify-center"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Rezepte neu laden
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Apply Filters Button */}
-            <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
-              <button
-                onClick={resetFilters}
-                className="btn-secondary flex items-center justify-center"
-              >
-                <X className="h-4 w-4 mr-2" />
-                Filter zurücksetzen
-              </button>
-              <button
-                onClick={() => refreshRecipes(sortBy)}
-                className="btn-primary flex items-center justify-center"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Rezepte neu laden
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
