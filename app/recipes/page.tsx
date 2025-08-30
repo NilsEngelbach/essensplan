@@ -22,6 +22,7 @@ import AIImportModal from '../../components/AIImportModal'
 import DatePickerModal from '../../components/DatePickerModal'
 import RecipeCard from '../../components/RecipeCard'
 import PageStateHandler from '../../components/PageStateHandler'
+import DeleteConfirmModal from '../../components/DeleteConfirmModal'
 import toast from 'react-hot-toast'
 import type { RecipeWithRelations } from '../../lib/supabase'
 
@@ -41,6 +42,8 @@ export default function RecipesPage() {
   const [selectedRecipeForPlanning, setSelectedRecipeForPlanning] = useState<string | null>(null)
   const [isStateInitialized, setIsStateInitialized] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [recipeToDelete, setRecipeToDelete] = useState<{id: string, title: string, imageUrl?: string} | null>(null)
 
   const categories = ['Hauptspeise', 'Salat', 'Dessert', 'Suppe', 'Beilage', 'Frühstück', 'Snack']
   const commonTags = ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß']
@@ -153,16 +156,27 @@ export default function RecipesPage() {
   }
 
   const handleDeleteRecipe = async (recipeId: string, recipeTitle: string, imageUrl?: string) => {
-    if (!confirm(`Sind Sie sicher, dass Sie "${recipeTitle}" löschen möchten?`)) {
-      return
-    }
+    setRecipeToDelete({ id: recipeId, title: recipeTitle, imageUrl })
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDeleteRecipe = async () => {
+    if (!recipeToDelete) return
+    
     try {
-      await removeRecipe(recipeId, imageUrl)
+      await removeRecipe(recipeToDelete.id, recipeToDelete.imageUrl)
       toast.success('Rezept erfolgreich gelöscht')
+      setShowDeleteConfirm(false)
+      setRecipeToDelete(null)
     } catch (error) {
       console.error('Error deleting recipe:', error)
       toast.error('Fehler beim Löschen des Rezepts')
     }
+  }
+
+  const cancelDeleteRecipe = () => {
+    setShowDeleteConfirm(false)
+    setRecipeToDelete(null)
   }
 
   const handlePlanRecipe = (recipeId: string) => {
@@ -203,8 +217,7 @@ export default function RecipesPage() {
     setSelectedTags([])
     setMinRating(0)
     setSortBy('created')
-    refreshRecipes('created')
-  }, [refreshRecipes])
+  }, [])
 
   const getTags = useCallback((recipe: RecipeWithRelations) => {
     if (!recipe.tags) return []
@@ -216,7 +229,7 @@ export default function RecipesPage() {
   }, [])
 
   const filteredRecipes = useMemo(() => {
-    return recipes.filter(recipe => {
+    const filtered = recipes.filter(recipe => {
       const matchesCategory = !selectedCategory || recipe.category === selectedCategory
       const matchesSearch = recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            (recipe.description && recipe.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -226,7 +239,31 @@ export default function RecipesPage() {
       const matchesRating = minRating === 0 || (recipe.rating && recipe.rating >= minRating)
       return matchesCategory && matchesSearch && matchesTags && matchesRating
     })
-  }, [recipes, searchTerm, selectedCategory, selectedTags, minRating, getTags])
+
+    // Apply client-side sorting
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'popular':
+          return (b.cookingStats?.timesCooked || 0) - (a.cookingStats?.timesCooked || 0)
+        case 'lastCooked':
+          const aLastCooked = a.cookingStats?.lastCooked ? new Date(a.cookingStats.lastCooked).getTime() : 0
+          const bLastCooked = b.cookingStats?.lastCooked ? new Date(b.cookingStats.lastCooked).getTime() : 0
+          return bLastCooked - aLastCooked
+        case 'rating':
+          const aRating = a.rating || 0
+          const bRating = b.rating || 0
+          if (bRating !== aRating) {
+            return bRating - aRating
+          }
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        case 'recent':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        case 'created':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      }
+    })
+  }, [recipes, searchTerm, selectedCategory, selectedTags, minRating, sortBy, getTags])
 
   return (
     <PageStateHandler
@@ -363,7 +400,6 @@ export default function RecipesPage() {
                       onChange={(e) => {
                         const newSortBy = e.target.value as 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating'
                         setSortBy(newSortBy)
-                        refreshRecipes(newSortBy)
                       }}
                       className="input-field"
                     >
@@ -400,20 +436,13 @@ export default function RecipesPage() {
                 </div>
 
                 {/* Apply Filters Button */}
-                <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                <div className="flex justify-end">
                   <button
                     onClick={resetFilters}
                     className="btn-secondary flex items-center justify-center"
                   >
                     <X className="h-4 w-4 mr-2" />
                     Filter zurücksetzen
-                  </button>
-                  <button
-                    onClick={() => refreshRecipes(sortBy)}
-                    className="btn-primary flex items-center justify-center"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Rezepte neu laden
                   </button>
                 </div>
               </div>
@@ -464,7 +493,6 @@ export default function RecipesPage() {
                   onDeleteRecipe={handleDeleteRecipe}
                   formatLastCooked={formatLastCooked}
                   returnUrl={returnUrl}
-                  mealPlans={mealPlans.map(mp => ({ date: typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date, recipeId: mp.recipeId || '' })).filter(mp => mp.recipeId)}
                 />
               )
             })}
@@ -486,6 +514,15 @@ export default function RecipesPage() {
         onDateSelect={handleDateSelect}
         title="Rezept planen"
         plannedDates={mealPlans.map(mp => typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date)}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={cancelDeleteRecipe}
+        onConfirm={confirmDeleteRecipe}
+        title="Rezept löschen"
+        message={recipeToDelete ? `Sind Sie sicher, dass Sie "${recipeToDelete.title}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.` : ''}
       />
     </div>
     </PageStateHandler>

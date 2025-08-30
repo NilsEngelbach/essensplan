@@ -1,9 +1,9 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthProvider';
 import { supabaseService } from '../lib/supabase';
-import type { MealPlan, MealPlanWithRecipe } from '../lib/supabase';
+import type { MealPlanWithRecipe } from '../lib/supabase';
 
 interface MealPlanContextType {
   mealPlans: MealPlanWithRecipe[];
@@ -21,6 +21,8 @@ export const MealPlanProvider = ({ children }: { children: React.ReactNode }) =>
   const { user } = useAuth();
   const [mealPlans, setMealPlans] = useState<MealPlanWithRecipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastFetchedUserId, setLastFetchedUserId] = useState<string | null>(null);
+  const fetchMealPlansRef = useRef<(startDate?: string, endDate?: string) => Promise<void>>();
 
   // Get current week's start and end dates (7 days ahead from today)
   const getCurrentWeekRange = () => {
@@ -54,49 +56,66 @@ export const MealPlanProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }, [user?.id]);
 
+  fetchMealPlansRef.current = fetchMealPlans;
+
   // Load meal plans on user change
   useEffect(() => {
-    if (user) {
-      fetchMealPlans();
-    } else {
+    if (user && user.id !== lastFetchedUserId) {
+      setLastFetchedUserId(user.id);
+      fetchMealPlansRef.current?.();
+    } else if (!user) {
       setMealPlans([]);
+      setLastFetchedUserId(null);
       setLoading(false);
     }
-  }, [user, fetchMealPlans]);
+  }, [user, lastFetchedUserId]);
 
   // Add or update meal plan
   const addOrUpdateMealPlan = useCallback(async (date: string, recipeId?: string) => {
     if (!user?.id) return;
     
-    setLoading(true);
     try {
-      await supabaseService.createOrUpdateMealPlan({
+      const updatedMealPlan = await supabaseService.createOrUpdateMealPlan({
         date,
         recipeId,
         userId: user.id
       });
-      await fetchMealPlans();
+      
+      // Update local state directly instead of refetching
+      setMealPlans(prevMealPlans => {
+        const existingIndex = prevMealPlans.findIndex(mp => 
+          (typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date) === date.split('T')[0]
+        );
+        
+        if (existingIndex >= 0) {
+          // Update existing meal plan
+          const updated = [...prevMealPlans];
+          updated[existingIndex] = updatedMealPlan;
+          return updated;
+        } else {
+          // Add new meal plan
+          return [...prevMealPlans, updatedMealPlan].sort((a, b) => 
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+          );
+        }
+      });
     } catch (error) {
       console.error('Failed to add/update meal plan:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
-  }, [user?.id, fetchMealPlans]);
+  }, [user?.id]);
 
   // Remove meal plan
   const removeMealPlan = useCallback(async (id: string) => {
-    setLoading(true);
     try {
       await supabaseService.deleteMealPlan(id);
-      await fetchMealPlans();
+      // Update local state directly instead of refetching
+      setMealPlans(prevMealPlans => prevMealPlans.filter(mp => mp.id !== id));
     } catch (error) {
       console.error('Failed to remove meal plan:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
-  }, [fetchMealPlans]);
+  }, []);
 
   // Reschedule meal plan
   const rescheduleMealPlan = useCallback(async (mealPlanId: string, newDate: string) => {
@@ -105,24 +124,28 @@ export const MealPlanProvider = ({ children }: { children: React.ReactNode }) =>
     const mealPlan = mealPlans.find(mp => mp.id === mealPlanId);
     if (!mealPlan) return;
     
-    setLoading(true);
     try {
       // Remove the old meal plan
       await supabaseService.deleteMealPlan(mealPlanId);
       // Create a new meal plan with the same recipe on the new date
-      await supabaseService.createOrUpdateMealPlan({
+      const newMealPlan = await supabaseService.createOrUpdateMealPlan({
         date: newDate,
-        recipeId: mealPlan.recipe.id,
+        recipeId: mealPlan.recipe?.id,
         userId: user.id
       });
-      await fetchMealPlans();
+      
+      // Update local state directly instead of refetching
+      setMealPlans(prevMealPlans => {
+        const filtered = prevMealPlans.filter(mp => mp.id !== mealPlanId);
+        return [...filtered, newMealPlan].sort((a, b) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+      });
     } catch (error) {
       console.error('Failed to reschedule meal plan:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
-  }, [user?.id, mealPlans, fetchMealPlans]);
+  }, [user?.id, mealPlans]);
 
   // Get meal plan for specific date
   const getMealPlanForDate = useCallback((date: string) => {

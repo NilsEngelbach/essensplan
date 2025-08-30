@@ -56,7 +56,7 @@ model MealPlan {
   date      DateTime
   recipeId  String?
   userId    String   // Supabase user ID
-  recipe    Recipe?  @relation(fields: [recipeId], references: [id])
+  recipe    Recipe?  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

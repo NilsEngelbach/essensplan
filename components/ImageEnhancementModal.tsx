@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 import { X, Check, ArrowLeft } from 'lucide-react'
 
 interface ImageEnhancementModalProps {
@@ -62,9 +63,11 @@ export default function ImageEnhancementModal({
             <div className="space-y-3">
               <h3 className="text-lg font-medium text-gray-900 text-center">Original</h3>
               <div className="relative bg-gray-100 rounded-lg overflow-hidden">
-                <img
+                <Image
                   src={originalImageUrl}
                   alt="Original Bild"
+                  width={600}
+                  height={256}
                   className="w-full h-64 object-cover"
                 />
                 <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-75 text-white px-2 py-1 rounded text-xs">
@@ -77,9 +80,11 @@ export default function ImageEnhancementModal({
             <div className="space-y-3">
               <h3 className="text-lg font-medium text-gray-900 text-center">KI-Verbessert</h3>
               <div className="relative bg-gray-100 rounded-lg overflow-hidden">
-                <img
+                <Image
                   src={enhancedImageData}
                   alt="KI-verbessertes Bild"
+                  width={600}
+                  height={256}
                   className="w-full h-64 object-cover"
                 />
                 <div className="absolute top-2 left-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-1 rounded text-xs">

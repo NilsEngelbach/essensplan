@@ -1,15 +1,13 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { 
   Calendar, 
-  Plus, 
   Trash2, 
   Clock, 
   Users, 
-  Star,
   ChefHat,
   ChevronLeft,
   ChevronRight,
@@ -51,11 +49,14 @@ export default function MealPlanPage() {
 
   // Refresh meal plans when week dates change
   const { refreshMealPlans } = useMealPlans()
+  const refreshMealPlansRef = useRef(refreshMealPlans)
+  refreshMealPlansRef.current = refreshMealPlans
+  
   useEffect(() => {
     if (user && weekDates.length > 0) {
-      refreshMealPlans(weekDates[0], weekDates[6])
+      refreshMealPlansRef.current(weekDates[0], weekDates[6])
     }
-  }, [user, weekDates, refreshMealPlans])
+  }, [user, weekDates])
 
   // Get planned dates for calendar indicators
   const plannedDates = useMemo(() => {

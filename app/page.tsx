@@ -232,7 +232,6 @@ export default function HomePage() {
                       onPlanRecipe={handlePlanRecipe}
                       formatLastCooked={formatLastCooked}
                       onClick={(recipeId) => router.push(`/recipes/${recipeId}`)}
-                      mealPlans={mealPlans.map(mp => ({ date: typeof mp.date === 'string' ? mp.date.split('T')[0] : mp.date, recipeId: mp.recipeId || '' })).filter(mp => mp.recipeId)}
                     />
                   ))}
                 </div>

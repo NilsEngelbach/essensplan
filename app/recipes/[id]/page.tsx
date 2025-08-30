@@ -19,6 +19,7 @@ import { useAuth } from '../../../components/AuthProvider'
 import Navigation from '../../../components/Navigation'
 import DatePickerModal from '../../../components/DatePickerModal'
 import PageStateHandler from '../../../components/PageStateHandler'
+import DeleteConfirmModal from '../../../components/DeleteConfirmModal'
 import toast from 'react-hot-toast'
 import { useRecipes } from '../../../components/RecipeProvider'
 import { useMealPlans } from '../../../components/MealPlanProvider'
@@ -37,8 +38,7 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
   // Redirect if recipe not found and not loading
   useEffect(() => {
     if (!authLoading && user && !recipe && recipes.length > 0) {
-      toast.error('Rezept nicht gefunden')
-      router.push('/recipes')
+      router.replace('/recipes')
     }
   }, [authLoading, user, recipe, recipes.length, router])
 
@@ -50,7 +50,7 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
     try {
       await removeRecipe(params.id, recipe?.imageUrl)
       toast.success('Rezept erfolgreich gelöscht')
-      router.push('/recipes')
+      router.replace('/recipes')
     } catch (error) {
       console.error('Error deleting recipe:', error)
       toast.error('Fehler beim Löschen des Rezepts')
@@ -131,7 +131,7 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
             Das angeforderte Rezept existiert nicht oder Sie haben keine Berechtigung.
           </p>
           <button
-            onClick={() => router.push('/recipes')}
+            onClick={() => router.replace('/recipes')}
             className="btn-primary"
           >
             Zurück zu Rezepten
@@ -156,9 +156,9 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                 onClick={() => {
                   const returnUrl = searchParams.get('returnUrl')
                   if (returnUrl) {
-                    router.push(decodeURIComponent(returnUrl))
+                    router.replace(decodeURIComponent(returnUrl))
                   } else {
-                    router.push('/recipes')
+                    router.replace('/recipes')
                   }
                 }}
                 className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
@@ -414,7 +414,7 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                         )}
                       </div>
                       <div className="text-sm text-gray-600">
-                        {ingredient.amount} {ingredient.unit}
+                        {ingredient.amount && ingredient.amount > 0 ? `${ingredient.amount} ${ingredient.unit || ''}`.trim() : ingredient.unit || ''}
                       </div>
                     </div>
                   ))}
@@ -440,7 +440,7 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
                             )}
                           </div>
                           <div className="text-sm text-gray-600">
-                            {ingredient.amount} {ingredient.unit}
+                            {ingredient.amount && ingredient.amount > 0 ? `${ingredient.amount} ${ingredient.unit || ''}`.trim() : ingredient.unit || ''}
                           </div>
                         </div>
                       ))}
@@ -482,30 +482,13 @@ export default function RecipeDetailPage({ params }: { params: { id: string } })
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Rezept löschen</h3>
-            <p className="text-gray-600 mb-6">
-              Sind Sie sicher, dass Sie &ldquo;{recipe.title}&rdquo; löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="btn-secondary"
-              >
-                Abbrechen
-              </button>
-              <button
-                onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-              >
-                Löschen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Rezept löschen"
+        message={`Sind Sie sicher, dass Sie "${recipe.title}" löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.`}
+      />
 
       {/* Date Picker Modal */}
       <DatePickerModal

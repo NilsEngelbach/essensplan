@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Image from 'next/image'
 
 interface ImportPreviewProps {
   preview: any
@@ -32,9 +33,11 @@ export default function ImportPreview({ preview, onBack, onConfirm }: ImportPrev
       <div className="card">
         {(preview.previewImageData) && (
           <div className="mb-6">
-            <img
+            <Image
               src={preview.previewImageData}
               alt={preview.title}
+              width={600}
+              height={256}
               className="w-full h-64 object-cover rounded-lg"
             />
           </div>
@@ -62,7 +65,7 @@ export default function ImportPreview({ preview, onBack, onConfirm }: ImportPrev
           <ul className="space-y-1">
             {preview.ingredients.map((ingredient: any, index: number) => (
               <li key={index} className="text-sm text-gray-600">
-                {ingredient.amount} {ingredient.unit} {ingredient.name}
+                {ingredient.amount && ingredient.amount > 0 ? `${ingredient.amount} ${ingredient.unit || ''}`.trim() + ' ' : (ingredient.unit || '') + ' '}{ingredient.name}
                 {ingredient.notes && ` (${ingredient.notes})`}
               </li>
             ))}

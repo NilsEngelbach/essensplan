@@ -24,7 +24,7 @@ export default function NewRecipePage() {
         instructions
       )
       toast.success('Rezept erfolgreich erstellt')
-      router.push('/recipes')
+      router.replace('/recipes')
       return createdRecipe
     } catch (error) {
       console.error('Error creating recipe:', error)
@@ -34,7 +34,7 @@ export default function NewRecipePage() {
   }
 
   const handleCancel = () => {
-    router.push('/recipes')
+    router.replace('/recipes')
   }
 
   return (

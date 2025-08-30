@@ -30,6 +30,7 @@ export type MealPlanWithRecipe = MealPlan & {
 export type RecipeWithRelations = Recipe & {
   ingredients: Ingredient[]
   instructions: Instruction[]
+  mealPlans?: MealPlan[]
   cookingStats?: {
     timesCooked: number
     lastCooked: string | null
@@ -166,7 +167,8 @@ export class SupabaseService {
       .select(`
         *,
         ingredients:Ingredient(*),
-        instructions:Instruction(*)
+        instructions:Instruction(*),
+        mealPlans:MealPlan(*)
       `)
       .eq('userId', userId)
       .order('createdAt', { ascending: false })
@@ -185,17 +187,24 @@ export class SupabaseService {
       throw new Error(`Failed to fetch recipes: ${error.message}`)
     }
 
-    // Get cooking statistics for each recipe
-    const recipesWithStats = await Promise.all(
-      (data || []).map(async (recipe) => {
-        const stats = await this.getRecipeCookingStats(recipe.id, userId)
-        return {
-          ...recipe,
-          instructions: recipe.instructions?.sort((a, b) => a.stepNumber - b.stepNumber),
-          cookingStats: stats
-        }
-      })
-    )
+    // Calculate cooking statistics from meal plans data
+    const recipesWithStats = (data || []).map((recipe) => {
+      const today = new Date().toISOString().split('T')[0]
+      const pastMealPlans = recipe.mealPlans?.filter(mp => 
+        mp.date && new Date(mp.date).toISOString().split('T')[0] <= today
+      ) || []
+      
+      const timesCooked = pastMealPlans.length
+      const lastCooked = pastMealPlans.length > 0 
+        ? pastMealPlans.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].date
+        : null
+
+      return {
+        ...recipe,
+        instructions: recipe.instructions?.sort((a, b) => a.stepNumber - b.stepNumber),
+        cookingStats: { timesCooked, lastCooked }
+      }
+    })
 
     // Sort recipes based on sortBy option
     if (options?.sortBy) {
@@ -236,7 +245,8 @@ export class SupabaseService {
       .select(`
         *,
         ingredients:Ingredient(*),
-        instructions:Instruction(*)
+        instructions:Instruction(*),
+        mealPlans:MealPlan(*)
       `)
       .eq('id', id)
       .single()
@@ -245,10 +255,22 @@ export class SupabaseService {
       throw new Error(`Failed to fetch recipe: ${error.message}`)
     }
 
+    // Calculate cooking stats from meal plans
+    const today = new Date().toISOString().split('T')[0]
+    const pastMealPlans = data.mealPlans?.filter(mp => 
+      mp.date && new Date(mp.date).toISOString().split('T')[0] <= today
+    ) || []
+    
+    const timesCooked = pastMealPlans.length
+    const lastCooked = pastMealPlans.length > 0 
+      ? pastMealPlans.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].date
+      : null
+
     // Sort instructions by stepNumber
     return {
       ...data,
-      instructions: data.instructions?.sort((a, b) => a.stepNumber - b.stepNumber)
+      instructions: data.instructions?.sort((a, b) => a.stepNumber - b.stepNumber),
+      cookingStats: { timesCooked, lastCooked }
     }
   }
 
@@ -385,6 +407,13 @@ export class SupabaseService {
    * Delete a recipe and all its related data
    */
   public async deleteRecipe(id: string): Promise<void> {
+    // First delete any meal plans that reference this recipe
+    await this.client
+      .from('MealPlan')
+      .delete()
+      .eq('recipeId', id)
+
+    // Then delete the recipe (ingredients and instructions will cascade)
     const { error } = await this.client
       .from('Recipe')
       .delete()
@@ -395,32 +424,6 @@ export class SupabaseService {
     }
   }
 
-  /**
-   * Get cooking statistics for a recipe (how many times cooked, last cooked date)
-   */
-  public async getRecipeCookingStats(recipeId: string, userId: string): Promise<{
-    timesCooked: number
-    lastCooked: string | null
-  }> {
-    const { data, error } = await this.client
-      .from('MealPlan')
-      .select('date')
-      .eq('recipeId', recipeId)
-      .eq('userId', userId)
-      .not('date', 'is', null)
-      .lte('date', new Date().toISOString().split('T')[0]) // Only past dates
-      .order('date', { ascending: false })
-
-    if (error) {
-      console.warn(`Failed to fetch cooking stats for recipe ${recipeId}:`, error.message)
-      return { timesCooked: 0, lastCooked: null }
-    }
-
-    const timesCooked = data?.length || 0
-    const lastCooked = data && data.length > 0 ? data[0].date : null
-
-    return { timesCooked, lastCooked }
-  }
 
   // ==================
   // MEAL PLAN METHODS

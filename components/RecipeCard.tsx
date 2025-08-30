@@ -26,7 +26,6 @@ interface RecipeCardProps {
   maxTags?: number
   onClick?: (recipeId: string) => void
   returnUrl?: string
-  mealPlans?: Array<{ date: string; recipeId: string }>
 }
 
 export default function RecipeCard({
@@ -38,8 +37,7 @@ export default function RecipeCard({
   formatLastCooked,
   maxTags = 2,
   onClick,
-  returnUrl,
-  mealPlans = []
+  returnUrl
 }: RecipeCardProps) {
   const router = useRouter()
 
@@ -81,8 +79,8 @@ export default function RecipeCard({
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    // Get all meal plans for this recipe
-    const recipeMealPlans = mealPlans.filter(mp => mp.recipeId === recipe.id)
+    // Get all meal plans for this recipe from the recipe's meal plans
+    const recipeMealPlans = recipe.mealPlans || []
     
     // Separate past and future meal plans
     const pastPlans = recipeMealPlans.filter(mp => {

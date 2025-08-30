@@ -16,7 +16,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (user && !recipe && recipes.length > 0) {
       toast.error('Rezept nicht gefunden')
-      router.push('/recipes')
+      router.replace('/recipes')
     }
   }, [user, recipe, recipes.length, router])
 
@@ -31,7 +31,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
         recipe?.imageUrl // pass old image url for deletion if changed
       )
       toast.success('Rezept erfolgreich aktualisiert')
-      router.push(`/recipes/${params.id}`)
+      router.replace(`/recipes/${params.id}`)
       return recipe // Return existing recipe for consistency
     } catch (error) {
       console.error('Error updating recipe:', error)
@@ -41,7 +41,7 @@ export default function EditRecipePage({ params }: { params: { id: string } }) {
   }
 
   const handleCancel = () => {
-    router.push(`/recipes/${params.id}`)
+    router.replace(`/recipes/${params.id}`)
   }
 
   if (!user) {

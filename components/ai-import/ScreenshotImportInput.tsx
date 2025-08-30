@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useRef } from 'react'
+import Image from 'next/image'
 import { Upload, X } from 'lucide-react'
 
 interface ScreenshotImportInputProps {
@@ -61,9 +62,11 @@ export default function ScreenshotImportInput({
         <div className="border border-gray-200 rounded-lg p-4">
           <div className="flex items-start space-x-4">
             {previewImage && (
-              <img 
+              <Image 
                 src={previewImage} 
                 alt="Preview" 
+                width={80}
+                height={80}
                 className="w-20 h-20 object-cover rounded-lg"
               />
             )}

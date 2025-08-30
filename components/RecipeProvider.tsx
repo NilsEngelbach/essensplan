@@ -1,9 +1,9 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthProvider';
 import { supabaseService } from '../lib/supabase';
-import type { Recipe, RecipeInsert, RecipeUpdate, IngredientInsert, InstructionInsert, RecipeWithRelations } from '../lib/supabase';
+import type { RecipeInsert, RecipeUpdate, IngredientInsert, InstructionInsert, RecipeWithRelations } from '../lib/supabase';
 
 interface RecipeContextType {
   recipes: RecipeWithRelations[];
@@ -23,6 +23,8 @@ export const RecipeProvider = ({ children }: { children: React.ReactNode }) => {
   const [recipes, setRecipes] = useState<RecipeWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [lastFetchedUserId, setLastFetchedUserId] = useState<string | null>(null);
+  const fetchAllRecipesRef = useRef<(sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating') => Promise<void>>();
 
   // Fetch all recipes once after login/session restore
   const fetchAllRecipes = useCallback(async (sortBy?: 'recent' | 'popular' | 'lastCooked' | 'created' | 'rating') => {
@@ -39,68 +41,68 @@ export const RecipeProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [user?.id]);
 
+  fetchAllRecipesRef.current = fetchAllRecipes;
+
   useEffect(() => {
-    if (user) {
-      fetchAllRecipes();
-    } else {
+    if (user && user.id !== lastFetchedUserId) {
+      setLastFetchedUserId(user.id);
+      fetchAllRecipesRef.current?.();
+    } else if (!user) {
       setRecipes([]);
+      setLastFetchedUserId(null);
       setLoading(false);
     }
-  }, [user, fetchAllRecipes]);
+  }, [user, lastFetchedUserId]);
 
   // Add recipe
   const addRecipe = useCallback(async (recipe: RecipeInsert, ingredients?: IngredientInsert[], instructions?: InstructionInsert[]) => {
     if (!user?.id) throw new Error('User not authenticated');
-    setLoading(true);
     try {
       const createdRecipe = await supabaseService.createRecipe(recipe, ingredients, instructions);
-      await fetchAllRecipes();
+      // Update local state directly instead of refetching all recipes
+      setRecipes(prevRecipes => [createdRecipe, ...prevRecipes]);
       return createdRecipe;
     } catch (error) {
       console.error('Failed to add recipe:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
-  }, [user?.id, fetchAllRecipes]);
+  }, [user?.id]);
 
   // Edit recipe
   const editRecipe = useCallback(async (id: string, recipe: RecipeUpdate, ingredients?: IngredientInsert[], instructions?: InstructionInsert[], oldImageUrl?: string) => {
     if (!user?.id) return;
-    setLoading(true);
     try {
       // If image is being removed or changed, delete old image
       if (oldImageUrl && recipe.imageUrl !== oldImageUrl) {
         await supabaseService.deleteImage(oldImageUrl);
       }
-      await supabaseService.updateRecipe(id, recipe, ingredients, instructions);
-      await fetchAllRecipes();
+      const updatedRecipe = await supabaseService.updateRecipe(id, recipe, ingredients, instructions);
+      // Update local state directly instead of refetching all recipes
+      setRecipes(prevRecipes => 
+        prevRecipes.map(r => r.id === id ? updatedRecipe : r)
+      );
     } catch (error) {
       console.error('Failed to edit recipe:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
-  }, [user?.id, fetchAllRecipes]);
+  }, [user?.id]);
 
   // Remove recipe
   const removeRecipe = useCallback(async (id: string, imageUrl?: string) => {
     if (!user?.id) return;
-    setLoading(true);
     try {
       await supabaseService.deleteRecipe(id);
       // Delete image from storage if exists
       if (imageUrl) {
         await supabaseService.deleteImage(imageUrl);
       }
-      await fetchAllRecipes();
+      // Update local state directly instead of refetching all recipes
+      setRecipes(prevRecipes => prevRecipes.filter(r => r.id !== id));
     } catch (error) {
       console.error('Failed to remove recipe:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
-  }, [user?.id, fetchAllRecipes]);
+  }, [user?.id]);
 
   // Upload image
   const uploadImage = useCallback(async (file: File): Promise<string> => {
