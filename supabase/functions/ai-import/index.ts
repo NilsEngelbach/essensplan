@@ -77,6 +77,7 @@ async function parseRecipeFromURL(
       - Nutze keine Zitierungen für die Ausgabe in Texten (Titel, Beschreibung, Anweisungen, ...)
       - Versuche ein Bild des Rezepts zu extrahieren und in der property imageUrl zu setzen, wenn verfügbar
       - Setze die property sourceUrl auf die URL die als Input zum parsen angegebene wurde
+      - Rechne alle Einheiten in metrische Einheiten um (g, ml, ...) und verwende diese in der Ausgabe (keine cups, ounces, pounds, ...). TL, EL, Prise sind ok
     `,
     text: {
       format: zodTextFormat(Recipe, "recipe"),
@@ -110,6 +111,7 @@ async function analyzeRecipeFromImage(
       - Erstelle klare, schrittweise Anweisungen
       - Nutze keine Zitierungen für die Ausgabe in Texten (Titel, Beschreibung, Anweisungen, ...)
       - Setze die properties "imageUrl" und "sourceUrl" auf null, da diese nicht aus dem Bild extrahiert werden können
+      - Rechne alle Einheiten in metrische Einheiten um (g, ml, ...) und verwende diese in der Ausgabe (keine cups, ounces, pounds, ...). TL, EL, Prise sind ok
     `,
     text: {
       format: zodTextFormat(Recipe, "recipe"),
