@@ -79,7 +79,8 @@ export async function fetchImageAsBase64(
 ): Promise<string | null> {
   try {
     console.log("Fetching image from URL:", imageUrl);
-    const response = await fetch(imageUrl);
+    const url = new URL(imageUrl);
+    const response = await fetch(url);
     if (!response.ok) {
       console.warn(
         "Failed to fetch image:",
@@ -98,9 +99,7 @@ export async function fetchImageAsBase64(
     return `data:${contentType};base64,${base64}`;
   } catch (error) {
     console.error("Error fetching image:", error);
-    throw createAppError.imageFetchFailed(
-      error instanceof Error ? error.message : "Unknown error",
-    );
+    return null;
   }
 }
 
