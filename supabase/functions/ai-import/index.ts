@@ -145,25 +145,27 @@ async function analyzeRecipeFromImage(
 // The model is asked to return a single JSON object matching the Recipe schema
 // (response_format is set to json_object to enforce valid JSON).
 const OPENCODE_SYSTEM_INSTRUCTIONS = `
-Du bist ein Experte fuer Rezepte.
-Extrahiere strukturierte Rezeptdaten und gib sie als EIN JSON-Objekt zurueck.
+Du bist ein Experte für Rezepte.
+Extrahiere strukturierte Rezeptdaten und gib sie als EIN JSON-Objekt zurück.
 Wichtige Hinweise:
 - Erkenne Zutaten und Mengenangaben genau
-- Schaetze Kochzeit und Portionen realistisch ein
+- Schätze Kochzeit und Portionen realistisch ein
 - Gib sinnvolle deutsche Tags an
 - Erstelle klare, schrittweise Anweisungen
-- Nutze keine Zitierungen fuer die Ausgabe in Texten (Titel, Beschreibung, Anweisungen, ...)
+- Nutze keine Zitierungen für die Ausgabe in Texten (Titel, Beschreibung, Anweisungen, ...)
 - Rechne alle Einheiten in metrische Einheiten um (g, ml, ...) und verwende diese in der Ausgabe (keine cups, ounces, pounds, ...). TL, EL, Prise sind ok
-- Gib NUR gueltiges JSON zurueck, KEIN Markdown, KEINE Erklaerungen
+- Gib NUR gültiges JSON zurück, KEIN Markdown, KEINE Erklärungen
 `;
 
 // JSON schema description embedded in the system prompt so the model knows the
-// expected shape when response_format=json_object is used.
+// expected shape when response_format=json_object is used. The enum values
+// must EXACTLY match the Zod schema below (German umlauts included) or the
+// parser will reject the response.
 const RECIPE_SCHEMA_DESCRIPTION = `{
   "title": string,
   "description": string,
-  "category": "Hauptspeise" | "Salat" | "Dessert" | "Suppe" | "Beilage" | "Fruehstueck" | "Snack",
-  "tags": array_of ("Vegetarisch" | "Vegan" | "Glutenfrei" | "Laktosefrei" | "Schnell" | "Gesund" | "Wuerzig" | "Suess"),
+  "category": "Hauptspeise" | "Salat" | "Dessert" | "Suppe" | "Beilage" | "Frühstück" | "Snack",
+  "tags": array_of ("Vegetarisch" | "Vegan" | "Glutenfrei" | "Laktosefrei" | "Schnell" | "Gesund" | "Würzig" | "Süß"),
   "cookingTime": number (int, minutes),
   "servings": number (int),
   "difficulty": "Einfach" | "Mittel" | "Schwer",
@@ -174,15 +176,48 @@ const RECIPE_SCHEMA_DESCRIPTION = `{
 }`;
 
 function parseRecipeFromJson(content: string | null): RecipeType | null {
-  if (!content) return null;
-  try {
-    const trimmed = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-    const json = JSON.parse(trimmed);
-    return Recipe.parse(json);
-  } catch (err) {
-    console.warn("Failed to parse recipe JSON from model response:", err);
+  if (!content || content.trim() === "") {
+    console.error("Model returned empty content — cannot parse recipe.");
     return null;
   }
+  let trimmed: string;
+  let json: unknown;
+  try {
+    trimmed = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+    json = JSON.parse(trimmed);
+  } catch (err) {
+    console.error("Model response was not valid JSON:", err);
+    console.error("Raw model response (first 2000 chars):", content.slice(0, 2000));
+    throw createAppError.aiRequestFailed(
+      `Model response was not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+  // Models sometimes wrap the recipe in a { "recipe": {...} } object,
+  // mirroring the OpenAI responses.parse schema name. Unwrap it.
+  if (
+    json !== null &&
+    typeof json === "object" &&
+    !Array.isArray(json) &&
+    "recipe" in (json as Record<string, unknown>) &&
+    typeof (json as Record<string, unknown>).recipe === "object"
+  ) {
+    console.log("Unwrapping { recipe: ... } wrapper from model response.");
+    json = (json as Record<string, unknown>).recipe;
+  }
+  const parsed = Recipe.safeParse(json);
+  if (!parsed.success) {
+    console.error("Schema validation failed:", parsed.error.message);
+    console.error("Parsed JSON (first 2000 chars):", JSON.stringify(json).slice(0, 2000));
+    for (const issue of parsed.error.issues) {
+      console.error(
+        `Zod issue at ${issue.path.join(".")}: ${issue.message}`,
+      );
+    }
+    throw createAppError.aiRequestFailed(
+      `Schema validation failed: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
+    );
+  }
+  return parsed.data;
 }
 
 // OpenCode Go has no web_search tool, so we fetch the page server-side and
@@ -212,7 +247,25 @@ Versuche, falls in der Seite vorhanden, ein Bild des Rezepts zu erkennen und die
   const input_tokens = response.usage?.prompt_tokens ?? 0;
   const output_tokens = response.usage?.completion_tokens ?? 0;
   console.log(`[opencode] Used ${input_tokens} input tokens and ${output_tokens} output tokens.`);
-  return parseRecipeFromJson(response.choices[0]?.message?.content ?? null);
+
+  // Log the full response structure so we can see where content ended up.
+  const choice = response.choices?.[0];
+  const message = choice?.message;
+  console.log(`[opencode] finish_reason: ${choice?.finish_reason ?? "N/A"}`);
+  console.log(`[opencode] message keys: ${JSON.stringify(message ? Object.keys(message) : "no message")}`);
+
+  // Reasoning models (GLM-5.2, DeepSeek) put their output in reasoning_content
+  // and leave message.content empty. Fall back to reasoning_content.
+  let rawContent = message?.content ?? "";
+  if (!rawContent && (message as Record<string, unknown>)?.reasoning_content) {
+    rawContent = String((message as Record<string, unknown>).reasoning_content);
+    console.log(`[opencode] Using reasoning_content fallback (${rawContent.length} chars).`);
+  } else {
+    console.log(`[opencode] message.content length: ${rawContent.length}`);
+  }
+  console.log(`[opencode] raw content (first 500): ${JSON.stringify(rawContent.slice(0, 500))}`);
+
+  return parseRecipeFromJson(rawContent || null);
 }
 
 // OpenCode Go image import via the Chat Completions multimodal content format.
@@ -242,7 +295,22 @@ Setze die properties "imageUrl" und "sourceUrl" auf null, da diese nicht aus dem
   const input_tokens = response.usage?.prompt_tokens ?? 0;
   const output_tokens = response.usage?.completion_tokens ?? 0;
   console.log(`[opencode] Used ${input_tokens} input tokens and ${output_tokens} output tokens.`);
-  return parseRecipeFromJson(response.choices[0]?.message?.content ?? null);
+
+  const choice = response.choices?.[0];
+  const message = choice?.message;
+  console.log(`[opencode] finish_reason: ${choice?.finish_reason ?? "N/A"}`);
+  console.log(`[opencode] message keys: ${JSON.stringify(message ? Object.keys(message) : "no message")}`);
+
+  let rawContent = message?.content ?? "";
+  if (!rawContent && (message as Record<string, unknown>)?.reasoning_content) {
+    rawContent = String((message as Record<string, unknown>).reasoning_content);
+    console.log(`[opencode] Using reasoning_content fallback (${rawContent.length} chars).`);
+  } else {
+    console.log(`[opencode] message.content length: ${rawContent.length}`);
+  }
+  console.log(`[opencode] raw content (first 500): ${JSON.stringify(rawContent.slice(0, 500))}`);
+
+  return parseRecipeFromJson(rawContent || null);
 }
 
 Deno.serve(async (req) => {
