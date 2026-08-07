@@ -22,7 +22,7 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
 - **Rezepte via URL importieren**: Die KI durchsucht die angegebene URL und extrahiert das Rezept - keine lästige manuelle Arbeit mehr!
 - **Rezepte via Foto importieren**: Ein Foto aus dem Kochbuch genügt um das Rezept komplett zu importieren.
 ![](./docs/ai-import.png)
-- **Rezeptbilder mit KI verbessern**: Ein einfacher Schnappschuss kann mit einem Klick in ein professionelles Bild umgewandelt werden
+- **Rezeptbilder mit KI verbessern** *(nur mit OpenAI)*: Ein einfacher Schnappschuss kann mit einem Klick in ein professionelles Bild umgewandelt werden
 ![](./docs/enhance-image.jpg)
 
 ## 🛠️ Technologie-Stack
@@ -36,7 +36,7 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
 - **Formulare**: React Hook Form mit Zod-Validierung
 - **Benachrichtigungen**: React Hot Toast
 - **API**: Supabase Edge Functions
-- **KI-Integration**: OpenAI für Rezept-Import
+- **KI-Integration**: OpenAI oder OpenCode Go (umschaltbar über `AI_PROVIDER`) für Rezept-Import
 
 ## 🚀 Installation
 
@@ -44,7 +44,7 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
 - Node.js 18+ 
 - npm
 - Supabase
-- OpenAI API-Key (für AI-Features)
+- OpenCode Go API-Key (Standard, für AI-Features) **oder** OpenAI API-Key
 
 ### Setup-Schritte
 
@@ -60,12 +60,22 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
    ```
 
 3. **Umgebungsvariablen konfigurieren**
-   Erstellen Sie eine `.env` Datei:
+   Erstellen Sie eine `.env` Datei (siehe `.env.example` als Vorlage):
    ```env
    DATABASE_URL="your-postgresql-database-url"
    DIRECT_URL="your-postgresql-direct-url"
    NEXT_PUBLIC_SUPABASE_URL="your-supabase-url"
    NEXT_PUBLIC_SUPABASE_ANON_KEY="your-supabase-anon-key"
+
+   # AI-Provider: "opencode" (Standard) oder "openai"
+   AI_PROVIDER="opencode"
+   NEXT_PUBLIC_AI_PROVIDER="opencode"
+
+   # OpenCode Go (wenn AI_PROVIDER=opencode)
+   OPENCODE_API_KEY="your-opencode-api-key"
+   OPENCODE_MODEL="glm-5.2"
+
+   # OpenAI (wenn AI_PROVIDER=openai)
    OPENAI_API_KEY="your-openai-api-key"
    ```
 
@@ -161,16 +171,38 @@ essensplan/
    # RLS Policies in Supabase einrichten (über Supabase Dashboard)
    ```
 
-4. **Deployment**
+4. **Supabase Edge Functions deployen**
+   ```bash
+   # Secrets setzen (einmalig, und bei jeder Key-Rotation)
+   npx supabase secrets set AI_PROVIDER=opencode
+   npx supabase secrets set OPENCODE_API_KEY=your-opencode-api-key
+   npx supabase secrets set OPENCODE_MODEL=glm-5.2
+   # Optional, nur bei AI_PROVIDER=openai:
+   npx supabase secrets set OPENAI_API_KEY=your-openai-api-key
+
+   # Funktionen deployen
+   npx supabase functions deploy ai-import
+   npx supabase functions deploy enhance-image
+   # oder alle auf einmal:
+   npx supabase functions deploy
+   ```
+   > Hinweis: `SUPABASE_URL` und `SUPABASE_SERVICE_ROLE_KEY` werden für deployte
+   > Functions automatisch von Supabase injiziert. Die Bildverbesserung
+   > (`enhance-image`) ist nur mit `AI_PROVIDER=openai` verfügbar und gibt
+   > andernfalls `501 FEATURE_DISABLED` zurück.
+
+5. **Deployment**
    - **Vercel** (empfohlen): `npm run build` und automatisches Deployment
+   - Nach Änderung an `AI_PROVIDER`/`NEXT_PUBLIC_AI_PROVIDER` muss das Next.js
+     Frontend redeployt werden, damit die Feature-Flags aktualisiert werden.
 
 ### Produktions-Checkliste
 - [ ] Alle Umgebungsvariablen konfiguriert
 - [ ] Datenbank-Migrationen angewendet
 - [ ] Row Level Security (RLS) Policies aktiviert
 - [ ] Supabase Storage Buckets eingerichtet
-- [ ] Supabase Functions deployed (optional)
-- [ ] OpenAI API-Key für AI-Import konfiguriert (optional)
+- [ ] Supabase Edge Functions deployed
+- [ ] API-Keys konfiguriert: OpenCode Go (`OPENCODE_API_KEY`) und/oder OpenAI (`OPENAI_API_KEY`)
 - [ ] Build erfolgreich durchgeführt (`npm run build`)
 - [ ] Linting ohne Fehler (`npm run lint`)
 

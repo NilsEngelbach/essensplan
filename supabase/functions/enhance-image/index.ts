@@ -1,8 +1,9 @@
 import OpenAI from "openai";
-import { 
+import {
   createSuccessResponse,
   createOpenAIClient,
-  handleRequest 
+  getAIProvider,
+  handleRequest
 } from '../_shared/utils.ts'
 import { createAppError } from '../_shared/error.ts'
 
@@ -73,6 +74,14 @@ Deno.serve(async (req) => {
       throw createAppError.missingRequiredField('base64ImageData')
     }
 
+    const provider = getAIProvider()
+
+    // The image enhancement feature relies on OpenAI's image_generation tool,
+    // which is not available through OpenCode Go. Disable it for other providers.
+    if (provider !== 'openai') {
+      throw createAppError.featureDisabled('image-enhancement')
+    }
+
     const openai = createOpenAIClient();
 
     const enhancedImageData = await enhanceImageWithOpenAI(openai, input);
@@ -81,7 +90,7 @@ Deno.serve(async (req) => {
       throw createAppError.openAIRequestFailed('OpenAI API did not return an enhanced image')
     }
 
-    return createSuccessResponse({ 
+    return createSuccessResponse({
       enhancedImageData
     });
   });

@@ -4,6 +4,7 @@ import React from 'react'
 import Image from 'next/image'
 import { Upload, Camera, X, Sparkles } from 'lucide-react'
 import { supabaseService } from '../../lib/supabase'
+import { IMAGE_ENHANCEMENT_ENABLED } from '../../lib/feature-flags'
 import ImageEnhancementModal from '../ImageEnhancementModal'
 
 interface ImageUploadSectionProps {
@@ -190,6 +191,7 @@ export default function ImageUploadSection({
                 <X className="h-4 w-4" />
               </button>
             </div>
+            {IMAGE_ENHANCEMENT_ENABLED && (
             <button
               type="button"
               onClick={handleImageEnhancement}
@@ -199,6 +201,7 @@ export default function ImageUploadSection({
               <Sparkles className="h-4 w-4 mr-2" />
               {isEnhancing ? 'Wird verbessert...' : 'Mit KI verbessern'}
             </button>
+            )}
           </div>
         )}
         
