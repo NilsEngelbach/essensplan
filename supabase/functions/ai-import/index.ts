@@ -5,6 +5,7 @@ import {
   createSuccessResponse,
   fetchImageAsBase64,
   fetchUrlContent,
+  getAIImageModel,
   getAIModel,
   getAIProvider,
   handleRequest,
@@ -36,15 +37,15 @@ const Recipe = z.object({
       "Süß",
     ]),
   ),
-  cookingTime: z.number().int(),
-  servings: z.number().int(),
+  cookingTime: z.number(),
+  servings: z.number(),
   difficulty: z.enum(["Einfach", "Mittel", "Schwer"]),
   imageUrl: z.string().nullable().optional(), // Optional image URL
   sourceUrl: z.string().nullable().optional(), // Optional source URL
   ingredients: z.array(
     z.object({
       name: z.string(),
-      amount: z.number().int().min(0),
+      amount: z.number().min(0),
       unit: z.string().nullable(), // e.g. 'g', 'ml', 'Tasse'
       notes: z.string().nullable(), // e.g. 'optional', 'nach Geschmack'
       component: z.string().nullable(), // e.g. 'Teig', 'Füllung'
@@ -52,7 +53,7 @@ const Recipe = z.object({
   ),
   instructions: z.array(
     z.object({
-      stepNumber: z.number().int().min(1),
+      stepNumber: z.number().min(1),
       description: z.string(),
     }),
   ),
@@ -166,13 +167,13 @@ const RECIPE_SCHEMA_DESCRIPTION = `{
   "description": string,
   "category": "Hauptspeise" | "Salat" | "Dessert" | "Suppe" | "Beilage" | "Frühstück" | "Snack",
   "tags": array_of ("Vegetarisch" | "Vegan" | "Glutenfrei" | "Laktosefrei" | "Schnell" | "Gesund" | "Würzig" | "Süß"),
-  "cookingTime": number (int, minutes),
-  "servings": number (int),
+  "cookingTime": number (minutes),
+  "servings": number,
   "difficulty": "Einfach" | "Mittel" | "Schwer",
   "imageUrl": string|null (optional),
   "sourceUrl": string|null (optional),
-  "ingredients": [{ "name": string, "amount": number (int>=0), "unit": string|null, "notes": string|null, "component": string|null }],
-  "instructions": [{ "stepNumber": number (int>=1), "description": string }]
+  "ingredients": [{ "name": string, "amount": number (>=0, decimals allowed), "unit": string|null, "notes": string|null, "component": string|null }],
+  "instructions": [{ "stepNumber": number (>=1), "description": string }]
 }`;
 
 function parseRecipeFromJson(content: string | null): RecipeType | null {
@@ -279,7 +280,7 @@ ${RECIPE_SCHEMA_DESCRIPTION}
 
 Setze die properties "imageUrl" und "sourceUrl" auf null, da diese nicht aus dem Bild extrahiert werden koennen.`;
   const response = await openai.chat.completions.create({
-    model: getAIModel(),
+    model: getAIImageModel(),
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: system },

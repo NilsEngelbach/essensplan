@@ -98,6 +98,7 @@ NEXT_PUBLIC_AI_PROVIDER="opencode"
 # OpenCode Go credentials (used when AI_PROVIDER=opencode)
 OPENCODE_API_KEY="..."        # from https://opencode.ai/auth
 OPENCODE_MODEL="glm-5.2"     # e.g. glm-5.2 | kimi-k3 | deepseek-v4-pro | deepseek-v4-flash
+OPENCODE_IMAGE_MODEL="kimi-k3"  # vision-capable model for screenshot imports
 
 # OpenAI credentials (used when AI_PROVIDER=openai, still required for image enhancement)
 OPENAI_API_KEY="..."

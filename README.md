@@ -74,6 +74,7 @@ Ein moderner, KI-gestützter Essensplaner für Familien, der das Organisieren vo
    # OpenCode Go (wenn AI_PROVIDER=opencode)
    OPENCODE_API_KEY="your-opencode-api-key"
    OPENCODE_MODEL="glm-5.2"
+   OPENCODE_IMAGE_MODEL="kimi-k3"  # Modell mit Bild-Unterstützung für Foto-Import
 
    # OpenAI (wenn AI_PROVIDER=openai)
    OPENAI_API_KEY="your-openai-api-key"
@@ -177,6 +178,7 @@ essensplan/
    npx supabase secrets set AI_PROVIDER=opencode
    npx supabase secrets set OPENCODE_API_KEY=your-opencode-api-key
    npx supabase secrets set OPENCODE_MODEL=glm-5.2
+   npx supabase secrets set OPENCODE_IMAGE_MODEL=glm-5.2
    # Optional, nur bei AI_PROVIDER=openai:
    npx supabase secrets set OPENAI_API_KEY=your-openai-api-key
 

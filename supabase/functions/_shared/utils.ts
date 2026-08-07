@@ -74,13 +74,25 @@ export function getAIProvider(): AIProvider {
   throw createAppError.aiProviderNotConfigured(raw as AIProvider);
 }
 
-// Returns the model id used for the given provider.
+// Returns the model id used for text-based AI tasks (URL import).
 export function getAIModel(): string {
   const provider = getAIProvider();
   if (provider === "openai") {
     return Deno.env.get("OPENAI_MODEL") ?? "gpt-5-mini";
   }
   return Deno.env.get("OPENCODE_MODEL") ?? OPENCODE_DEFAULT_MODEL;
+}
+
+// Returns the model id used for image-based AI tasks (screenshot import).
+// Not all OpenCode Go models support vision input, so a separate env var
+// (OPENCODE_IMAGE_MODEL) lets you pick a vision-capable model. Falls back to
+// OPENCODE_MODEL when unset.
+export function getAIImageModel(): string {
+  const provider = getAIProvider();
+  if (provider === "openai") {
+    return Deno.env.get("OPENAI_MODEL") ?? "gpt-5-mini";
+  }
+  return Deno.env.get("OPENCODE_IMAGE_MODEL") ?? Deno.env.get("OPENCODE_MODEL") ?? OPENCODE_DEFAULT_MODEL;
 }
 
 // Creates an AI client configured for the active AI_PROVIDER.
