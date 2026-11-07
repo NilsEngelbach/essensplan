@@ -1,0 +1,106 @@
+/*
+ * Das Küchengerät – design tokens.
+ * Light = the white/grey appliance, dark = the black appliance variant.
+ * Green means "on" / primary action, orange is the single marker.
+ */
+:root {
+  color-scheme: light;
+
+  /* Body & surfaces */
+  --body: #e8e9e6;
+  --panel: #f4f5f2;
+  --slot: #dcddd9;
+  --slot-strong: #d0d2cd;
+  --seam: #c6c8c3;
+
+  /* Ink */
+  --ink: #1f2022;
+  --ink-2: #45484b;
+  --label: #5b5e61;
+
+  /* Signal colours */
+  --green: #2f7a43;
+  --on-green: #ffffff;
+  --green-ink: #276a39;
+  --led-green: #3fae5c;
+  --orange: #e0661f;
+  --on-orange: #1f2022;
+  --orange-ink: #a3420b;
+  --led-off: #c2c4bf;
+  --danger-ink: #a12a1f;
+
+  /* Type */
+  --font: 'Archivo Variable', 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fs-label: 0.75rem;
+  --fs-small: 0.875rem;
+  --fs-body: 1rem;
+  --fs-lead: 1.125rem;
+  --fs-title: 1.5rem;
+  --fs-display: clamp(1.75rem, 1.2rem + 2.4vw, 2.75rem);
+
+  /* Geometry */
+  --r-panel: 14px;
+  --r-slot: 10px;
+  --r-pill: 999px;
+  --gap-1: 4px;
+  --gap-2: 8px;
+  --gap-3: 12px;
+  --gap-4: 16px;
+  --gap-5: 24px;
+  --gap-6: 32px;
+  --gap-7: 48px;
+  --tap: 44px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 140ms;
+  --t-mid: 260ms;
+
+  /* Layout */
+  --rail-w: 236px;
+  --bar-h: 68px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --body: #161718;
+    --panel: #1f2022;
+    --slot: #0f1011;
+    --slot-strong: #2a2c2e;
+    --seam: #303235;
+    --ink: #ecedea;
+    --ink-2: #b9bcb7;
+    --label: #9a9d99;
+    --green: #4cb065;
+    --on-green: #0f1011;
+    --green-ink: #6cc883;
+    --led-green: #5ccf78;
+    --orange: #f07a2e;
+    --on-orange: #0f1011;
+    --orange-ink: #f59a5c;
+    --led-off: #3a3c3f;
+    --danger-ink: #f08a7e;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --body: #161718;
+  --panel: #1f2022;
+  --slot: #0f1011;
+  --slot-strong: #2a2c2e;
+  --seam: #303235;
+  --ink: #ecedea;
+  --ink-2: #b9bcb7;
+  --label: #9a9d99;
+  --green: #4cb065;
+  --on-green: #0f1011;
+  --green-ink: #6cc883;
+  --led-green: #5ccf78;
+  --orange: #f07a2e;
+  --on-orange: #0f1011;
+  --orange-ink: #f59a5c;
+  --led-off: #3a3c3f;
+  --danger-ink: #f08a7e;
+}

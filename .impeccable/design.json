@@ -1,0 +1,594 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-07T15:04:14.774Z",
+  "title": "Design System: Essensplan",
+  "extensions": {
+    "colorMeta": {
+      "body": {
+        "role": "neutral",
+        "displayName": "Appliance Body",
+        "canonical": "#e8e9e6",
+        "darkVariant": "#161718",
+        "tonalRamp": [
+          "oklch(18% 0.004 120)",
+          "oklch(28% 0.004 120)",
+          "oklch(40% 0.004 120)",
+          "oklch(52% 0.004 120)",
+          "oklch(64% 0.004 120)",
+          "oklch(76% 0.004 120)",
+          "oklch(86% 0.004 120)",
+          "oklch(94% 0.004 120)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel Grey",
+        "canonical": "#f4f5f2",
+        "darkVariant": "#1f2022"
+      },
+      "slot": {
+        "role": "neutral",
+        "displayName": "Slot Grey",
+        "canonical": "#dcddd9",
+        "darkVariant": "#0f1011"
+      },
+      "slot-strong": {
+        "role": "neutral",
+        "displayName": "Pressed Grey",
+        "canonical": "#d0d2cd",
+        "darkVariant": "#2a2c2e"
+      },
+      "seam": {
+        "role": "neutral",
+        "displayName": "Seam",
+        "canonical": "#c6c8c3",
+        "darkVariant": "#303235"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Charcoal Ink",
+        "canonical": "#1f2022",
+        "darkVariant": "#ecedea"
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "#45484b",
+        "darkVariant": "#b9bcb7"
+      },
+      "label": {
+        "role": "neutral",
+        "displayName": "Label Grey",
+        "canonical": "#5b5e61",
+        "darkVariant": "#9a9d99"
+      },
+      "green": {
+        "role": "primary",
+        "displayName": "Signal Green",
+        "canonical": "#2f7a43",
+        "darkVariant": "#4cb065",
+        "tonalRamp": [
+          "oklch(22% 0.07 150)",
+          "oklch(32% 0.09 150)",
+          "oklch(42% 0.11 150)",
+          "oklch(52% 0.12 150)",
+          "oklch(62% 0.13 150)",
+          "oklch(72% 0.12 150)",
+          "oklch(84% 0.08 150)",
+          "oklch(94% 0.04 150)"
+        ]
+      },
+      "green-ink": {
+        "role": "primary",
+        "displayName": "Green Ink",
+        "canonical": "#276a39",
+        "darkVariant": "#6cc883"
+      },
+      "led-green": {
+        "role": "primary",
+        "displayName": "LED Green",
+        "canonical": "#3fae5c",
+        "darkVariant": "#5ccf78"
+      },
+      "orange": {
+        "role": "secondary",
+        "displayName": "Marker Orange",
+        "canonical": "#e0661f",
+        "darkVariant": "#f07a2e",
+        "tonalRamp": [
+          "oklch(25% 0.07 50)",
+          "oklch(35% 0.10 50)",
+          "oklch(46% 0.13 50)",
+          "oklch(56% 0.16 50)",
+          "oklch(65% 0.17 50)",
+          "oklch(74% 0.14 50)",
+          "oklch(85% 0.08 50)",
+          "oklch(95% 0.03 50)"
+        ]
+      },
+      "orange-ink": {
+        "role": "secondary",
+        "displayName": "Orange Ink",
+        "canonical": "#a3420b",
+        "darkVariant": "#f59a5c"
+      },
+      "led-off": {
+        "role": "neutral",
+        "displayName": "LED Off",
+        "canonical": "#c2c4bf",
+        "darkVariant": "#3a3c3f"
+      },
+      "danger-ink": {
+        "role": "neutral",
+        "displayName": "Danger Ink",
+        "canonical": "#a12a1f",
+        "darkVariant": "#f08a7e"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page and recipe titles; width 94 (page) / 92 (recipe)."
+      },
+      "plate": {
+        "displayName": "Plate",
+        "purpose": "Title on a photo-less recipe tile, condensed, up to 4 lines."
+      },
+      "readout": {
+        "displayName": "Readout",
+        "purpose": "Servings dial number, tabular."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel, dialog, focus-bar, empty-state and suggestion-shelf titles."
+      },
+      "entry": {
+        "displayName": "Entry",
+        "purpose": "Recipe titles in rows, pick rows, day-row main lines and tiles, 2-line clamp."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text; 62ch descriptions, 68ch steps."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Meta, controls, field labels; slip section names (700) and the slip amount column (650)."
+      },
+      "label": {
+        "displayName": "Device Label",
+        "purpose": "Engraved word beside a control or value; lowercase only for single words."
+      },
+      "plate-small": {
+        "displayName": "Plate small",
+        "purpose": "Title plate on a photo-less suggestion-shelf tile, up to 3 lines."
+      },
+      "day-number": {
+        "displayName": "Day number",
+        "purpose": "Day of the month in a week day row, tabular."
+      },
+      "step-number": {
+        "displayName": "Step number",
+        "purpose": "Kochmodus step number, tabular, followed by a \"von n\" label."
+      },
+      "step-text": {
+        "displayName": "Step text",
+        "purpose": "Kochmodus step, read at 50–80cm; sized by length (≤150 / ≤260 / longer chars: 30 / 34 / 38ch, down to 1.375rem); grows on tablets."
+      },
+      "cook-ingredient": {
+        "displayName": "Cook ingredient",
+        "purpose": "Kochmodus ingredient rows; amount 750 ink, unit 600 ink-2."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "System monospace for the API key (0.9375rem/600), its prefix (0.875rem, ink-2) and setup snippets (0.8125rem/1.5) only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 12px 32px -12px rgb(0 0 0 / 0.28)",
+        "purpose": "Popover menus only (account, overflow, entry menu, slip line menu). Never on cards or panels."
+      },
+      {
+        "name": "power-focus",
+        "value": "0 0 0 3px var(--orange)",
+        "purpose": "Focus ring on the bottom-bar power disc."
+      },
+      {
+        "name": "led-knockout",
+        "value": "0 0 0 2px var(--body) (avatar dot) / 0 0 0 4px var(--body) (route station)",
+        "purpose": "A solid ring in the ground colour that separates an LED from the edge or line behind it. Not elevation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "All state transitions."
+      },
+      {
+        "name": "t-fast",
+        "value": "140ms",
+        "purpose": "Hover, press, LED and switch state."
+      },
+      {
+        "name": "t-mid",
+        "value": "260ms",
+        "purpose": "Toast entry; a day-key, route-station or program LED lighting up."
+      },
+      {
+        "name": "dial-turn",
+        "value": "220ms",
+        "purpose": "Dial pointer rotation."
+      },
+      {
+        "name": "amount-lit",
+        "value": "700ms",
+        "purpose": "Rescaled amount flashes green-ink and settles 2px."
+      },
+      {
+        "name": "flap",
+        "value": "320ms cubic-bezier(0.16, 1, 0.3, 1); from perspective(420px) rotateX(-72deg), opacity 0.35; transform-origin top",
+        "purpose": "Woche signature: a newly picked entry title, and the plan-bar readout when the selected day changes. Not on first paint; instant under reduced motion."
+      },
+      {
+        "name": "strike",
+        "value": "180ms cubic-bezier(0.16, 1, 0.3, 1); background-size 0 → 100% × 1.5px currentColor at 58%",
+        "purpose": "Einkauf signature: a ticked slip line is struck through in place; text turns ink-2."
+      },
+      {
+        "name": "feed",
+        "value": "420ms cubic-bezier(0.16, 1, 0.3, 1); from clip-path inset(0 0 100% 0) + translateY(-6px)",
+        "purpose": "A slip line printed since the last visit feeds in where it belongs."
+      },
+      {
+        "name": "fold",
+        "value": "340ms cubic-bezier(0.16, 1, 0.3, 1); grid-template-rows 1fr → 0fr after a ~520ms hold",
+        "purpose": "A finished slip section collapses under its rule once the last strike has played. Sections finished on arrival start folded, without motion."
+      },
+      {
+        "name": "cook-slide",
+        "value": "220ms cubic-bezier(0.16, 1, 0.3, 1); from translateX(±24px), opacity 0.4",
+        "purpose": "Kochmodus signature: the next or previous screen turns in from its side while the program LED moves on. The only animated position change in the system."
+      },
+      {
+        "name": "cook-guard",
+        "value": "350ms",
+        "purpose": "Minimum time between two Kochmodus page turns, so a double tap never skips a step."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0ms",
+        "purpose": "All transitions and animations under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "cook-narrow",
+        "value": "559px",
+        "purpose": "max-width: the Kochmodus wake text hides in the bar; a hint line appears when the screen may turn off."
+      },
+      {
+        "name": "keys-narrow",
+        "value": "389px",
+        "purpose": "max-width: plan bar side padding drops to 12px, key gap to 3px."
+      },
+      {
+        "name": "phone-narrow",
+        "value": "479px",
+        "purpose": "max-width: 'Mehr' collapses to icon."
+      },
+      {
+        "name": "form",
+        "value": "760px",
+        "purpose": "Save moves into focus bar; ingredient row goes single-line."
+      },
+      {
+        "name": "rail",
+        "value": "1024px",
+        "purpose": "Rail replaces bars; list becomes aside + grid; the planning week becomes a pinned column beside the library."
+      },
+      {
+        "name": "cook-split",
+        "value": "(min-width: 900px) and (orientation: landscape), (min-width: 1024px)",
+        "purpose": "Kochmodus step splits 3fr / minmax(280px, 2fr); full ingredient list under the step panel; larger step text."
+      }
+    ],
+    "layout": {
+      "rail-w": "236px",
+      "bar-h": "68px",
+      "topbar-h": "56px",
+      "focusbar-h": "60px",
+      "main-max": "1320px",
+      "week-max": "760px",
+      "plan-week-column": "minmax(360px, 420px)",
+      "plan-bar-top": "56px",
+      "konto-max": "640px",
+      "shop-controls": "300px",
+      "shop-slip-max": "520px",
+      "shop-gap": "48px",
+      "route-top": "56px",
+      "konto-gap": "24px",
+      "cook-bar-h": "60px",
+      "cook-intro-max": "720px",
+      "cook-step-columns": "minmax(0, 3fr) minmax(280px, 2fr)",
+      "agents-max": "760px"
+    }
+  },
+  "components": [
+    {
+      "name": "Power Button",
+      "kind": "button",
+      "refersTo": "power-button",
+      "description": "The one green control: adds a recipe from anywhere; lifts out of the bottom bar.",
+      "html": "<a class=\"ds-power\" href=\"#\" aria-label=\"Rezept hinzufügen\"><span class=\"ds-power__disc\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><path d=\"M5 12h14\"/><path d=\"M12 5v14\"/></svg></span></a>",
+      "css": ".ds-power { display: inline-flex; align-items: center; justify-content: center; color: var(--on-green, #fff); text-decoration: none; } .ds-power__disc { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 50%; background: var(--green, #2f7a43); outline: 5px solid var(--panel, #f4f5f2); transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-power:active .ds-power__disc { transform: scale(0.94); } .ds-power:focus-visible { outline: none; } .ds-power:focus-visible .ds-power__disc { box-shadow: 0 0 0 3px var(--orange, #e0661f); }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Green pill for the view's primary action (Speichern, Rezept lesen).",
+      "html": "<button class=\"ds-btn ds-btn--primary\">Speichern</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 24px; border: 1px solid var(--seam, #c6c8c3); border-radius: 999px; background: var(--panel, #f4f5f2); color: var(--ink, #1f2022); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 1rem; font-weight: 620; white-space: nowrap; cursor: pointer; transition: background 140ms cubic-bezier(0.16, 1, 0.3, 1), transform 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn:active { transform: scale(0.98); } .ds-btn:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-btn--primary { background: var(--green, #2f7a43); border-color: transparent; color: var(--on-green, #fff); } .ds-btn--primary:hover { background: color-mix(in srgb, var(--green, #2f7a43) 88%, var(--ink, #1f2022)); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Panel pill with seam border for secondary actions (Kochen, Abbrechen).",
+      "html": "<button class=\"ds-btn2\">Kochen</button>",
+      "css": ".ds-btn2 { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 24px; border: 1px solid var(--seam, #c6c8c3); border-radius: 999px; background: var(--panel, #f4f5f2); color: var(--ink, #1f2022); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 1rem; font-weight: 620; cursor: pointer; transition: background 140ms cubic-bezier(0.16, 1, 0.3, 1), transform 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn2:hover { background: var(--slot, #dcddd9); } .ds-btn2:active { transform: scale(0.98); } .ds-btn2:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Rocker Switch",
+      "kind": "custom",
+      "refersTo": "rocker",
+      "description": "Binary filter switch: LED window | seam | label half; on = pressed label half + orange LED. Distinct from chips.",
+      "html": "<div style=\"display:flex;gap:6px\"><button class=\"ds-rocker\" role=\"switch\" aria-checked=\"true\" data-on><span class=\"ds-rocker__window\"><span class=\"ds-rocker__led\"></span></span><span class=\"ds-rocker__label\">Lieblinge</span></button><button class=\"ds-rocker\" role=\"switch\" aria-checked=\"false\"><span class=\"ds-rocker__window\"><span class=\"ds-rocker__led\"></span></span><span class=\"ds-rocker__label\">Schnell</span></button></div>",
+      "css": ".ds-rocker { display: inline-flex; align-items: stretch; min-height: 44px; padding: 0; border: 1px solid var(--seam, #c6c8c3); border-radius: 9px; background: var(--panel, #f4f5f2); color: var(--ink-2, #45484b); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; white-space: nowrap; overflow: hidden; cursor: pointer; } .ds-rocker__window { display: grid; place-items: center; width: 24px; border-right: 1px solid var(--seam, #c6c8c3); background: var(--slot, #dcddd9); } .ds-rocker__led { width: 8px; height: 8px; border-radius: 50%; background: var(--led-off, #c2c4bf); transition: background 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-rocker__label { display: flex; align-items: center; padding: 0 9px 0 8px; transition: background 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-rocker[data-on] { color: var(--ink, #1f2022); } .ds-rocker[data-on] .ds-rocker__label, .ds-rocker:active .ds-rocker__label { background: var(--slot-strong, #d0d2cd); } .ds-rocker[data-on] .ds-rocker__led { background: var(--orange, #e0661f); } .ds-rocker:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Multi-select / sort choice; pressed = ink fill. 44px under coarse pointers.",
+      "html": "<div style=\"display:flex;gap:8px;flex-wrap:wrap\"><button class=\"ds-chip\" aria-pressed=\"true\">Am liebsten</button><button class=\"ds-chip\" aria-pressed=\"false\">Vegetarisch</button></div>",
+      "css": ".ds-chip { min-height: 36px; padding: 0 12px; border: 1px solid var(--seam, #c6c8c3); border-radius: 999px; background: var(--panel, #f4f5f2); color: var(--ink-2, #45484b); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.875rem; font-weight: 560; cursor: pointer; } .ds-chip:hover { background: var(--slot, #dcddd9); } .ds-chip[aria-pressed='true'] { background: var(--ink, #1f2022); border-color: var(--ink, #1f2022); color: var(--body, #e8e9e6); } .ds-chip:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } @media (pointer: coarse) { .ds-chip { min-height: 44px; } }"
+    },
+    {
+      "name": "Search Slot",
+      "kind": "input",
+      "refersTo": "slot-input",
+      "description": "Recessed input in the appliance body; orange focus outline.",
+      "html": "<label class=\"ds-slot\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><input class=\"ds-slot__input\" type=\"search\" placeholder=\"Name oder Zutat\"></label>",
+      "css": ".ds-slot { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 12px 0 16px; border-radius: 10px; background: var(--slot, #dcddd9); color: var(--label, #5b5e61); } .ds-slot:focus-within { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-slot__input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; color: var(--ink, #1f2022); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 16px; } .ds-slot__input:focus { outline: none; } .ds-slot__input::placeholder { color: var(--label, #5b5e61); opacity: 1; }"
+    },
+    {
+      "name": "Recipe Tile with Title Plate",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Desktop recipe tile; photo-less recipes get a deliberate title plate on the panel tone.",
+      "html": "<a class=\"ds-tile\" href=\"#\"><span class=\"ds-tile__plate\"><span class=\"ds-tile__plate-title\">Käsespätzle mit Röstzwiebeln</span></span><span class=\"ds-tile__foot\"><span class=\"ds-tile__meta\"><span class=\"ds-leds\"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i data-on></i></span> 7×<br>zuletzt vor 3 Monaten</span><span class=\"ds-tile__time\">40 min</span></span></a>",
+      "css": ".ds-tile { display: flex; flex-direction: column; width: 240px; border: 1px solid var(--seam, #c6c8c3); border-radius: 14px; background: var(--panel, #f4f5f2); color: var(--ink, #1f2022); text-decoration: none; overflow: hidden; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; transition: border-color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-tile:hover { border-color: var(--label, #5b5e61); } .ds-tile:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-tile__plate { display: flex; align-items: flex-end; aspect-ratio: 4 / 3; padding: 16px; border-bottom: 1px solid var(--seam, #c6c8c3); } .ds-tile__plate-title { font-size: 1.875rem; font-weight: 720; line-height: 1.04; letter-spacing: -0.03em; font-variation-settings: 'wdth' 88; text-wrap: balance; hyphens: auto; } .ds-tile__foot { display: flex; justify-content: space-between; align-items: flex-end; padding: 12px 16px 16px; } .ds-tile__meta { font-size: 0.875rem; color: var(--ink-2, #45484b); font-variant-numeric: tabular-nums; } .ds-tile__time { font-weight: 650; font-variant-numeric: tabular-nums; } .ds-leds { display: inline-flex; gap: 3px; } .ds-leds i { width: 8px; height: 8px; border-radius: 50%; background: var(--led-off, #c2c4bf); } .ds-leds i[data-on] { background: var(--led-green, #3fae5c); }"
+    },
+    {
+      "name": "Segmented Switch",
+      "kind": "custom",
+      "refersTo": "segmented-on",
+      "description": "One-of-n choice (meal slot, difficulty, theme); selected = ink fill.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\"><button role=\"radio\" aria-checked=\"false\">Früh</button><button role=\"radio\" aria-checked=\"false\">Mittag</button><button role=\"radio\" aria-checked=\"true\">Abend</button><button role=\"radio\" aria-checked=\"false\">Snack</button></div>",
+      "css": ".ds-seg { display: flex; width: 320px; padding: 3px; border-radius: 999px; background: var(--slot, #dcddd9); } .ds-seg button { flex: 1; min-height: 38px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-2, #45484b); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: background 140ms cubic-bezier(0.16, 1, 0.3, 1), color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-seg button[aria-checked='true'] { background: var(--ink, #1f2022); color: var(--body, #e8e9e6); } .ds-seg button:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Bottom Bar",
+      "kind": "nav",
+      "description": "Phone navigation: Woche · Rezepte · power ＋ · Einkauf; active = ink text + orange dot.",
+      "html": "<nav class=\"ds-bar\"><a class=\"ds-bar__item\" href=\"#\">Woche</a><a class=\"ds-bar__item is-active\" href=\"#\">Rezepte</a><span class=\"ds-bar__power\"><svg width=\"26\" height=\"26\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\"><path d=\"M5 12h14\"/><path d=\"M12 5v14\"/></svg></span><a class=\"ds-bar__item\" href=\"#\">Einkauf</a></nav>",
+      "css": ".ds-bar { display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; width: 390px; height: 68px; margin-top: 24px; background: var(--panel, #f4f5f2); border-top: 1px solid var(--seam, #c6c8c3); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-bar__item { position: relative; display: flex; align-items: center; justify-content: center; height: 100%; color: var(--label, #5b5e61); text-decoration: none; font-size: 0.75rem; font-weight: 560; } .ds-bar__item::before { content: ''; position: absolute; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: transparent; } .ds-bar__item:hover { color: var(--ink, #1f2022); } .ds-bar__item.is-active { color: var(--ink, #1f2022); } .ds-bar__item.is-active::before { background: var(--orange, #e0661f); } .ds-bar__item:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: -4px; } .ds-bar__power { justify-self: center; display: grid; place-items: center; width: 58px; height: 58px; margin-top: -22px; border-radius: 50%; background: var(--green, #2f7a43); color: var(--on-green, #fff); outline: 5px solid var(--panel, #f4f5f2); }"
+    },
+    {
+      "name": "Toast",
+      "kind": "custom",
+      "refersTo": "toast",
+      "description": "Ink bar with LED and optional undo; sits above the bottom bar.",
+      "html": "<div class=\"ds-toast\"><span class=\"ds-toast__led\"></span><span class=\"ds-toast__msg\">Für morgen, Abendessen geplant.</span><button class=\"ds-toast__undo\">Rückgängig</button></div>",
+      "css": ".ds-toast { display: flex; align-items: center; gap: 12px; width: 380px; min-height: 52px; padding: 8px 8px 8px 16px; border-radius: 12px; background: var(--ink, #1f2022); color: var(--body, #e8e9e6); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; font-weight: 560; } .ds-toast__led { width: 8px; height: 8px; border-radius: 50%; background: var(--led-green, #3fae5c); flex: 0 0 auto; } .ds-toast__msg { flex: 1; } .ds-toast__undo { min-height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; } .ds-toast__undo:hover { background: color-mix(in srgb, var(--body, #e8e9e6) 12%, transparent); } .ds-toast__undo:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Week Day Row",
+      "kind": "custom",
+      "refersTo": "day-row",
+      "description": "One of seven fixed hairline rows: 52px date column, main slot line, side + line, lowercase other-slot line; today = orange dot; selected (planning) = slot fill + orange pointer.",
+      "html": "<ol class=\"ds-wdays\"><li class=\"ds-wday\" data-today><span class=\"ds-wday__date\"><span class=\"ds-wday__wd\">Mo</span><span class=\"ds-wday__num\">16</span></span><span class=\"ds-wday__body\"><button class=\"ds-went\"><span class=\"ds-went__title\">Käsespätzle mit Röstzwiebeln</span><span class=\"ds-went__time\">40 min</span></button><button class=\"ds-went ds-went--small\"><span class=\"ds-went__plus\">+</span><span class=\"ds-went__title\">Gurkensalat</span><span class=\"ds-went__time\">10 min</span></button><button class=\"ds-went ds-went--small\"><span class=\"ds-label\">abend</span><span class=\"ds-went__title\">Brotzeit</span></button></span></li><li class=\"ds-wday\" data-selected><span class=\"ds-wday__date\"><span class=\"ds-wday__wd\">Di</span><span class=\"ds-wday__num\">17</span></span><span class=\"ds-wday__body\"><button class=\"ds-wday__free\">frei</button></span></li><li class=\"ds-wday\"><span class=\"ds-wday__date\"><span class=\"ds-wday__wd\">Mi</span><span class=\"ds-wday__num\">18</span></span><span class=\"ds-wday__body\"><button class=\"ds-wday__free\">frei<span class=\"ds-wday__hint\">Mittag planen</span></button></span></li></ol>",
+      "css": ".ds-wdays { list-style: none; margin: 0; padding: 0; width: 390px; border-top: 1px solid var(--seam, #c6c8c3); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; color: var(--ink, #1f2022); } .ds-wday { display: grid; grid-template-columns: 52px 1fr; gap: 8px; min-height: 76px; border-bottom: 1px solid var(--seam, #c6c8c3); } .ds-wday[data-selected] { background: var(--slot, #dcddd9); } .ds-wday__date { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 12px 0 12px 12px; } .ds-wday__wd { font-size: 0.875rem; font-weight: 650; color: var(--ink-2, #45484b); } .ds-wday[data-today] .ds-wday__wd::after { content: ''; display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--orange, #e0661f); vertical-align: 0.15em; } .ds-wday__num { font-size: 1.5rem; font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; } .ds-wday[data-selected] .ds-wday__date::after { content: ''; position: absolute; left: 12px; bottom: 10px; width: 14px; height: 3px; border-radius: 2px; background: var(--orange, #e0661f); } .ds-wday__body { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; padding: 8px 8px 8px 0; } .ds-went, .ds-wday__free { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 4px 0 4px 8px; margin-left: -8px; border: 0; border-radius: 10px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; } .ds-went:hover, .ds-wday__free:hover { background: var(--slot, #dcddd9); } .ds-went:focus-visible, .ds-wday__free:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-went__title { flex: 1; font-size: 1.0625rem; font-weight: 620; line-height: 1.25; } .ds-went__time { min-width: 4.2em; text-align: right; font-weight: 650; font-variant-numeric: tabular-nums; } .ds-went--small { min-height: 36px; } .ds-went--small .ds-went__title { font-size: 0.9375rem; font-weight: 560; color: var(--ink-2, #45484b); } .ds-went--small .ds-went__time { font-size: 0.875rem; color: var(--ink-2, #45484b); } .ds-went__plus { width: 0.9em; color: var(--label, #5b5e61); font-weight: 650; } .ds-label { min-width: 3.4em; font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } .ds-wday__free { width: 100%; color: var(--label, #5b5e61); font-weight: 560; } .ds-wday__hint { margin-left: auto; padding-right: 8px; color: var(--green-ink, #276a39); font-size: 0.875rem; font-weight: 620; }"
+    },
+    {
+      "name": "Day Keys",
+      "kind": "custom",
+      "refersTo": "day-key",
+      "description": "Seven panel keys across (weekday, number, LED); selected = pressed in slot-strong + orange 14x3 pointer; today = orange-ink weekday; past = body tone.",
+      "html": "<div class=\"ds-keys\" role=\"radiogroup\" aria-label=\"Tag wählen\"><button class=\"ds-key\" role=\"radio\" aria-checked=\"false\" data-past data-filled><span class=\"ds-key__wd\">Mo</span><span class=\"ds-key__num\">16</span><span class=\"ds-key__led\"></span></button><button class=\"ds-key\" role=\"radio\" aria-checked=\"false\" data-today data-filled><span class=\"ds-key__wd\">Di</span><span class=\"ds-key__num\">17</span><span class=\"ds-key__led\"></span></button><button class=\"ds-key\" role=\"radio\" aria-checked=\"true\" ><span class=\"ds-key__wd\">Mi</span><span class=\"ds-key__num\">18</span><span class=\"ds-key__led\"></span></button><button class=\"ds-key\" role=\"radio\" aria-checked=\"false\" data-filled><span class=\"ds-key__wd\">Do</span><span class=\"ds-key__num\">19</span><span class=\"ds-key__led\"></span></button><button class=\"ds-key\" role=\"radio\" aria-checked=\"false\" ><span class=\"ds-key__wd\">Fr</span><span class=\"ds-key__num\">20</span><span class=\"ds-key__led\"></span></button><button class=\"ds-key\" role=\"radio\" aria-checked=\"false\" ><span class=\"ds-key__wd\">Sa</span><span class=\"ds-key__num\">21</span><span class=\"ds-key__led\"></span></button><button class=\"ds-key\" role=\"radio\" aria-checked=\"false\" ><span class=\"ds-key__wd\">So</span><span class=\"ds-key__num\">22</span><span class=\"ds-key__led\"></span></button></div>",
+      "css": ".ds-keys { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; width: 358px; padding: 8px 16px; background: var(--body, #e8e9e6); border-bottom: 1px solid var(--seam, #c6c8c3); } .ds-key { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 60px; padding: 6px 0 10px; border: 1px solid var(--seam, #c6c8c3); border-radius: 10px; background: var(--panel, #f4f5f2); color: var(--ink, #1f2022); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; cursor: pointer; transition: background 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-key__wd { font-size: 0.75rem; font-weight: 600; color: var(--ink-2, #45484b); } .ds-key__num { font-size: 1.125rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; } .ds-key__led { width: 7px; height: 7px; margin-top: 3px; border-radius: 50%; background: var(--led-off, #c2c4bf); transition: background 260ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-key[data-filled] .ds-key__led { background: var(--led-green, #3fae5c); } .ds-key[data-today] .ds-key__wd { color: var(--orange-ink, #a3420b); } .ds-key[data-past] { color: var(--ink-2, #45484b); background: var(--body, #e8e9e6); } .ds-key:active { background: var(--slot-strong, #d0d2cd); } .ds-key[aria-checked='true'] { background: var(--slot-strong, #d0d2cd); border-color: var(--slot-strong, #d0d2cd); } .ds-key[aria-checked='true']::after { content: ''; position: absolute; bottom: 3px; left: 50%; width: 14px; height: 3px; margin-left: -7px; border-radius: 2px; background: var(--orange, #e0661f); } .ds-key:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Suggestion Shelf Tile",
+      "kind": "card",
+      "refersTo": "shelf-tile",
+      "description": "148px (168px desktop) panel tile in a snap rail; photo or Plate-small title plate; LED ramp + time; the shelf states its reason under its title.",
+      "html": "<div class=\"ds-shelf\"><h2 class=\"ds-shelf__title\">Lange nicht gegessen</h2><span class=\"ds-shelf__why\">Gut bewertet, seit 6 Wochen nicht gekocht</span><ul class=\"ds-shelf__rail\"><li><button class=\"ds-stile\"><span class=\"ds-stile__plate\">Linsensuppe mit Würstchen</span><span class=\"ds-stile__meta\"><span class=\"ds-leds\"><i data-on></i><i data-on></i><i data-on></i><i data-on></i><i></i></span><span>35 min</span></span></button></li><li><button class=\"ds-stile\"><span class=\"ds-stile__plate\">Ofengemüse mit Feta</span><span class=\"ds-stile__meta\"><span class=\"ds-leds\"><i data-on></i><i data-on></i><i data-on></i><i></i><i></i></span><span>45 min</span></span></button></li></ul></div>",
+      "css": ".ds-shelf { width: 390px; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; color: var(--ink, #1f2022); } .ds-shelf__title { margin: 0; font-size: 1.125rem; font-weight: 700; } .ds-shelf__why { display: block; margin: 2px 0 12px; font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } .ds-shelf__rail { list-style: none; display: flex; gap: 10px; margin: 0; padding: 2px 0 6px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; } .ds-shelf__rail > li { flex: 0 0 auto; display: flex; scroll-snap-align: start; } .ds-stile { display: flex; flex-direction: column; width: 148px; padding: 0; border: 1px solid var(--seam, #c6c8c3); border-radius: 12px; background: var(--panel, #f4f5f2); color: inherit; font: inherit; text-align: left; overflow: hidden; cursor: pointer; transition: border-color 140ms cubic-bezier(0.16, 1, 0.3, 1), transform 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-stile:hover { border-color: var(--label, #5b5e61); } .ds-stile:active { transform: scale(0.97); } .ds-stile:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-stile__plate { display: flex; align-items: flex-end; aspect-ratio: 4 / 3; padding: 10px; border-bottom: 1px solid var(--seam, #c6c8c3); font-size: 1.1875rem; font-weight: 720; line-height: 1.04; letter-spacing: -0.02em; font-variation-settings: 'wdth' 88; text-wrap: balance; hyphens: auto; } .ds-stile__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px 10px; font-size: 0.875rem; font-weight: 650; font-variant-numeric: tabular-nums; } .ds-leds { display: inline-flex; gap: 3px; } .ds-leds i { width: 8px; height: 8px; border-radius: 50%; background: var(--led-off, #c2c4bf); } .ds-leds i[data-on] { background: var(--led-green, #3fae5c); }"
+    },
+    {
+      "name": "Shopping Slip",
+      "kind": "custom",
+      "refersTo": "slip",
+      "description": "The printed slip: dashed section rules with open count, tabular amount column, lines struck through in place, a \"haben wir\" button on every open line, finished sections fold to one line.",
+      "html": "<div class=\"ds-slip\"><section><h2 class=\"ds-slip__head\"><span class=\"ds-slip__rule\"><span class=\"ds-slip__name\">Obst &amp; Gemüse</span><span class=\"ds-slip__dots\"></span><span class=\"ds-slip__count\">2</span></span></h2><ul class=\"ds-slip__lines\"><li class=\"ds-sline\" data-checked><button class=\"ds-sline__tap\" role=\"checkbox\" aria-checked=\"true\"><span class=\"ds-sline__qty\">1,1 kg</span><span class=\"ds-sline__name\"><span class=\"ds-sline__text\">Kartoffeln</span></span><span class=\"ds-sline__flags\"></span></button><button class=\"ds-sline__more\" aria-label=\"mehr\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></button></li><li class=\"ds-sline\" ><button class=\"ds-sline__tap\" role=\"checkbox\" aria-checked=\"false\"><span class=\"ds-sline__qty\">3</span><span class=\"ds-sline__name\"><span class=\"ds-sline__text\">Zwiebeln</span></span><span class=\"ds-sline__flags\"><span class=\"ds-sline__new\"><span class=\"ds-led\"></span>neu</span></span></button><button class=\"ds-sline__home\" aria-pressed=\"false\">haben wir</button><button class=\"ds-sline__more\" aria-label=\"mehr\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></button></li><li class=\"ds-sline\" ><button class=\"ds-sline__tap\" role=\"checkbox\" aria-checked=\"false\"><span class=\"ds-sline__qty\">200 g + 2 EL</span><span class=\"ds-sline__name\"><span class=\"ds-sline__text\">Petersilie</span></span><span class=\"ds-sline__flags\"></span></button><button class=\"ds-sline__home\" aria-pressed=\"false\" data-likely>meist da</button><button class=\"ds-sline__more\" aria-label=\"mehr\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></button></li><li class=\"ds-sline\" data-home><button class=\"ds-sline__tap\" role=\"checkbox\" aria-checked=\"false\"><span class=\"ds-sline__qty\">1</span><span class=\"ds-sline__name\"><span class=\"ds-sline__text\">Knoblauch</span></span><span class=\"ds-sline__flags\"></span></button><button class=\"ds-sline__home\" aria-pressed=\"true\">da</button><button class=\"ds-sline__more\" aria-label=\"mehr\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></button></li></ul></section><section><h2 class=\"ds-slip__head\"><button class=\"ds-slip__rule ds-slip__rule--btn\" aria-expanded=\"false\"><span class=\"ds-slip__name\">Kühlung</span><span class=\"ds-slip__dots\"></span><span class=\"ds-slip__done\">alles im Wagen <span class=\"ds-led\"></span></span></button></h2></section></div>",
+      "css": ".ds-slip { width: 390px; padding: 2px 16px 16px; border: 1px solid var(--seam, #c6c8c3); border-radius: 14px; background: var(--panel, #f4f5f2); color: var(--ink, #1f2022); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-slip__head { margin: 0; font: inherit; } .ds-slip__rule { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 16px 0 4px; } .ds-slip__rule--btn { min-height: 44px; border: 0; border-radius: 8px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; } .ds-slip__rule--btn:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-slip__name { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; } .ds-slip__dots { flex: 1; min-width: 12px; border-bottom: 1px dashed var(--seam, #c6c8c3); transform: translateY(-3px); } .ds-slip__count { font-size: 0.875rem; font-weight: 650; color: var(--ink-2, #45484b); font-variant-numeric: tabular-nums; } .ds-slip__done { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; color: var(--label, #5b5e61); } .ds-slip__rule--btn:hover .ds-slip__done { color: var(--ink, #1f2022); } .ds-slip__lines { list-style: none; margin: 0; padding: 0; } .ds-sline { display: flex; align-items: stretch; } .ds-sline__tap { flex: 1; display: grid; grid-template-columns: 5.5em minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 44px; padding: 6px 0; border: 0; border-radius: 8px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; } .ds-sline__tap:active { background: var(--slot, #dcddd9); } .ds-sline__tap:focus-visible, .ds-sline__more:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-sline__qty { text-align: right; font-size: 0.875rem; font-weight: 650; color: var(--ink-2, #45484b); font-variant-numeric: tabular-nums; } .ds-sline__name { min-width: 0; font-weight: 560; line-height: 1.3; } .ds-sline__text { background-image: linear-gradient(currentColor, currentColor); background-repeat: no-repeat; background-position: 0 58%; background-size: 0 1.5px; -webkit-box-decoration-break: clone; box-decoration-break: clone; transition: background-size 180ms cubic-bezier(0.16, 1, 0.3, 1), color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-sline[data-checked] .ds-sline__text { background-size: 100% 1.5px; color: var(--ink-2, #45484b); } .ds-sline[data-checked] .ds-sline__qty, .ds-sline[data-home] .ds-sline__qty, .ds-sline[data-home] .ds-sline__text { color: var(--label, #5b5e61); } .ds-sline__flags { display: inline-flex; align-items: center; gap: 6px; } .ds-sline__new { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 650; color: var(--green-ink, #276a39); } .ds-label { font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } .ds-led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--led-green, #3fae5c); } .ds-sline__home { flex: 0 0 auto; align-self: center; min-height: 32px; padding: 0 8px; border: 0; border-radius: 999px; background: transparent; color: var(--label, #5b5e61); font: inherit; font-size: 0.75rem; font-weight: 620; white-space: nowrap; cursor: pointer; } .ds-sline__home:hover { background: var(--slot, #dcddd9); color: var(--ink, #1f2022); } .ds-sline__home[data-likely] { color: var(--green-ink, #276a39); } .ds-sline__home[aria-pressed='true'] { background: var(--slot, #dcddd9); color: var(--ink, #1f2022); } .ds-sline__home:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-sline__more { flex: 0 0 36px; display: grid; place-items: center; min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--label, #5b5e61); cursor: pointer; } .ds-sline__more:hover { background: var(--slot, #dcddd9); color: var(--ink, #1f2022); } @media (pointer: coarse) { .ds-sline__more { flex-basis: 44px; } }"
+    },
+    {
+      "name": "Route Rail",
+      "kind": "nav",
+      "refersTo": "route-rail",
+      "description": "One station per section in store order: 10px LED on a 1px seam line + short name; done = led-green; current = ink text + orange 14x3 pointer.",
+      "html": "<ol class=\"ds-route\"><li><a class=\"ds-route__stop\" href=\"#\" data-done><span class=\"ds-route__led\"></span><span>Obst</span></a></li><li><a class=\"ds-route__stop\" href=\"#\" data-done><span class=\"ds-route__led\"></span><span>Brot</span></a></li><li><a class=\"ds-route__stop\" href=\"#\" aria-current=\"step\"><span class=\"ds-route__led\"></span><span>Kühlung</span></a></li><li><a class=\"ds-route__stop\" href=\"#\"><span class=\"ds-route__led\"></span><span>Fleisch</span></a></li><li><a class=\"ds-route__stop\" href=\"#\"><span class=\"ds-route__led\"></span><span>TK</span></a></li><li><a class=\"ds-route__stop\" href=\"#\"><span class=\"ds-route__led\"></span><span>Trocken</span></a></li><li><a class=\"ds-route__stop\" href=\"#\"><span class=\"ds-route__led\"></span><span>Gewürze</span></a></li></ol>",
+      "css": ".ds-route { list-style: none; display: flex; width: 390px; margin: 0; padding: 8px 16px; background: var(--body, #e8e9e6); border-bottom: 1px solid var(--seam, #c6c8c3); overflow-x: auto; scrollbar-width: none; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-route > li { position: relative; flex: 1 0 auto; min-width: 52px; } .ds-route > li::before { content: ''; position: absolute; top: 12px; left: 0; right: 0; height: 1px; background: var(--seam, #c6c8c3); } .ds-route > li:first-child::before { left: 50%; } .ds-route > li:last-child::before { right: 50%; } .ds-route__stop { position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; min-height: 44px; padding: 7px 4px 8px; border-radius: 10px; color: var(--ink-2, #45484b); font-size: 0.75rem; font-weight: 600; text-decoration: none; } .ds-route__stop:hover { background: var(--slot, #dcddd9); } .ds-route__stop:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: -2px; } .ds-route__led { position: relative; box-shadow: 0 0 0 4px var(--body, #e8e9e6); width: 10px; height: 10px; border-radius: 50%; background: var(--led-off, #c2c4bf); transition: background 260ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-route__stop[data-done] .ds-route__led { background: var(--led-green, #3fae5c); } .ds-route__stop[aria-current='step'] { color: var(--ink, #1f2022); } .ds-route__stop[aria-current='step']::after { content: ''; position: absolute; bottom: 2px; left: 50%; width: 14px; height: 3px; margin-left: -7px; border-radius: 2px; background: var(--orange, #e0661f); }"
+    },
+    {
+      "name": "Shopping Day List",
+      "kind": "custom",
+      "refersTo": "shop-day-row",
+      "description": "Days of a trip with their dishes: checkbox rows with a 24px slot LED window (lit = in this trip, no pointer), date, dishes; dashed window + \"eingekauft\" when already shopped.",
+      "html": "<ul class=\"ds-sdays\"><li><button class=\"ds-sday\" role=\"checkbox\" aria-checked=\"true\"><span class=\"ds-sday__window\"><span class=\"ds-sday__led\"></span></span><span class=\"ds-sday__date\"><span class=\"ds-sday__wd\">Sa</span><span>7.</span></span><span class=\"ds-sday__dishes\">Käsespätzle · Gurkensalat</span></button></li><li><button class=\"ds-sday\" role=\"checkbox\" aria-checked=\"true\"><span class=\"ds-sday__window\"><span class=\"ds-sday__led\"></span></span><span class=\"ds-sday__date\"><span class=\"ds-sday__wd\">So</span><span>8.</span></span><span class=\"ds-sday__dishes\">Linsensuppe</span></button></li><li><button class=\"ds-sday\" role=\"checkbox\" aria-checked=\"false\"><span class=\"ds-sday__window\"><span class=\"ds-sday__led\"></span></span><span class=\"ds-sday__date\"><span class=\"ds-sday__wd\">Mo</span><span>9.</span></span><span class=\"ds-sday__dishes\">Ofengemüse mit Feta</span></button></li><li><button class=\"ds-sday\" role=\"checkbox\" aria-checked=\"false\" data-shopped><span class=\"ds-sday__window\"><span class=\"ds-sday__led\"></span></span><span class=\"ds-sday__date\"><span class=\"ds-sday__wd\">Fr</span><span>6.</span></span><span class=\"ds-sday__dishes\">Pfannkuchen</span><span class=\"ds-label\">eingekauft</span></button></li></ul>",
+      "css": ".ds-sdays { list-style: none; width: 300px; margin: 0; padding: 0; border-top: 1px solid var(--seam, #c6c8c3); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-sday { display: grid; grid-template-columns: 24px 2.6em minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 6px 0; border: 0; border-bottom: 1px solid var(--seam, #c6c8c3); background: none; color: var(--ink, #1f2022); font: inherit; text-align: left; cursor: pointer; } .ds-sday:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-sday:hover .ds-sday__dishes { color: var(--ink, #1f2022); } .ds-sday__window { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--slot, #dcddd9); } .ds-sday__led { width: 8px; height: 8px; border-radius: 50%; background: var(--led-off, #c2c4bf); transition: background 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-sday[aria-checked='true'] .ds-sday__led { background: var(--led-green, #3fae5c); } .ds-sday__date { display: flex; flex-direction: column; line-height: 1.15; font-weight: 700; font-variant-numeric: tabular-nums; } .ds-sday__wd { font-size: 0.75rem; font-weight: 600; color: var(--ink-2, #45484b); } .ds-sday__dishes { font-size: 0.875rem; font-weight: 560; line-height: 1.3; color: var(--ink-2, #45484b); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .ds-sday[aria-checked='false'] .ds-sday__dishes, .ds-sday[aria-checked='false'] .ds-sday__date { color: var(--label, #5b5e61); } .ds-sday[data-shopped] .ds-sday__window { background: transparent; outline: 1px dashed var(--seam, #c6c8c3); outline-offset: -1px; } .ds-label { font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); }"
+    },
+    {
+      "name": "Cook Head",
+      "kind": "nav",
+      "refersTo": "cook-bar",
+      "description": "Kochmodus head: ✕, title, servings −/+ in a slot pill, wake LED window; program LEDs below (done green, current ink + orange pointer).",
+      "html": "<div class=\"ds-cookhead\"><header class=\"ds-cookbar\"><a class=\"ds-ib\" href=\"#\" aria-label=\"Kochmodus beenden\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/></svg></a><span class=\"ds-cookbar__title\">Linsensuppe mit Würstchen</span><span class=\"ds-serv\"><button class=\"ds-ib\" aria-label=\"Eine Portion weniger\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\"><path d=\"M5 12h14\"/></svg></button><span class=\"ds-serv__n\"><b>6</b> <span class=\"ds-label\">Port.</span></span><button class=\"ds-ib\" aria-label=\"Eine Portion mehr\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\"><path d=\"M5 12h14\"/><path d=\"M12 5v14\"/></svg></button></span><span class=\"ds-wake\"><span class=\"ds-wake__win\"><span class=\"ds-wake__led\"></span></span>Bildschirm bleibt an</span></header><ol class=\"ds-pleds\"><li class=\"ds-pled\" data-state=\"done\"></li><li class=\"ds-pled\" data-state=\"done\"></li><li class=\"ds-pled\" data-state=\"current\"></li><li class=\"ds-pled\" data-state=\"off\"></li><li class=\"ds-pled\" data-state=\"off\"></li><li class=\"ds-pled\" data-state=\"off\"></li></ol></div>",
+      "css": ".ds-cookhead { width: 560px; background: var(--body, #e8e9e6); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; color: var(--ink, #1f2022); } .ds-cookbar { display: flex; align-items: center; gap: 8px; min-height: 60px; padding: 0 8px 0 4px; border-bottom: 1px solid var(--seam, #c6c8c3); } .ds-cookbar__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; font-weight: 650; color: var(--ink-2, #45484b); } .ds-ib { display: inline-grid; place-items: center; min-width: 44px; height: 44px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; } .ds-ib:hover { background: var(--slot, #dcddd9); } .ds-ib:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-serv { display: flex; align-items: center; border-radius: 999px; background: var(--slot, #dcddd9); } .ds-serv .ds-ib:hover { background: var(--slot-strong, #d0d2cd); } .ds-serv__n { min-width: 4.4em; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; } .ds-label { font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } .ds-wake { display: inline-flex; align-items: center; gap: 6px; padding: 0 8px; font-size: 0.75rem; font-weight: 600; color: var(--label, #5b5e61); } .ds-wake__win { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--slot, #dcddd9); } .ds-wake__led { width: 8px; height: 8px; border-radius: 50%; background: var(--led-green, #3fae5c); } .ds-pleds { list-style: none; display: flex; justify-content: center; gap: 10px; margin: 0; padding: 12px 16px 8px; } .ds-pled { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--led-off, #c2c4bf); transition: background 260ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-pled[data-state='done'] { background: var(--led-green, #3fae5c); } .ds-pled[data-state='current'] { background: var(--ink, #1f2022); } .ds-pled[data-state='current']::after { content: ''; position: absolute; top: 15px; left: 50%; width: 14px; height: 3px; margin-left: -7px; border-radius: 2px; background: var(--orange, #e0661f); }"
+    },
+    {
+      "name": "Cook Step",
+      "kind": "custom",
+      "refersTo": "cook-step-text",
+      "description": "One step read from across the counter: 3rem tabular number + \"von n\", step text at distance size (≤30ch), \"Für diesen Schritt\" panel with 1.25rem rows and a tabular amount column; quiet footer nav with chevron icons.",
+      "html": "<div class=\"ds-cook\"><p class=\"ds-cook__count\"><span class=\"ds-cook__num\">3</span><span class=\"ds-label\"> von 6</span></p><p class=\"ds-cook__text\">Zwiebel, Karotte und Knoblauch fein würfeln und in Öl glasig anschwitzen.</p><section class=\"ds-cook__uses\"><h2 class=\"ds-cook__uses-title\">Für diesen Schritt</h2><ul class=\"ds-cook__list\"><li class=\"ds-cook__ing\"><span class=\"ds-cook__qty\">1</span><span>Zwiebel</span></li><li class=\"ds-cook__ing\"><span class=\"ds-cook__qty\">1</span><span>Karotte</span></li><li class=\"ds-cook__ing\"><span class=\"ds-cook__qty\">2 <span class=\"ds-cook__unit\">Zehen</span></span><span>Knoblauch</span></li><li class=\"ds-cook__ing\"><span class=\"ds-cook__qty\">2 <span class=\"ds-cook__unit\">EL</span></span><span>Olivenöl</span></li></ul></section><footer class=\"ds-cook__hint\"><button class=\"ds-cook__nav\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m15 18-6-6 6-6\"/></svg>zurück</button><button class=\"ds-cook__nav\">weiter<svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.25\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg></button></footer></div>",
+      "css": ".ds-cook { width: 390px; padding: 16px; background: var(--body, #e8e9e6); color: var(--ink, #1f2022); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; } .ds-cook__count { display: flex; align-items: baseline; gap: 6px; margin: 0 0 12px; } .ds-cook__num { font-size: 3rem; font-weight: 760; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; } .ds-label { font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } .ds-cook__text { max-width: 30ch; margin: 0 0 24px; font-size: clamp(1.75rem, 1.2rem + 2.6vw, 2.25rem); font-weight: 620; line-height: 1.3; letter-spacing: -0.01em; text-wrap: pretty; hyphens: auto; } .ds-cook__uses { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; border: 1px solid var(--seam, #c6c8c3); border-radius: 14px; background: var(--panel, #f4f5f2); } .ds-cook__uses-title { margin: 0; font-size: 0.875rem; font-weight: 700; color: var(--ink-2, #45484b); } .ds-cook__list { list-style: none; margin: 0; padding: 0; } .ds-cook__ing { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 12px; align-items: baseline; padding: 6px 0; font-size: 1.25rem; font-weight: 600; line-height: 1.3; } .ds-cook__qty { text-align: right; font-weight: 750; color: var(--ink, #1f2022); font-variant-numeric: tabular-nums; } .ds-cook__unit { font-weight: 600; color: var(--ink-2, #45484b); } .ds-cook__hint { display: flex; justify-content: space-between; margin: 16px -16px -16px; padding: 4px 8px 8px; border-top: 1px solid var(--seam, #c6c8c3); } .ds-cook__nav { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 12px; border: 0; border-radius: 999px; background: none; color: var(--label, #5b5e61); font: inherit; font-size: 0.875rem; font-weight: 650; cursor: pointer; } .ds-cook__nav:hover { background: var(--slot, #dcddd9); color: var(--ink, #1f2022); } .ds-cook__nav:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; }"
+    },
+    {
+      "name": "Link Rows",
+      "kind": "nav",
+      "refersTo": "link-row",
+      "description": "52px hairline rows to a subpage with state and chevron; \"n neu\" in green-ink with LED. Shown with the avatar dot and the agent mark.",
+      "html": "<div class=\"ds-agents\"><span class=\"ds-avatar\">N<span class=\"ds-avatar__dot\"></span></span><div class=\"ds-linkrows\"><a class=\"ds-linkrow\" href=\"#\"><span class=\"ds-linkrow__text\">API &amp; Agenten</span><span class=\"ds-label\">1 Schlüssel aktiv</span><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg></a><a class=\"ds-linkrow\" href=\"#\"><span class=\"ds-linkrow__text\">Aktivität</span><span class=\"ds-linkrow__new\"><span class=\"ds-led\" data-on></span>3 neu</span><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg></a></div><span class=\"ds-agentmark\"><span class=\"ds-led\" data-on></span>vom Agenten geändert</span></div>",
+      "css": ".ds-agents { display: flex; flex-direction: column; gap: 16px; width: 390px; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; color: var(--ink, #1f2022); } .ds-avatar { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--slot, #dcddd9); font-weight: 700; } .ds-avatar__dot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--led-green, #3fae5c); box-shadow: 0 0 0 2px var(--body, #e8e9e6); } .ds-linkrows { display: flex; flex-direction: column; border-top: 1px solid var(--seam, #c6c8c3); } .ds-linkrow { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 4px; border-bottom: 1px solid var(--seam, #c6c8c3); color: inherit; text-decoration: none; } .ds-linkrow:hover .ds-linkrow__text { text-decoration: underline; text-decoration-color: var(--seam, #c6c8c3); } .ds-linkrow:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-linkrow__text { flex: 1; font-weight: 620; } .ds-linkrow__new { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; font-weight: 620; color: var(--green-ink, #276a39); } .ds-agentmark { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 620; color: var(--green-ink, #276a39); } .ds-label { font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } .ds-led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--led-off, #c2c4bf); } .ds-led[data-on] { background: var(--led-green, #3fae5c); } "
+    },
+    {
+      "name": "Key Row",
+      "kind": "custom",
+      "refersTo": "key-row",
+      "description": "API key: LED window (used in last 7 days), name + mono prefix, rights per group (group engraved, harmful rights in danger-ink), meta line, Widerrufen danger text button.",
+      "html": "<ul class=\"ds-keys\"><li class=\"ds-keyrow\"><span class=\"ds-ledwin\"><span class=\"ds-led\" data-on></span></span><div><div class=\"ds-keyrow__top\"><span class=\"ds-keyrow__name\">Claude Code Laptop</span><code class=\"ds-keyrow__prefix\">esp_live_7Kq…</code></div><ul class=\"ds-keyrow__scopes\"><li><span class=\"ds-label\">Rezepte</span> lesen · speichern · <span class=\"ds-danger\">löschen</span></li><li><span class=\"ds-label\">Wochenplan</span> lesen · planen</li></ul><p class=\"ds-keyrow__meta\">zuletzt benutzt vor 2 Std. · gültig bis 7. Nov. 2027</p></div><button class=\"ds-textbtn ds-textbtn--danger\">Widerrufen</button></li></ul>",
+      "css": ".ds-keys { list-style: none; width: 420px; margin: 0; padding: 0; border-top: 1px solid var(--seam, #c6c8c3); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; color: var(--ink, #1f2022); } .ds-keyrow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--seam, #c6c8c3); } .ds-keyrow__top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; } .ds-keyrow__name { font-weight: 650; } .ds-keyrow__prefix { font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace; font-size: 0.875rem; color: var(--ink-2, #45484b); } .ds-keyrow__scopes { list-style: none; display: flex; flex-direction: column; gap: 2px; margin: 4px 0 0; padding: 0; font-size: 0.875rem; font-weight: 560; } .ds-danger { color: var(--danger-ink, #a12a1f); } .ds-keyrow__meta { margin: 4px 0 0; font-size: 0.75rem; font-weight: 560; color: var(--label, #5b5e61); } .ds-ledwin { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--slot, #dcddd9); } .ds-led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--led-off, #c2c4bf); } .ds-led[data-on] { background: var(--led-green, #3fae5c); } .ds-label { font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } .ds-textbtn { min-height: 44px; padding: 0; border: 0; background: none; color: var(--green-ink, #276a39); font: inherit; font-size: 0.875rem; font-weight: 620; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); cursor: pointer; } .ds-textbtn--danger { color: var(--danger-ink, #a12a1f); } .ds-textbtn:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } "
+    },
+    {
+      "name": "Shown Once",
+      "kind": "custom",
+      "refersTo": "secret-slot",
+      "description": "The new key in a recessed slot with an LED window (lights on copy), the once note, client chips (one pressed) and the setup snippet in mono with a per-client copy button.",
+      "html": "<section class=\"ds-reveal\"><h2 class=\"ds-reveal__title\">„Claude Code Laptop“ ist bereit</h2><div class=\"ds-secret\"><span class=\"ds-ledwin ds-ledwin--body\"><span class=\"ds-led\" data-on></span></span><code class=\"ds-secret__value\">esp_live_7Kq2mX9vR4tN8wB1cZ6pL3hJ</code><button class=\"ds-btn\">Kopiert</button></div><p class=\"ds-reveal__once\">Nur jetzt sichtbar. Danach siehst du nur noch den Anfang (esp_live_7Kq…).</p><div class=\"ds-reveal__setup\"><span class=\"ds-label\">Einrichten für</span><div class=\"ds-chips\"><button class=\"ds-chip\" aria-pressed=\"true\">Claude Code</button><button class=\"ds-chip\" aria-pressed=\"false\">Claude Desktop</button><button class=\"ds-chip\" aria-pressed=\"false\">REST</button></div><pre class=\"ds-snippet\"><code>claude mcp add --transport http essensplan https://essen.local/mcp --header \"Authorization: Bearer esp_live_7Kq2…\"</code></pre><button class=\"ds-btn ds-btn--quiet\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"14\" height=\"14\" x=\"8\" y=\"8\" rx=\"2\"/><path d=\"M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2\"/></svg>Befehl kopieren</button></div></section>",
+      "css": ".ds-reveal { display: flex; flex-direction: column; gap: 16px; width: 420px; padding: 16px; border: 1px solid var(--seam, #c6c8c3); border-radius: 14px; background: var(--panel, #f4f5f2); font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; color: var(--ink, #1f2022); } .ds-reveal__title { margin: 0; font-size: 1.125rem; font-weight: 700; } .ds-secret { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px; border-radius: 10px; background: var(--slot, #dcddd9); } .ds-ledwin--body { background: var(--body, #e8e9e6); } .ds-secret__value { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace; font-size: 0.9375rem; font-weight: 600; user-select: all; } .ds-reveal__once { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--ink-2, #45484b); } .ds-reveal__setup { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--seam, #c6c8c3); } .ds-chips { display: flex; flex-wrap: wrap; gap: 8px; } .ds-chip { min-height: 36px; padding: 0 12px; border: 1px solid var(--seam, #c6c8c3); border-radius: 999px; background: var(--panel, #f4f5f2); color: var(--ink-2, #45484b); font: inherit; font-size: 0.875rem; font-weight: 560; cursor: pointer; } .ds-chip[aria-pressed='true'] { background: var(--ink, #1f2022); border-color: var(--ink, #1f2022); color: var(--body, #e8e9e6); } .ds-snippet { margin: 0; padding: 12px; border-radius: 10px; background: var(--slot, #dcddd9); color: var(--ink, #1f2022); font-family: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace; font-size: 0.8125rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; } .ds-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 24px; border: 1px solid var(--seam, #c6c8c3); border-radius: 999px; background: var(--panel, #f4f5f2); color: var(--ink, #1f2022); font: inherit; font-weight: 620; cursor: pointer; } .ds-btn:hover { background: var(--slot, #dcddd9); } .ds-btn--quiet { align-self: flex-start; padding: 0 16px; border-color: transparent; background: transparent; } .ds-btn:focus-visible, .ds-chip:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } .ds-ledwin { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--slot, #dcddd9); } .ds-led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--led-off, #c2c4bf); } .ds-led[data-on] { background: var(--led-green, #3fae5c); } .ds-label { font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } "
+    },
+    {
+      "name": "Activity Row",
+      "kind": "custom",
+      "refersTo": "activity-row",
+      "description": "One agent action: LED window (lit while unseen), key name + sentence, tabular time · link, then Rückgängig / \"rückgängig gemacht\" / blocked reason.",
+      "html": "<section class=\"ds-act\"><h2 class=\"ds-act__head\">Heute</h2><ul class=\"ds-actlist\"><li class=\"ds-actrow\"><span class=\"ds-ledwin\"><span class=\"ds-led\" data-on></span></span><div><p class=\"ds-actrow__text\"><strong>Claude Code Laptop</strong> hat „Linsensuppe“ für Mittwoch geplant.</p><p class=\"ds-actrow__meta\"><span class=\"ds-num\">14:32</span> · <a href=\"#\">Woche</a></p></div><button class=\"ds-textbtn\">Rückgängig</button></li><li class=\"ds-actrow\" data-undone><span class=\"ds-ledwin\"><span class=\"ds-led\"></span></span><div><p class=\"ds-actrow__text\"><strong>Claude Code Laptop</strong> hat „Milch“ auf die Einkaufsliste gesetzt.</p><p class=\"ds-actrow__meta\"><span class=\"ds-num\">09:10</span> · <a href=\"#\">Einkauf</a></p></div><span class=\"ds-label\">rückgängig gemacht</span></li></ul></section>",
+      "css": ".ds-act { width: 420px; font-family: 'Archivo Variable', 'Archivo', system-ui, sans-serif; color: var(--ink, #1f2022); } .ds-act__head { margin: 12px 0 8px; font-size: 0.875rem; font-weight: 700; color: var(--ink-2, #45484b); } .ds-actlist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--seam, #c6c8c3); } .ds-actrow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 12px; align-items: start; min-height: 64px; padding: 8px 0; border-bottom: 1px solid var(--seam, #c6c8c3); } .ds-actrow__text { margin: 0; line-height: 1.35; } .ds-actrow__text strong { font-weight: 680; } .ds-actrow[data-undone] .ds-actrow__text { color: var(--label, #5b5e61); } .ds-actrow__meta { margin: 2px 0 0; font-size: 0.875rem; color: var(--ink-2, #45484b); } .ds-actrow__meta a { color: inherit; text-underline-offset: 0.2em; } .ds-num { font-variant-numeric: tabular-nums; } .ds-ledwin { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--slot, #dcddd9); } .ds-led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--led-off, #c2c4bf); } .ds-led[data-on] { background: var(--led-green, #3fae5c); } .ds-label { font-size: 0.75rem; font-weight: 560; letter-spacing: 0.04em; font-variation-settings: 'wdth' 88; color: var(--label, #5b5e61); } .ds-textbtn { min-height: 44px; padding: 0; border: 0; background: none; color: var(--green-ink, #276a39); font: inherit; font-size: 0.875rem; font-weight: 620; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); cursor: pointer; } .ds-textbtn--danger { color: var(--danger-ink, #a12a1f); } .ds-textbtn:focus-visible { outline: 2px solid var(--orange, #e0661f); outline-offset: 2px; } "
+    }
+  ],
+  "narrative": {
+    "northStar": "Das Küchengerät",
+    "overview": "Essensplan is a quiet, precise kitchen appliance in the Braun/Rams line. A matte grey body carries a few controls, and each one is tactile and exactly labelled: a recessed search slot, rocker switches with an LED window, a servings dial with a printed scale, and one green power button that adds a recipe from anywhere. The tone is calm and utilitarian. The controls are where the fun lives.\n\nThe appliance comes from geometry, proportion and control behaviour. There is no faked material. Surfaces are flat tones separated by 1px hairline seams. Depth comes from tone: panels sit raised and slots sit recessed. Status is shown with LED dots. Times and amounts use tabular figures. One sober grotesk (Archivo, with variable width) does all the work, from large condensed titles down to small engraved device labels. The dark theme is the black version of the same appliance. It uses the same geometry with the tones inverted.\n\nContent stays dense and calm. The phone gets quiet hairline rows. Wider screens get a grid in which photos show as photos, and a recipe without a photo gets a deliberate title plate instead of a placeholder. The week is the appliance's program panel: seven fixed day rows that fold into a row of seven day keys while planning. The shopping list is the slip the appliance prints: one narrow strip in the store's order, struck through line by line where it stands. Kochmodus runs a recipe as the appliance's program: one step on the display at a time, set large enough to read from across the counter. The system rejects the category default of photo-card grids, shadowed cards and a stock-blue accent.",
+    "keyCharacteristics": [
+      "Matte grey body, raised panels, recessed slots, hairline seams (1px).",
+      "One signal green for \"on\" and the primary action. One orange for the single active or favourite marker.",
+      "LED dots for status and the single \"how loved\" scale.",
+      "One grotesk on the width axis: condensed display titles, small tracked device labels, tabular figures.",
+      "Round, tactile controls with touch targets of at least 44px.",
+      "Content changes in place: rows and lines never move. A day's entry flips like a split-flap, and a bought item is struck through where it stands."
+    ],
+    "rules": [
+      {
+        "name": "The One Marker Rule",
+        "body": "Orange marks state only: what is active, selected, favoured or focused. It is never an action colour. No button, link or fill that triggers an action is orange.",
+        "section": "colors"
+      },
+      {
+        "name": "The Power Rule",
+        "body": "Green means \"on\" and the primary action. Each view has one green filled control. In the shell that control is the power ＋.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink Variant Rule",
+        "body": "Green and orange reach contrast as fills. When text needs either colour, use `green-ink` or `orange-ink`.",
+        "section": "colors"
+      },
+      {
+        "name": "The Pointer Rule",
+        "body": "The one current thing carries exactly one orange pointer: a 14×3px bar with 2px corners. It sits under the selected day (key or row) while planning, under the current station of the route rail, and under the current screen of the Kochmodus program row. When a program is finished, every LED is lit and the pointer disappears. Today is a different mark (an orange dot in rows, `orange-ink` weekday text on keys), so \"current\" and \"today\" never read as the same signal.",
+        "section": "colors"
+      },
+      {
+        "name": "The Multi-Select Rule",
+        "body": "When a control chooses several things at once (chips, the days of a shopping trip), \"chosen\" is shown by the pressed or lit state alone. Multi-select controls never carry the pointer, because there is no single current one.",
+        "section": "colors"
+      },
+      {
+        "name": "The Device Label Rule",
+        "body": "A device label names a control or a value: zeit, gekocht, zuletzt, bewertung, sortierung, kategorie, portionen, folgt, optional, heute, and the short slot names (früh, abend, snack) that lead secondary entry lines. A single-word device label is lowercase. Every other label, hint or sentence uses normal German orthography (\"Link zum Rezept\", \"Ein Konto für die ganze Familie\"). Never use uppercase or small caps.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Rule",
+        "body": "Monospace appears only for an API key, its prefix and setup snippets. Everything a person reads stays in Archivo.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Kicker Rule",
+        "body": "Never put a label above a heading. Headings stand alone. Labels belong to controls, fields, Steckbrief values and ingredient groups. A shelf's reason sits under its title, never above it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Figure Rule",
+        "body": "Times, amounts, counts, day numbers, step numbers, section counts on the slip and the dial readout use tabular figures (`tnum`). Shopping amounts and Kochmodus amounts sit in a right-aligned 5.5em column. A time is a first-class figure, right-aligned and set at 650 weight.",
+        "section": "typography"
+      },
+      {
+        "name": "The Seam Not Shadow Rule",
+        "body": "Separate surfaces with a 1px `seam` hairline and a change of tone. A shadow is allowed only on something that actually floats above the page.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Split-Flap Rule",
+        "body": "Rows and lines never move, reorder or slide. Change happens in place: an entry flips, a bought line is struck through, a new line feeds in where it belongs, and a finished section folds under its own rule. Only the element that changed moves. Kochmodus is a pager, not a list: there the whole screen turns (see Kochmodus).",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** separate surfaces with 1px `seam` hairlines and tone. Panels are raised and slots are recessed.",
+      "**Do** keep every interactive target at least 44px (`tap`). Controls that are smaller on fine pointers grow to 44px under `pointer: coarse`.",
+      "**Do** give a recipe without a photo a deliberate title plate on the panel tone, set in Plate type (Plate small on shelf tiles).",
+      "**Do** use the LED ramp as the only rating and \"how loved\" display, and use the same ramp everywhere.",
+      "**Do** set times, amounts and counts in tabular figures, with times right-aligned.",
+      "**Do** use lowercase only for single-word device labels, and normal German orthography everywhere else.",
+      "**Do** honour `prefers-reduced-motion`. Every transition and animation drops to 0ms.",
+      "**Do** keep the week as seven fixed rows or seven keys. Show a change by flipping the content in place, never by moving rows.",
+      "**Do** mark the one current thing (the selected day, the current route station) with the orange pointer bar, and today with the orange dot or the `orange-ink` weekday.",
+      "**Do** show a multi-select choice by pressing the key alone, without the pointer.",
+      "**Do** strike a bought line through where it stands, and fold a finished section under its own rule.",
+      "**Do** set Kochmodus for reading at 50–80cm: step numbers at 3rem, step text never below 1.375rem, ingredient rows at 1.25rem.",
+      "**Do** keep real, focusable navigation buttons wherever a whole-screen tap zone moves the content.",
+      "**Do** light an LED for what an agent did that you have not seen yet (avatar dot, \"n neu\", activity rows), and offer \"Rückgängig\" in the log instead of asking for confirmation up front.",
+      "**Do** list rights that can do harm in `danger-ink`, wherever they appear."
+    ],
+    "donts": [
+      "**Don't** put kicker or eyebrow labels above headings.",
+      "**Don't** use orange for an action. It marks the single active, favourite or focused thing.",
+      "**Don't** draw rockers as ink-filled pills. A rocker is LED window, seam and pressed label half. Ink fill belongs to chips and segments.",
+      "**Don't** put shadows on cards or panels. The Float shadow is only for popover menus.",
+      "**Don't** fake material: no bevels, textures, embossing, or decorative or placeholder gradients on surfaces.",
+      "**Don't** use the old stock blue, or any accent other than green and orange.",
+      "**Don't** use a gradient or icon placeholder in place of a missing photo.",
+      "**Don't** confirm a pick with a toast, sheet or dialog. The flap, the LED and the last-pick line are the feedback.",
+      "**Don't** animate position. Rows and lines never move, reorder or slide; motion only flips, strikes, feeds or folds content in place. The one exception is a whole Kochmodus screen, which turns with a 24px slide.",
+      "**Don't** set anything a person reads in monospace. Mono is for the key, its prefix and setup snippets only.",
+      "**Don't** fake paper on the slip: no texture, torn edges or receipt font. It is the panel tone with dashed seams."
+    ]
+  }
+}

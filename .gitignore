@@ -107,3 +107,18 @@ jspm_packages/
 supabase/.temp/
 supabase/seed.sql
 supabase/config.toml
+# Local browser automation artifacts
+.playwright-mcp/
+
+# impeccable: keep config.json, design.json, surfaces/, critique/; local session artifacts stay out
+.impeccable/review/
+.impeccable/live/
+.impeccable/questions/
+
+# PHP backend (Slim)
+/vendor/
+.phpunit.result.cache
+.phpunit.cache/
+/public/app/
+/public/media/
+/storage/
