@@ -1,0 +1,30 @@
+# Apache (all-inkl). Local runs nginx and ignores this file.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # PHP-FPM/CGI drops the Authorization header unless it is passed on (API keys, MCP).
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Real files (built SPA assets, media) are served directly; everything else goes to Slim.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "same-origin"
+    Header always set X-Frame-Options "DENY"
+    # Enable once the domain serves HTTPS only:
+    # Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+# Uploaded media are images only, never scripts.
+<FilesMatch "\.(php|phtml|phar)$">
+    <If "%{REQUEST_URI} =~ m#^/media/#">
+        Require all denied
+    </If>
+</FilesMatch>

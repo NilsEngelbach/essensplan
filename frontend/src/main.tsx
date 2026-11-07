@@ -17,6 +17,12 @@ import { ApiPage } from './features/konto/ApiPage'
 import { ActivityPage } from './features/konto/ActivityPage'
 import { ShoppingPage } from './features/einkauf/ShoppingPage'
 import { CookPage } from './features/kochen/CookPage'
+import { RequireAuth } from './app/RequireAuth'
+import { AuthLayout } from './features/login/AuthLayout'
+import { LoginPage } from './features/login/LoginPage'
+import { ForgotPage } from './features/login/ForgotPage'
+import { ResetPage } from './features/login/ResetPage'
+import { PairPage } from './features/login/PairPage'
 
 // Apply the stored theme before first paint.
 try {
@@ -28,7 +34,11 @@ try {
 
 const router = createBrowserRouter([
   {
-    element: <AppShell />,
+    element: (
+      <RequireAuth>
+        <AppShell />
+      </RequireAuth>
+    ),
     children: [
       { path: '/', element: <WeekPage /> },
       { path: '/woche/:start', element: <WeekPage /> },
@@ -41,10 +51,20 @@ const router = createBrowserRouter([
     ],
   },
   // Focused tasks run full screen without the shell.
-  { path: '/rezepte/neu', element: <CapturePage /> },
-  { path: '/rezepte/neu/pruefen', element: <RecipeEditPage /> },
-  { path: '/rezepte/:id/bearbeiten', element: <RecipeEditPage /> },
-  { path: '/rezepte/:id/kochen', element: <CookPage /> },
+  { path: '/rezepte/neu', element: <RequireAuth><CapturePage /></RequireAuth> },
+  { path: '/rezepte/neu/pruefen', element: <RequireAuth><RecipeEditPage /></RequireAuth> },
+  { path: '/rezepte/:id/bearbeiten', element: <RequireAuth><RecipeEditPage /></RequireAuth> },
+  { path: '/rezepte/:id/kochen', element: <RequireAuth><CookPage /></RequireAuth> },
+  // Logged out: the appliance on standby.
+  {
+    element: <AuthLayout />,
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      { path: '/passwort-vergessen', element: <ForgotPage /> },
+      { path: '/passwort-zuruecksetzen', element: <ResetPage /> },
+      { path: '/koppeln/:token', element: <PairPage /> },
+    ],
+  },
 ])
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

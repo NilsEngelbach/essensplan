@@ -1,6 +1,6 @@
 # Migration Plan: Essensplan → PHP/MySQL on all-inkl, UX-first, with Agent API + MCP
 
-Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅; Login postponed; next: first backend draft (handoff: [docs/HANDOFF.md](HANDOFF.md))**
+Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅, Login & Geräte shaped + built ✅ (all surfaces done); backend draft 1 ✅ on branch `backend-draft` ([BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md), 37 tests green on MySQL 8.4 + MariaDB 10.6); next: owner review of the draft, then the Local site spike (§3.1) and wiring the SPA**
 Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per day, API keys only, Local dev env)
 
 ---
@@ -24,6 +24,7 @@ Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per d
 | D14 | **Home = the week.** Installable web app (PWA) on Android + iPhone; **share target on Android**, paste-link fallback on iPhone. Phone, tablet and desktop all first-class | decided (shape app-shell) |
 | D13 | UI voice: **"du"**; dark mode required | decided (init) |
 | D18 | **API & Agenten:** no scope presets (rights picked per key; write implies read); setup snippets for Claude Code, Claude Desktop (via mcp-remote), other MCP clients and REST. **claude.ai web and ChatGPT need OAuth** (still out of scope, D4); the UI says so. Activity log with per-action undo (blocked when the target changed since), marks where it happened, avatar dot; 90-day retention. New scopes `shopping:read|write` | decided (shape api-agenten) |
+| D19 | **Login & Geräte:** e-mail + password with "Angemeldet bleiben" (on by default → rolling 1-year session; off → ends with the browser). **New family devices pair** with a logged-in one: a 6-digit code or QR (10 min, single use), no password needed; paired devices stay logged in. Konto lists **Geräte** (sessions, log out one or all others) and **Name und E-Mail** (e-mail change needs the current password). No password change in Konto (reset mail instead), no web setup screen (owner comes from the import / `bin/console user:create`). Sessions are DB rows, not native PHP sessions | decided (shape login) |
 | D17 | **Kochmodus:** propped-up reading at a distance; one step per screen; tap anywhere for next; per-step ingredients; no timers, no mise en place; "gekocht" stays derived from past plan entries (no explicit cooked events) | decided (shape kochmodus) |
 | D16 | **Einkaufsliste:** days chosen per trip (default: planned days not yet shopped); one store with a user-defined section order; own extra items until bought; "Zuhause prüfen" with learned "meist da"; live list (plan changes print as "neu"); explicit "Einkauf abschließen" (undoable). Not chosen: several stores, two-phone live sync, "which recipe needs it" | decided (shape einkaufsliste) |
 | D15 | **Wochenplan:** a plan entry is a recipe **or** free text (presets Reste · Essen gehen · Auswärts · Bestellen + recent own texts). **No per-entry servings, no notes**; grocery list uses recipe base servings. Mostly Mittagessen is planned; planning happens on the phone in one sit-down. **Wochenbeginn** (default Mo) and **Planungstag** (default Fr; home flips to next week from then) are user settings | decided (shape wochenplan) |
@@ -50,11 +51,11 @@ Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per d
 | Runtime | PHP **8.2+** (Local ships 8.2.29; all-inkl: pick 8.2 or newer) |
 | HTTP | Slim 4 (router + PSR-15 middleware) |
 | DB | MySQL 8 via PDO; repositories with plain SQL; `migrations/*.sql` + `bin/console migrate` |
-| Auth | Native PHP sessions + CSRF for the browser; **generated API keys** (Bearer, scoped) for agents |
+| Auth | DB-backed sessions (one row per device, D19) + CSRF for the browser; **generated API keys** (Bearer, scoped) for agents |
 | Storage | `public/media/{userId}/…` + generated thumbnails |
 | Frontend | React 18 + Vite + React Router + TanStack Query; built into `public/app/` |
 | AI | PHP providers: OpenAI, Anthropic (`anthropic-ai/sdk`), OpenCode |
-| MCP | Official `mcp/sdk`, Streamable HTTP, stateless ([docs](https://php.sdk.modelcontextprotocol.io/docs/transports.html)) |
+| MCP | Streamable HTTP, stateless. Draft 1 uses a small hand-rolled JSON-RPC server (`src/Mcp/`); `mcp/sdk` 0.9 installs but keeps sessions for the handshake era (BACKEND_REQUIREMENTS §9) |
 | Mail | PHPMailer (Mailpit locally, all-inkl SMTP in production) |
 | Jobs | `ai_jobs` table + cron `bin/console jobs:run` |
 
@@ -62,7 +63,7 @@ Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per d
 Each must support PHP 8.2; `composer install` in Phase 2 confirms this.
 
 **Built in-house (was Laravel's job), each with tests:**
-- Sessions (Secure/HttpOnly/SameSite=Lax, `session_regenerate_id` on login).
+- Sessions as DB rows, one per device (D19). Cookie Secure/HttpOnly/SameSite=Lax; a fresh id on every login.
 - CSRF token header.
 - `password_hash`/`password_verify`. These accept Supabase's `$2a$` hashes; rehash on login.
 - Password reset tokens (SHA-256 stored, 60 min, single use).
@@ -113,8 +114,8 @@ essensplan/
 | 1.5c ✅ | `/impeccable shape einkaufsliste` + **Einkauf prototype** (brief `.impeccable/surfaces/frontend-src-features-einkauf.md`): days picked per trip (pre-ticked = planned, not yet shopped), store section order ("Mein Laden"), Zuhause prüfen with "meist da", own items, live list with "neu" lines, strike in place, finish trip with undo | Trips, item state, manual items, section overrides/order, at-home counts |
 | 1.5d ✅ | `/impeccable shape kochmodus` + **Kochmodus prototype** (brief `.impeccable/surfaces/frontend-src-features-kochen.md`): one step per screen read from a distance, tap anywhere / swipe / keys, ingredients per step (scaled), Wake Lock, servings carried from the dial. No timers, no mise en place, "gekocht" stays derived from the plan | `instructions.ingredient_ids` (AI import fills; text-match fallback); no cooked_events |
 | 1.5e ✅ | `/impeccable shape api-agenten` + **prototype** (brief `.impeccable/surfaces/frontend-src-features-konto.md`): keys with rights picked per key (no presets; write implies read), show-once secret with setup for Claude Code / Claude Desktop (mcp-remote) / MCP / REST, activity log with undo and blocked-undo reason, agent marks on plan/recipes/shopping, avatar dot | Scopes + `shopping:*`; `api_keys.client`; `agent_activity.undo_payload/undone_at/seen_at`; undo + unseen endpoints |
-| 1.5 | `/impeccable shape <surface>` for the rest: Login (**postponed** 2026-11-07; backend draft starts first) | One confirmed brief per surface | Slot model, plan entries, grocery list entity |
-| 1.6 | **Backend requirements extract** (written by us from the briefs) | `docs/BACKEND_REQUIREMENTS.md`: entities, fields, queries, endpoints and MCP tools each screen needs | **Input for Phase 3** |
+| 1.5f ✅ | `/impeccable shape login` + **prototype** (brief `.impeccable/surfaces/frontend-src-features-login.md`): standby login (wordmark LED dark until you are in), "Angemeldet bleiben" rocker, pairing by code or QR (`/koppeln/:token`), forgot/reset, Konto → Geräte (sessions, pairing panel) and Name und E-Mail, "Abmelden" in the account menu, 401 → `/login?zurueck=` | `sessions` table with device label; `device_links`; pair, device-link, session endpoints; `PATCH /me` with `currentPassword` (D19, HANDOFF §4) |
+| 1.6 (draft) | **Backend requirements extract** (written 2026-11-07 together with the first backend draft, branch `backend-draft`) | [docs/BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md): entities, fields, endpoints, MCP tools, error codes; deviations in its §9, open points in §10 | **Input for Phase 3**; waits for the owner's confirmation (gate below) |
 
 **Gate:** PRODUCT.md, screen map, surface briefs, chosen visual direction and BACKEND_REQUIREMENTS.md are confirmed by you. Only then are the schema and API contract frozen.
 
@@ -129,7 +130,7 @@ essensplan/
 | **KI-Import** | Main entry point; **PWA Share Target** (link or photo from the phone); live progress; editable preview | Async jobs needed (progress states)? |
 | **Rezeptliste** | Instant search; filter chips; thumbnail cards; sort by last cooked / rating | Full-text search (MySQL FULLTEXT)? |
 | **Einstellungen → API & Agenten** | Key creation with scope presets; one-time reveal with copy-ready MCP snippets; revoke; activity log | Fixed by §6 |
-| **Login / empty states** | Login only (no sign-up page, D10); password reset; empty states for a fresh collection | Registration disabled by config after the owner exists |
+| **Login / empty states** | Login only (no sign-up page, D10); password reset; device pairing; empty states for a fresh collection | Decided in D19. Registration disabled by config after the owner exists |
 
 ---
 
@@ -137,7 +138,7 @@ essensplan/
 
 ### 3.1 Local (`essen.local`), see §12 for details
 - [ ] Junction `app\public` → `C:\DEV\essensplan\public`; "hello Slim" answers on `http://essen.local/api/v1/health`
-- [ ] `composer install` works with Local's PHP 8.2.29 (checks package constraints)
+- [x] `composer install` works with Local's PHP 8.2.29 (checks package constraints). Verified 2026-11-07 with Local's php.exe on the CLI (all §1 packages, `config.platform.php` 8.2.29), not yet inside the site shell
 - [ ] Database `essensplan` created on `127.0.0.1:10029`
 - [ ] Mail via Local's Mailpit arrives
 - [ ] `Authorization: Bearer` header reaches PHP through nginx
@@ -149,7 +150,7 @@ essensplan/
 - [ ] **`Authorization` header reaches PHP under Apache.** `.htaccess`: `RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]`
 - [ ] **`max_execution_time` / FastCGI timeout:** endpoint sleeping 150 s. Local allows 1200 s, so **only all-inkl reveals this limit**
 - [ ] Cron available + minimum interval; upload limits ≥ 10 MB; outbound HTTPS to the AI APIs
-- [ ] MySQL vs MariaDB version. Keep SQL compatible with both: JSON columns yes, no MySQL-only functions
+- [ ] MySQL vs MariaDB version. Keep SQL compatible with both: JSON columns yes, no MySQL-only functions. (Schema and test suite verified 2026-11-07 on MySQL 8.4.0 and MariaDB 10.6.23 locally; all-inkl's version still to check)
 - [ ] SMTP sender + SPF/DKIM
 - [ ] Check which MCP protocol revisions `mcp/sdk` serves: the current spec 2026-07-28 is stateless ([release](https://github.com/modelcontextprotocol/specification/releases/tag/2026-07-28)), while older clients still send `initialize` (2025-11-25)
 
@@ -193,7 +194,10 @@ ai_usage           id, user_id, api_key_id NULL, feature, provider, model, input
                    output_tokens, duration_ms, success, created_at      ← TODO.md analytics
 ai_jobs            id, user_id, type, status, progress, input JSON, result JSON, error,
                    created_at, finished_at
-sessions, password_resets, rate_limits, schema_migrations
+sessions           (D19) id hash, user_id, remember, device_label, user_agent, ip, via, created_at,
+                   last_seen_at, expires_at   ← listed and revocable in Konto → Geräte
+device_links       (D19) code_hash, token_hash, created_by_session, expires_at, used_at, used_by_session
+password_resets, rate_limits, schema_migrations
 (+ shopping_list_items / households if Phase 1 decides so)
 ```
 
@@ -209,6 +213,7 @@ sessions, password_resets, rate_limits, schema_migrations
 | Method | Route | Scope (API key) |
 |---|---|---|
 | POST | `/auth/login`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password` (`/auth/register` only while `REGISTRATION_ENABLED=true`, D10) | session only |
+| POST / GET / DELETE | `/auth/pair`, `/auth/device-links[/{id}]`, `/auth/sessions[/{id}]`, `/auth/sessions/revoke-others` (D19, details in HANDOFF §4) | session only |
 | GET/PATCH | `/me` | `profile:read` |
 | GET | `/recipes?q&category&tags[]&maxTime&minRating&notCookedSince&sort&limit&cursor` | `recipes:read` |
 | GET | `/recipes/{id}` | `recipes:read` |
@@ -240,6 +245,8 @@ Errors use one format: `{"error":{"code":"…","message":"…"}}`. The existing 
 ---
 
 ## 5. Phase 4 – Backend build
+
+**Draft 1 (2026-11-07, branch `backend-draft`):** steps 1–3 and 5–7 are drafted and tested (private MySQL 8.4 / MariaDB 10.6 instances and `php -S`, not yet the Local site). Step 4: recipes, plan, shopping and suggestions are in; images with variants are not (Phase 6). `import:supabase` is not written (Phase 8).
 1. Skeleton:
    - Slim app, container, `.env`, `JsonErrors` middleware.
    - `bin/console` (`migrate`, `jobs:run`, `import:supabase`).

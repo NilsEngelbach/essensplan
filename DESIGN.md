@@ -19,6 +19,8 @@ colors:
   orange-ink: "#a3420b"
   led-off: "#c2c4bf"
   danger-ink: "#a12a1f"
+  qr-paper: "#f4f5f2"
+  qr-ink: "#1f2022"
   dark-body: "#161718"
   dark-panel: "#1f2022"
   dark-slot: "#0f1011"
@@ -484,7 +486,8 @@ The design is mobile-first and changes at 760px and 1024px. On the spacing scale
 - **Week, 1024px and up:** outside planning, the week body and its head stop at 760px. While planning, the body splits into a pinned week column (minmax(360px, 420px), sticky 32px from the top) and the library (minmax(0, 1fr)), 32px apart. In planning every row's date takes the same 12px inset, so selecting a row never moves its text. Shelves stop bleeding to the edge.
 - **Einkauf, phone:** the controls stack first (days readout with "Tage ändern", the inline day list when open), then the route rail, pinned under the 56px top bar and bleeding to the screen edges on the `body` tone with a seam under it, then the slip. Sections scroll to sit below the pinned rail.
 - **Einkauf, 1024px and up:** a centred grid of a 300px control column (sticky 32px from the top, the day list always open, "Mein Laden: Reihenfolge" as a text button) and the slip column (minmax(0, 520px)), 48px apart. The head shares the same centred width. The route rail pins to the top of the slip column without bleeding.
-- **Konto:** a single column of panels, 24px apart and at most 640px wide: Woche, Mein Laden, then Agenten. The subpages "API & Agenten" and "Aktivität" use the same column (up to 760px from 1024px). Each starts with a "Konto" back link (arrow icon and text) above the page title, then an intro of at most 62ch in `ink-2`.
+- **Logged out (login, code, password reset, `/koppeln`):** no shell at all. A 56px bar with only the wordmark (32px padding from 1024px), then one column of at most 400px on `body`, 32px from the top (10vh when the window is at least 760px wide and tall), sections 24px apart. The owner's sign-off "Coded with ❤️ in THE LÄND." sits as a centred Label at the foot.
+- **Konto:** a single column of panels, 24px apart and at most 640px wide: Woche, Mein Laden, Geräte, Agenten, then Name und E-Mail. The subpages "API & Agenten" and "Aktivität" use the same column (up to 760px from 1024px). Each starts with a "Konto" back link (arrow icon and text) above the page title, then an intro of at most 62ch in `ink-2`.
 - Focus tasks (capture, edit) replace the shell with a 60px focus bar and a centred column (capture 560px, edit 820px).
 - **Kochmodus** is a focus surface with no shell at all: a full-height column on the `body` tone. A sticky head (the 60px cook bar with a seam under it, then the program LED row) sits on top. The stage takes the remaining height with 16px padding, and a sticky footer with a seam on top holds the two navigation buttons above the safe area. Below 560px the wake text is hidden in the bar, and a right-aligned Label line ("Bildschirm kann ausgehen") appears under it only when the screen may turn off.
 - **Kochmodus, tablet landscape (900px and up in landscape) and 1024px and up:** the stage padding grows to 24px/48px/12px. A step splits into the step (3fr) and its ingredients (minmax(280px, 2fr)), 48px apart. The ingredient screen stops at 720px.
@@ -695,6 +698,17 @@ Day groups ("Heute", "Gestern", "Montag, 9. November") with a 0.875rem/700 `ink-
 - **Right side:** a "Rückgängig" text button at 0.875rem. When the entry has been undone, a Label "rückgängig gemacht" appears instead and the sentence turns `label`. When undo is blocked, a Label gives the reason, right-aligned, at most 11em wide.
 
 The empty state is "Noch keine Agenten-Aktivität." with an explanation.
+
+### Standby (signature)
+Logged out, the app is the appliance on standby: the wordmark's LED is `led-off`. On a successful login (password, code, QR or new password) it switches on with a short double flick (`led-off` → `led-green` → off → on over 520ms, linear), and the app opens about 560ms later. Under reduced motion the LED is simply lit and the app opens at once. This is the only motion on the logged-out screens apart from the flap when the login panel swaps to code mode.
+- **Login panel:** E-Mail, Passwort with "Passwort vergessen?" as a Small text button right of the label (its 44px hit area overlaps the label row), the rocker "Angemeldet bleiben" (on by default, with an `ink-2` hint when off), the error line, and a large green "Anmelden" across the full width. While a request runs the button keeps its size and reads "Anmelden…".
+- **Code slot:** the 6-digit code goes into one recessed field, 64px tall, in 2rem/700 tabular figures with 0.16em tracking, shown as "482 913". The placeholder "6 Ziffern" is set at 1.125rem/560 without tracking. It submits by itself at six digits.
+- **Status line:** under a page title, an unlit LED window and a Small line at 600 in `ink-2` ("Du bist abgemeldet.", "Melde dich wieder an. Danach geht es dort weiter, wo du warst."). It is never a kicker above the title.
+- **Waiting primary:** a green button that cannot act yet (`aria-disabled`, still focusable) mixes 62% green into `panel`.
+
+### Devices and Pairing
+- **Device rows** use the key-row grammar: an LED window (lit when active in the last seven days), the device label ("iPhone · Safari") at 650 with a recessed "Dieses Gerät" pill (`slot`, Label size, 620, `ink-2`), and a Label meta line "jetzt aktiv" / "zuletzt aktiv vor …" · "seit …" · "bis Browser zu". "Abmelden" is a danger text button with no dialog and no undo. A device that just joined flips into the list.
+- **Pairing panel** (inside the Geräte panel, behind no extra card): a 168px QR code beside the code. The QR is always `qr-ink` on `qr-paper` with 10px corners, in both themes, so every camera reads it. The code sits in a recessed slot (`slot`) with an LED window on the `body` tone and 2rem/700 tabular digits. While waiting, that LED blinks slowly (1200ms), like the pairing button on a device; under reduced motion it stays lit. A Label counts down ("noch 9:41"). Expired: the QR fades to 18%, the digits turn `label`, and "Neuer Code" appears. Connected: a recessed line with a lit LED, "Verbunden: Android · Chrome".
 
 ### Navigation
 - **Bottom bar:** a `panel` bar with a seam on top and four equal columns of a 22px icon over a 0.75rem/560 label. The active item turns `ink` and gets a 6px orange dot above it.

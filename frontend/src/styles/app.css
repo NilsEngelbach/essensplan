@@ -4034,3 +4034,344 @@ select.input {
     max-width: 760px;
   }
 }
+
+/* ═════════════════════════════════ Login (the appliance on standby) ═════════════════════════════════ */
+
+.auth {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--body);
+}
+.authbar {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 var(--gap-4);
+  border-bottom: 1px solid var(--seam);
+}
+/* Standby: the wordmark LED is dark until you are in. */
+.wordmark[data-standby]::after {
+  background: var(--led-off);
+}
+.wordmark[data-power]::after {
+  animation: power-on 520ms linear;
+}
+@keyframes power-on {
+  0%,
+  28% {
+    background: var(--led-off);
+  }
+  14%,
+  44%,
+  100% {
+    background: var(--led-green);
+  }
+}
+.auth__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-5);
+  width: 100%;
+  max-width: calc(400px + 2 * var(--gap-4));
+  margin: 0 auto;
+  padding: var(--gap-6) var(--gap-4);
+}
+@media (min-width: 760px) and (min-height: 760px) {
+  .auth__main {
+    padding-top: 10vh;
+  }
+}
+.auth__main > .konto__back {
+  margin-bottom: calc(-1 * var(--gap-4));
+}
+.auth__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-2);
+}
+.auth__head .pagehead__title {
+  text-wrap: balance;
+}
+.auth__intro {
+  color: var(--ink-2);
+  max-width: 62ch;
+}
+.auth__note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.auth__panel {
+  gap: var(--gap-4);
+}
+.auth__panel[data-flip],
+.keyrow[data-flip] .keyrow__body,
+.acct .field[data-flip] {
+  animation: flap 320ms var(--ease-out);
+  transform-origin: 50% 0;
+}
+.auth__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-2) var(--gap-4);
+}
+.auth__toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gap-2);
+}
+.auth__hint {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+.auth__panel > .auth__hint {
+  margin-top: calc(-1 * var(--gap-2));
+}
+.auth__error:empty {
+  display: none;
+}
+.auth__submit {
+  width: 100%;
+}
+.btn[aria-disabled='true'] {
+  cursor: default;
+}
+.btn--primary[aria-disabled='true'] {
+  background: color-mix(in srgb, var(--green) 62%, var(--panel));
+}
+.btn--primary[aria-disabled='true']:hover {
+  background: color-mix(in srgb, var(--green) 62%, var(--panel));
+}
+.auth__panel > .textbtn {
+  align-self: center;
+}
+.auth__alt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-3);
+  padding-top: var(--gap-5);
+  border-top: 1px solid var(--seam);
+}
+.auth__back {
+  align-self: center;
+}
+.auth__sent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-3);
+  font-weight: 560;
+}
+.auth__sent:focus {
+  outline: none;
+}
+.auth__sent .ledwin {
+  margin-top: 0;
+}
+.auth__rule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.auth__rule[data-ok] {
+  color: var(--green-ink);
+}
+.auth__demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--gap-3);
+  justify-content: center;
+  text-align: center;
+}
+.auth__demo .textbtn {
+  font-size: var(--fs-small);
+  letter-spacing: 0;
+}
+.auth__foot {
+  padding: var(--gap-5) var(--gap-4) calc(var(--gap-5) + env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+.field__labelrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-3);
+}
+/* Keeps the 44px hit area without pushing the field down. */
+.field__labelrow .textbtn {
+  margin: -12px 0;
+  font-size: var(--fs-small);
+}
+
+/* Password field with its eye */
+.pwfield {
+  position: relative;
+}
+.pwfield__input {
+  padding-right: 52px;
+}
+.pwfield__eye {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  color: var(--ink-2);
+}
+.pwfield__eye:hover {
+  background: transparent;
+  color: var(--ink);
+}
+/* Edge draws its own reveal button; ours is the one. */
+.pwfield__input::-ms-reveal {
+  display: none;
+}
+
+/* The 6-digit code, typed into one recessed slot */
+.codeslot {
+  min-height: 64px;
+  padding: 8px 12px;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-align: center;
+}
+.codeslot::placeholder {
+  color: var(--label);
+  font-size: 1.125rem;
+  font-weight: 560;
+  letter-spacing: 0;
+}
+
+/* ── Konto → Geräte ── */
+.devices__me {
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: var(--slot);
+  color: var(--ink-2);
+  font-size: var(--fs-label);
+  font-weight: 620;
+}
+.devices__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-2) var(--gap-5);
+}
+.pair {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-4);
+}
+.pair__title {
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+.pair__title:focus {
+  outline: none;
+}
+.pair__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap-4) var(--gap-5);
+  align-items: center;
+}
+@media (min-width: 520px) {
+  .pair__grid {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+}
+.pair__qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  justify-self: center;
+  margin: 0;
+}
+.pair__qr svg {
+  display: block;
+  width: 168px;
+  height: 168px;
+  border-radius: var(--r-slot);
+  background: var(--qr-paper);
+  fill: var(--qr-ink);
+  transition: opacity var(--t-mid) var(--ease-out);
+}
+.pair__qr[data-expired] svg {
+  opacity: 0.18;
+}
+.pair__code {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--gap-2);
+}
+.pair__how {
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+  max-width: 34ch;
+}
+.pair__slot {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-3);
+  padding: 10px 18px 10px 10px;
+  border-radius: var(--r-slot);
+  background: var(--slot);
+}
+.pair__slot .ledwin,
+.pair__done .ledwin {
+  background: var(--body);
+}
+.pair__digits {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.pair__slot[data-expired] .pair__digits {
+  color: var(--label);
+}
+.pair__done {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-3);
+  padding: 10px 16px 10px 10px;
+  border-radius: var(--r-slot);
+  background: var(--slot);
+  font-weight: 560;
+}
+/* Waiting for the other device: a slow blink, like a pairing button. */
+.led[data-blink] {
+  animation: blink 1200ms steps(2, jump-none) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .led[data-blink] {
+    animation: none;
+  }
+}
+
+/* ── Konto → Name und E-Mail ── */
+.acct {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-4);
+}
+.acct__pw {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--gap-3);
+  padding-top: var(--gap-2);
+  border-top: 1px solid var(--seam);
+}

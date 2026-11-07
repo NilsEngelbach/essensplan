@@ -1,0 +1,337 @@
+{
+ "about": "Output of frontend/src/lib/shopping.ts aggregate()+classify() and format.ts formatAmount() for these inputs (generated with esbuild + node, 2026-11-07). The PHP port must match exactly.",
+ "ingredients": [
+  {
+   "name": "Zwiebel",
+   "amount": 1,
+   "unit": null
+  },
+  {
+   "name": "Zwiebeln",
+   "amount": 2,
+   "unit": ""
+  },
+  {
+   "name": "Mehl",
+   "amount": 500,
+   "unit": "g"
+  },
+  {
+   "name": "Mehl",
+   "amount": 0.75,
+   "unit": "kg"
+  },
+  {
+   "name": "Milch",
+   "amount": 250,
+   "unit": "ml"
+  },
+  {
+   "name": "Milch",
+   "amount": 1,
+   "unit": "l"
+  },
+  {
+   "name": "Knoblauch",
+   "amount": 1,
+   "unit": "Zehe"
+  },
+  {
+   "name": "Knoblauch",
+   "amount": 2,
+   "unit": "Zehen"
+  },
+  {
+   "name": "Salz",
+   "amount": 1,
+   "unit": "Prise"
+  },
+  {
+   "name": "Salz",
+   "amount": null,
+   "unit": null
+  },
+  {
+   "name": "Paprika, rot",
+   "amount": 1,
+   "unit": null
+  },
+  {
+   "name": "Paprika, gelb",
+   "amount": 0.5,
+   "unit": null
+  },
+  {
+   "name": "Olivenöl",
+   "amount": 2,
+   "unit": "EL"
+  },
+  {
+   "name": "Olivenöl",
+   "amount": 1.5,
+   "unit": "EL"
+  },
+  {
+   "name": "Butter",
+   "amount": 30,
+   "unit": "g"
+  },
+  {
+   "name": "Butter",
+   "amount": 1,
+   "unit": "EL"
+  },
+  {
+   "name": "Wasser",
+   "amount": 500,
+   "unit": "ml"
+  },
+  {
+   "name": "Tomaten",
+   "amount": 0.333,
+   "unit": null
+  },
+  {
+   "name": "Hackfleisch",
+   "amount": 1234,
+   "unit": "g"
+  },
+  {
+   "name": "Zucker",
+   "amount": 7.25,
+   "unit": "g"
+  },
+  {
+   "name": "Sahne",
+   "amount": 12345,
+   "unit": "ml"
+  },
+  {
+   "name": "Eier",
+   "amount": 2.5,
+   "unit": "Stück"
+  },
+  {
+   "name": "TK-Erbsen",
+   "amount": 150,
+   "unit": "g"
+  },
+  {
+   "name": "Möhren",
+   "amount": 3,
+   "unit": null
+  },
+  {
+   "name": "Möhre",
+   "amount": 1,
+   "unit": null
+  },
+  {
+   "name": "Kartoffeln",
+   "amount": 1.1,
+   "unit": "kg"
+  },
+  {
+   "name": "Spülmittel",
+   "amount": null,
+   "unit": null
+  },
+  {
+   "name": "Brühe",
+   "amount": 1,
+   "unit": "l"
+  }
+ ],
+ "aggregate": [
+  {
+   "key": "zwiebel",
+   "name": "Zwiebeln",
+   "qty": "3",
+   "section": "Obst & Gemüse"
+  },
+  {
+   "key": "mehl",
+   "name": "Mehl",
+   "qty": "1,3 kg",
+   "section": "Trockenware"
+  },
+  {
+   "key": "milch",
+   "name": "Milch",
+   "qty": "1,3 l",
+   "section": "Kühlung"
+  },
+  {
+   "key": "knoblauch",
+   "name": "Knoblauch",
+   "qty": "3 Zehen",
+   "section": "Obst & Gemüse"
+  },
+  {
+   "key": "salz",
+   "name": "Salz",
+   "qty": "1 Prise",
+   "section": "Gewürze & Öl"
+  },
+  {
+   "key": "paprika",
+   "name": "Paprika",
+   "qty": "1½",
+   "section": "Obst & Gemüse"
+  },
+  {
+   "key": "olivenöl",
+   "name": "Olivenöl",
+   "qty": "3½ EL",
+   "section": "Gewürze & Öl"
+  },
+  {
+   "key": "butter",
+   "name": "Butter",
+   "qty": "30 g + 1 EL",
+   "section": "Kühlung"
+  },
+  {
+   "key": "tomaten",
+   "name": "Tomaten",
+   "qty": "¼",
+   "section": "Obst & Gemüse"
+  },
+  {
+   "key": "hackfleisch",
+   "name": "Hackfleisch",
+   "qty": "1,2 kg",
+   "section": "Fleisch & Fisch"
+  },
+  {
+   "key": "zucker",
+   "name": "Zucker",
+   "qty": "7,3 g",
+   "section": "Trockenware"
+  },
+  {
+   "key": "sahne",
+   "name": "Sahne",
+   "qty": "12,3 l",
+   "section": "Kühlung"
+  },
+  {
+   "key": "eier",
+   "name": "Eier",
+   "qty": "2½ Stück",
+   "section": "Kühlung"
+  },
+  {
+   "key": "tk-erbsen",
+   "name": "TK-Erbsen",
+   "qty": "150 g",
+   "section": "Tiefkühl"
+  },
+  {
+   "key": "möhre",
+   "name": "Möhren",
+   "qty": "4",
+   "section": "Obst & Gemüse"
+  },
+  {
+   "key": "kartoffeln",
+   "name": "Kartoffeln",
+   "qty": "1,1 kg",
+   "section": "Obst & Gemüse"
+  },
+  {
+   "key": "spülmittel",
+   "name": "Spülmittel",
+   "qty": "",
+   "section": "Drogerie & Haushalt"
+  },
+  {
+   "key": "brühe",
+   "name": "Brühe",
+   "qty": "1 l",
+   "section": "Konserven & Saucen"
+  }
+ ],
+ "amounts": [
+  {
+   "amount": 0.25,
+   "unit": null,
+   "formatted": "¼"
+  },
+  {
+   "amount": 0.3,
+   "unit": "EL",
+   "formatted": "¼"
+  },
+  {
+   "amount": 0.3333333333333333,
+   "unit": null,
+   "formatted": "¼"
+  },
+  {
+   "amount": 0.6,
+   "unit": null,
+   "formatted": "½"
+  },
+  {
+   "amount": 2.5,
+   "unit": "TL",
+   "formatted": "2½"
+  },
+  {
+   "amount": 1.2,
+   "unit": "Prise",
+   "formatted": "1"
+  },
+  {
+   "amount": 7,
+   "unit": "g",
+   "formatted": "7"
+  },
+  {
+   "amount": 12.4,
+   "unit": "g",
+   "formatted": "12"
+  },
+  {
+   "amount": 52,
+   "unit": "g",
+   "formatted": "50"
+  },
+  {
+   "amount": 499,
+   "unit": "ml",
+   "formatted": "500"
+  },
+  {
+   "amount": 505,
+   "unit": "g",
+   "formatted": "510"
+  },
+  {
+   "amount": 1499,
+   "unit": "g",
+   "formatted": "1.500"
+  },
+  {
+   "amount": 3.33,
+   "unit": "g",
+   "formatted": "3,3"
+  },
+  {
+   "amount": 10.5,
+   "unit": "ml",
+   "formatted": "11"
+  },
+  {
+   "amount": 2.125,
+   "unit": "EL",
+   "formatted": "2¼"
+  },
+  {
+   "amount": 1.875,
+   "unit": null,
+   "formatted": "2"
+  }
+ ]
+}

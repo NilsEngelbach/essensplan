@@ -56,6 +56,10 @@
   --t-fast: 140ms;
   --t-mid: 260ms;
 
+  /* A QR code stays dark-on-light in both themes, so every camera reads it. */
+  --qr-paper: #f4f5f2;
+  --qr-ink: #1f2022;
+
   /* Layout */
   --rail-w: 236px;
   --bar-h: 68px;

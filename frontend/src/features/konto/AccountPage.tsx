@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowUp, ChevronRight } from 'lucide-react'
 import { Segmented } from '../../components/controls'
 import { defaultWeekStart, getSectionOrder, getSettings, keyIsActive, listApiKeys, saveSectionOrder, saveSettings, subscribe, unseenActivityCount } from '../../lib/api'
+import { DevicesPanel } from './DevicesPanel'
+import { AccountDetails } from './AccountDetails'
 import { dayOfMonth, rangeLabel, todayIso, WEEKDAY, WEEKDAY_LONG, weekdayShort, weekStartOf } from '../../lib/format'
 
 // Monday first, the way a German calendar prints the week.
@@ -50,7 +52,9 @@ export function AccountPage() {
       </section>
 
       <StoreOrder />
+      <DevicesPanel />
       <AgentsPanel />
+      <AccountDetails />
     </div>
   )
 }

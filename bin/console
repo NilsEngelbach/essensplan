@@ -1,0 +1,131 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// php bin/console <command> [--option=value …]
+
+use Essensplan\App;
+use Essensplan\Clock;
+use Essensplan\Config;
+use Essensplan\Console\Migrator;
+use Essensplan\Db;
+use Essensplan\Http\OpenApi;
+use Essensplan\Http\Principal;
+use Essensplan\Repository\UserRepository;
+use Essensplan\Service\ApiKeyService;
+use Essensplan\Service\AuthService;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+date_default_timezone_set('UTC');
+
+$command = $argv[1] ?? 'help';
+$opts = [];
+foreach (array_slice($argv, 2) as $arg) {
+    if (preg_match('/^--([a-z-]+)(?:=(.*))?$/', $arg, $m)) {
+        $opts[$m[1]] = $m[2] ?? true;
+    } else {
+        $opts['_'][] = $arg;
+    }
+}
+$out = fn (string $s) => fwrite(STDOUT, $s . PHP_EOL);
+$fail = function (string $s): never {
+    fwrite(STDERR, $s . PHP_EOL);
+    exit(1);
+};
+
+$config = Config::load(App::root());
+$container = App::container($config);
+
+try {
+    switch ($command) {
+        case 'migrate':
+            $name = $config->get('DB_NAME', 'essensplan');
+            if (!preg_match('/^\w+$/', $name)) {
+                $fail("Invalid DB_NAME $name");
+            }
+            // Create the database on a fresh server (Local, CI).
+            Db::connect($config, '')->pdo()->exec("CREATE DATABASE IF NOT EXISTS `$name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            $applied = (new Migrator($container->get(Db::class), App::root() . '/migrations'))->migrate($out);
+            $out($applied ? 'Done.' : 'Nothing to migrate.');
+            break;
+
+        case 'user:create':
+            $email = (string) ($opts['email'] ?? $fail('--email= is required'));
+            $name = (string) ($opts['name'] ?? 'Familie');
+            $password = $opts['password'] ?? null;
+            if (!is_string($password)) {
+                fwrite(STDOUT, 'Passwort (mind. ' . AuthService::MIN_PASSWORD . ' Zeichen): ');
+                $password = trim((string) fgets(STDIN));
+            }
+            if (mb_strlen($password) < AuthService::MIN_PASSWORD) {
+                $fail('Das Passwort braucht mindestens ' . AuthService::MIN_PASSWORD . ' Zeichen.');
+            }
+            $users = $container->get(UserRepository::class);
+            if ($users->emailTaken($email)) {
+                $fail("$email gibt es schon.");
+            }
+            $out('Created user ' . $users->create($name, $email, password_hash($password, PASSWORD_DEFAULT)));
+            break;
+
+        case 'api-key:create':
+            $user = $container->get(UserRepository::class)->findByEmail((string) ($opts['email'] ?? $fail('--email= is required')))
+                ?? $fail('No such user.');
+            $scopes = array_filter(explode(',', (string) ($opts['scopes'] ?? 'recipes:read,mealplan:read,shopping:read')));
+            $session = ['id' => 'console', 'user_id' => $user['id'], 'csrf_token' => ''];
+            $r = $container->get(ApiKeyService::class)->create(Principal::forSession($session), [
+                'name' => $opts['name'] ?? 'Konsole',
+                'scopes' => array_values($scopes),
+                'client' => $opts['client'] ?? 'rest',
+            ]);
+            $out($r['secret']);
+            break;
+
+        case 'purge':
+            $db = $container->get(Db::class);
+            $clock = $container->get(Clock::class);
+            $n = [
+                'entries' => $db->exec('DELETE FROM meal_plan_entries WHERE deleted_at < ?', [$clock->db('-7 days')]),
+                'manual items' => $db->exec('DELETE FROM shopping_manual_items WHERE deleted_at < ? OR bought_at < ?', [$clock->db('-7 days'), $clock->db('-180 days')]),
+            ];
+            // Recipes go after 30 days; their entries were detached on delete and only lose the link back.
+            $old = $db->column('SELECT id FROM recipes WHERE deleted_at < ?', [$clock->db('-30 days')]);
+            if ($old) {
+                $db->exec('UPDATE meal_plan_entries SET detached_recipe_id = NULL WHERE detached_recipe_id IN (' . Db::marks($old) . ')', $old);
+                $n['recipes'] = $db->exec('DELETE FROM recipes WHERE id IN (' . Db::marks($old) . ')', $old);
+            }
+            $n['sessions'] = $db->exec('DELETE FROM sessions WHERE expires_at <= ?', [$clock->db()]);
+            $n['device links'] = $db->exec('DELETE FROM device_links WHERE expires_at <= ?', [$clock->db('-1 day')]);
+            $n['reset tokens'] = $db->exec('DELETE FROM password_resets WHERE expires_at <= ?', [$clock->db('-1 day')]);
+            $n['rate limits'] = $db->exec('DELETE FROM rate_limits WHERE TIMESTAMPADD(SECOND, window_seconds, window_start) <= ?', [$clock->db()]);
+            $n['activity'] = $db->exec('DELETE FROM agent_activity WHERE created_at < ?', [$clock->db('-90 days')]);
+            foreach ($n as $what => $count) {
+                $out(sprintf('%-14s %d', $what, $count));
+            }
+            break;
+
+        case 'openapi:dump':
+            $file = $opts['_'][0] ?? 'php://stdout';
+            file_put_contents($file, json_encode(OpenApi::document($config), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
+            break;
+
+        case 'jobs:run':
+            $out('No job runner yet (Phase 6: AI import).');
+            break;
+
+        default:
+            $out(<<<TXT
+            Essensplan console
+
+              migrate                                   apply migrations/*.sql (creates the database if needed)
+              user:create --email= [--name=] [--password=]
+              api-key:create --email= [--scopes=a,b] [--name=] [--client=]
+              purge                                     remove old soft-deleted rows, sessions, tokens, activity
+              openapi:dump [file]                       write the OpenAPI document
+              jobs:run                                  (Phase 6)
+            TXT);
+    }
+} catch (Throwable $e) {
+    $fail($e::class . ': ' . $e->getMessage());
+}

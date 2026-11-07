@@ -9,15 +9,15 @@ Essensplan is a German family meal planner. It is being moved off Next.js/Supaba
 **Done (Phase 1, UX):**
 - Product context: [PRODUCT.md](../PRODUCT.md).
 - Visual system: [DESIGN.md](../DESIGN.md) and `.impeccable/design.json`.
-- Six surface briefs in `.impeccable/surfaces/`:
-  - App-Shell, Rezepte, Wochenplan, Einkauf, Kochmodus, API & Agenten (the last one is `…-konto.md`).
+- Seven surface briefs in `.impeccable/surfaces/`:
+  - App-Shell, Rezepte, Wochenplan, Einkauf, Kochmodus, API & Agenten (`…-konto.md`), Login & Geräte (`…-login.md`).
 - A clickable prototype in `frontend/` (Vite + React 18 + react-router 6, no backend).
   - `frontend/src/lib/api.ts` is a **mock API on localStorage**. Its function signatures and the types in `frontend/src/lib/types.ts` are the de-facto contract the real API has to serve.
   - Run it: `cd frontend && npm install && npm run dev` (http://localhost:5173).
 
-**Not done:**
-- **The Login surface is postponed** by the owner. The *backend* auth endpoints are still in scope (§3); only the login UI is deferred.
-- **`docs/BACKEND_REQUIREMENTS.md` does not exist yet.** Normally it is the gate before the backend. The owner has chosen to start a backend draft now. So the contract is **not frozen**: build it so it is easy to change.
+**Login surface: done** (2026-11-07, brief `.impeccable/surfaces/frontend-src-features-login.md`). Login, pairing by code/QR, password reset, Konto → Geräte and Name und E-Mail are in the prototype. The mock is `frontend/src/lib/auth.ts`; its functions are the contract for `/api/v1/auth/*` and `/me`. See the "Auth and devices" delta in §4.
+
+**Backend draft 1: done** (2026-11-07, branch `backend-draft`, not merged). Everything in §2 except the PR itself is built; [BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md) describes it, with what was verified where at the top, deviations in §9, open points in §10 and how to run it in §11. Next: the owner reviews it, then the Local site spike (MIGRATION_PLAN §3.1) and wiring the SPA to the real API.
 
 ## 2. Your task
 
@@ -162,6 +162,24 @@ Produce a **first working draft of the PHP backend** on a branch (suggested name
 - The "vom Agenten geändert" recipe mark is derived from unseen, not-undone activity on that recipe.
 - Retention: 90 days.
 
+**Auth and devices** (D19, Login brief)
+- **`sessions` table** (DB-backed, so devices can be listed and logged out remotely): id (store a hash of the cookie value), user_id, remember, device_label (derived from the User-Agent, e.g. "iPhone · Safari"), user_agent, ip, via ENUM(`password`, `pairing`, `reset`), created_at, last_seen_at, expires_at.
+  - "Angemeldet bleiben" on (the default): persistent cookie, rolling 1 year from last use. Off: a browser-session cookie; the row expires after a short idle time.
+  - Paired devices always get a lasting session.
+- **`device_links` table** (pairing a new device): code_hash (6 digits), token_hash (for the QR URL `/koppeln/{token}`), created_by_session, expires_at (+10 min), used_at, used_by_session. Single use; one open link per user (a new one replaces the old).
+  - Wrong codes count against **all open links**; after 5 misses they are spent ("Zu viele falsche Codes. …"). Also rate-limit `POST /auth/pair` per IP.
+- **Endpoints:**
+  - `POST /auth/login {email, password, remember}`; `POST /auth/logout`.
+  - `POST /auth/pair {code}` or `{token}` (logged out; creates a session).
+  - `POST /auth/device-links` → `{id, code, token, expiresAt}`; `GET /auth/device-links/{id}` → adds `usedAt, usedByLabel` (the trusted device polls it every second); `DELETE /auth/device-links/{id}`.
+  - `GET /auth/sessions` (with `current: true` on this device); `DELETE /auth/sessions/{id}`; `POST /auth/sessions/revoke-others`.
+  - `POST /auth/forgot-password {email}` always answers 204 (no enumeration); `POST /auth/reset-password {token, password, revokeOthers}` logs this device in. Minimum password length 10.
+  - `PATCH /me {name, email, currentPassword}`; `currentPassword` is required only when the e-mail changes.
+  - All session-only (never with an API key).
+- **Error codes and messages:** reuse the strings in `lib/auth.ts` (`invalid_credentials` "E-Mail oder Passwort stimmt nicht.", `rate_limited`, `invalid_code`, `code_spent`, `link_expired`, `reset_invalid`, `weak_password`, `wrong_password`, `invalid_email`).
+- **401 → `/login?zurueck=<path>`**; the SPA returns there after login.
+- **No password change in Konto.** It goes through the reset mail ("Link schicken"). No web setup screen: the owner account comes from the Supabase import, with `bin/console user:create` as fallback.
+
 **In-app undo toasts need server support too.** Pick an approach and record it in BACKEND_REQUIREMENTS:
 - restore a removed plan entry;
 - restore a deleted recipe together with its entries (suggestion: `deleted_at` soft delete, purged later);
@@ -194,4 +212,4 @@ The owner develops on Windows with the "Local" app: `http://essen.local`, MySQL 
 ## 7. Still open for the owner (don't block on these; choose a default and note it)
 - **Default AI provider/model** (MIGRATION_PLAN §14.1). Not needed for this draft.
 - **Undo windows** for the in-app toasts (§4 above).
-- **Login surface** (postponed). The backend just needs the endpoints; the frontend's 401 → login redirect comes later.
+- ~~Login surface~~: done, see "Auth and devices" in §4.

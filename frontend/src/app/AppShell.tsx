@@ -4,6 +4,7 @@ import { BookOpen, CalendarDays, Plus, ShoppingBasket } from 'lucide-react'
 import { Segmented } from '../components/controls'
 import { resetDemo, subscribe, unseenActivityCount } from '../lib/api'
 import { useToast } from '../components/toast'
+import { getAccount, logout, subscribeAuth } from '../lib/auth'
 
 type ThemeChoice = 'system' | 'light' | 'dark'
 const THEME_KEY = 'essensplan.theme'
@@ -49,7 +50,10 @@ function AccountMenu({ placement }: { placement: 'header' | 'rail' }) {
   const toast = useToast()
   const [, force] = useState(0)
   useEffect(() => subscribe(() => force((n) => n + 1)), [])
+  useEffect(() => subscribeAuth(() => force((n) => n + 1)), [])
   const unseen = unseenActivityCount()
+  const { name } = getAccount()
+  const initial = name.trim().charAt(0).toLocaleUpperCase('de-DE') || '?'
 
   useEffect(() => {
     applyTheme(theme)
@@ -76,19 +80,20 @@ function AccountMenu({ placement }: { placement: 'header' | 'rail' }) {
     <div className={`account account--${placement}`} ref={ref}>
       <button type="button" className="account__btn" aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((o) => !o)}>
         <span className="account__avatar" aria-hidden="true">
-          N{unseen > 0 && <span className="account__dot" />}
+          {initial}
+          {unseen > 0 && <span className="account__dot" />}
         </span>
-        {placement === 'rail' && <span className="account__name">Nils</span>}
+        {placement === 'rail' && <span className="account__name">{name}</span>}
         <span className="visually-hidden">Konto und Einstellungen{unseen > 0 ? `, ${unseen} neue Agenten-Aktivitäten` : ''}</span>
       </button>
       {open && (
         <div className="account__menu" role="menu">
           <div className="account__head">
             <span className="account__avatar account__avatar--lg" aria-hidden="true">
-              N
+              {initial}
             </span>
             <div>
-              <div className="account__who">Nils</div>
+              <div className="account__who">{name}</div>
               <div className="label">Ein Konto für die ganze Familie</div>
             </div>
           </div>
@@ -132,6 +137,10 @@ function AccountMenu({ placement }: { placement: 'header' | 'rail' }) {
               }}
             >
               Demo-Daten zurücksetzen
+            </button>
+            {/* No confirmation: logging in again is the undo. */}
+            <button type="button" role="menuitem" className="account__link account__logout" onClick={() => logout()}>
+              Abmelden
             </button>
           </div>
           <p className="account__note label">Prototyp mit Demo-Daten, keine echten Rezepte.</p>

@@ -22,7 +22,7 @@ export function agoText(iso: string | null): string {
   return d === 1 ? 'gestern' : `vor ${d} Tagen`
 }
 
-function dateText(iso: string): string {
+export function dateText(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Berlin' })
 }
 

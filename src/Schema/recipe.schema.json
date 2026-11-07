@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RecipeDraft",
+  "description": "A recipe as the SPA, REST agents and MCP create_recipe send it (and later the AI import returns it).",
+  "type": "object",
+  "required": ["title", "category"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "\\S" },
+    "description": { "type": ["string", "null"], "maxLength": 5000 },
+    "imageUrl": { "type": ["string", "null"], "maxLength": 500, "pattern": "^(https?://|/media/)" },
+    "category": { "enum": ["Hauptspeise", "Salat", "Suppe", "Beilage", "Frühstück", "Dessert", "Snack"] },
+    "tags": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "enum": ["Vegetarisch", "Vegan", "Glutenfrei", "Laktosefrei", "Schnell", "Gesund", "Würzig", "Süß"] }
+    },
+    "cookingTime": { "type": ["integer", "null"], "minimum": 1, "maximum": 1440 },
+    "servings": { "type": ["integer", "null"], "minimum": 1, "maximum": 99 },
+    "difficulty": { "enum": ["Einfach", "Mittel", "Schwer", null] },
+    "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+    "sourceUrl": { "type": ["string", "null"], "maxLength": 1000, "pattern": "^https?://" },
+    "ingredients": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "id": { "type": ["string", "null"], "maxLength": 64, "description": "Only used to link steps to ingredients in the same request; the server assigns new ids." },
+          "name": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "\\S" },
+          "amount": { "type": ["number", "null"], "minimum": 0, "maximum": 1000000 },
+          "unit": { "type": ["string", "null"], "maxLength": 30 },
+          "notes": { "type": ["string", "null"], "maxLength": 300 },
+          "component": { "type": ["string", "null"], "maxLength": 100 }
+        }
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "required": ["description"],
+        "properties": {
+          "description": { "type": "string", "minLength": 1, "maxLength": 5000, "pattern": "\\S" },
+          "ingredientIds": { "type": ["array", "null"], "maxItems": 100, "items": { "type": "string", "maxLength": 64 } }
+        }
+      }
+    }
+  }
+}
