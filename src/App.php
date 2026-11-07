@@ -60,7 +60,8 @@ final class App
         });
         $app->post('/mcp', [McpController::class, 'post'])->setName('mcp post');
         $app->map(['GET', 'DELETE', 'PUT', 'PATCH'], '/mcp', [McpController::class, 'other'])->setName('spa mcp-other');
-        $app->get('/{path:.*}', SpaController::class)->setName('spa');
+        // Everything outside the API is the SPA; unknown /api/… paths stay JSON 404s.
+        $app->get('/{path:(?!api/).*}', SpaController::class)->setName('spa');
 
         // Slim runs the last added first: JsonErrors → routing → RateLimit → Authenticate → RequireScope → Csrf.
         $app->add(Csrf::class);

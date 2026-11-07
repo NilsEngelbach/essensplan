@@ -10,11 +10,12 @@ use Essensplan\Clock;
 use Essensplan\Config;
 use Essensplan\Console\Migrator;
 use Essensplan\Db;
+use Essensplan\Http\ApiError;
 use Essensplan\Http\OpenApi;
 use Essensplan\Http\Principal;
 use Essensplan\Repository\UserRepository;
 use Essensplan\Service\ApiKeyService;
-use Essensplan\Service\AuthService;
+use Essensplan\Service\FamilyAdmin;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -37,6 +38,7 @@ $fail = function (string $s): never {
 
 $config = Config::load(App::root());
 $container = App::container($config);
+$admin = fn (): FamilyAdmin => $container->get(FamilyAdmin::class);
 
 try {
     switch ($command) {
@@ -52,21 +54,50 @@ try {
             break;
 
         case 'user:create':
+            // A new family (D20). Without --password it gets an invite mail with a link to set one.
+            $user = $admin()->create(
+                (string) ($opts['email'] ?? $fail('--email= is required')),
+                (string) ($opts['name'] ?? 'Familie'),
+                is_string($opts['password'] ?? null) ? $opts['password'] : null,
+                !isset($opts['no-invite']),
+            );
+            $out("Created {$user['email']} ($user[id])" . (isset($opts['password']) ? '' : (isset($opts['no-invite']) ? ', no invite sent' : ', invite mail sent')));
+            break;
+
+        case 'user:invite':
+            $admin()->invite((string) ($opts['email'] ?? $fail('--email= is required')));
+            $out('Invite mail sent.');
+            break;
+
+        case 'user:list':
+            // sprintf pads bytes; names have umlauts.
+            $pad = fn (string $s, int $w) => $s . str_repeat(' ', max(0, $w - mb_strlen($s)));
+            $out(sprintf('%-30s %-16s %-10s %-10s %7s %7s %4s  %s', 'E-Mail', 'Name', 'Seit', 'Zuletzt', 'Geräte', 'Rezepte', 'Keys', 'Status'));
+            foreach ($admin()->list() as $u) {
+                $out(sprintf(
+                    '%-30s %s %-10s %-10s %7d %7d %4d  %s',
+                    $u['email'], $pad(mb_strimwidth($u['name'], 0, 16), 16), substr($u['created_at'], 0, 10), substr((string) $u['last_seen_at'], 0, 10) ?: '–',
+                    $u['devices'], $u['recipes'], $u['api_keys'],
+                    $u['disabled_at'] !== null ? 'gesperrt' : ($u['email_verified_at'] === null && $u['last_seen_at'] === null ? 'eingeladen' : 'aktiv'),
+                ));
+            }
+            break;
+
+        case 'user:disable':
+        case 'user:enable':
             $email = (string) ($opts['email'] ?? $fail('--email= is required'));
-            $name = (string) ($opts['name'] ?? 'Familie');
-            $password = $opts['password'] ?? null;
-            if (!is_string($password)) {
-                fwrite(STDOUT, 'Passwort (mind. ' . AuthService::MIN_PASSWORD . ' Zeichen): ');
-                $password = trim((string) fgets(STDIN));
+            $command === 'user:disable' ? $admin()->disable($email) : $admin()->enable($email);
+            $out($command === 'user:disable' ? "$email is locked." : "$email is active again.");
+            break;
+
+        case 'user:delete':
+            $email = (string) ($opts['email'] ?? $fail('--email= is required'));
+            if (($opts['yes'] ?? false) !== true) {
+                $fail("This deletes $email and all its recipes, plans, lists and keys. Add --yes to confirm.");
             }
-            if (mb_strlen($password) < AuthService::MIN_PASSWORD) {
-                $fail('Das Passwort braucht mindestens ' . AuthService::MIN_PASSWORD . ' Zeichen.');
+            foreach ($admin()->delete($email) as $table => $count) {
+                $out(sprintf('%-22s %d', $table, $count));
             }
-            $users = $container->get(UserRepository::class);
-            if ($users->emailTaken($email)) {
-                $fail("$email gibt es schon.");
-            }
-            $out('Created user ' . $users->create($name, $email, password_hash($password, PASSWORD_DEFAULT)));
             break;
 
         case 'api-key:create':
@@ -119,13 +150,21 @@ try {
             Essensplan console
 
               migrate                                   apply migrations/*.sql (creates the database if needed)
-              user:create --email= [--name=] [--password=]
+              user:create --email= [--name=] [--password=] [--no-invite]
+                                                        add a family; without --password an invite mail is sent
+              user:invite --email=                      send the invite mail again (link valid 7 days)
+              user:list                                 all families with devices, recipes, keys
+              user:disable --email= / user:enable --email=
+                                                        lock a family out (sessions, keys, links) or let it back in
+              user:delete --email= --yes                delete a family and everything it owns
               api-key:create --email= [--scopes=a,b] [--name=] [--client=]
               purge                                     remove old soft-deleted rows, sessions, tokens, activity
               openapi:dump [file]                       write the OpenAPI document
               jobs:run                                  (Phase 6)
             TXT);
     }
+} catch (ApiError $e) {
+    $fail($e->getMessage());
 } catch (Throwable $e) {
     $fail($e::class . ': ' . $e->getMessage());
 }

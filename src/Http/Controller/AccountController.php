@@ -17,7 +17,7 @@ final class AccountController
     {
     }
 
-    /** Login, pairing, reset and register all answer the same way and set the cookie. */
+    /** Login, pairing and reset (also the invite link) all answer the same way and set the cookie. */
     private function started(Response $res, array $r, int $status = 200): Response
     {
         $remember = (bool) $r['session']['remember'];
@@ -34,13 +34,6 @@ final class AccountController
         $b = Io::body($req, 'login');
         $r = $this->auth->login($b['email'], $b['password'], $b['remember'] ?? true, Io::userAgent($req), Io::ip($req, $this->config));
         return $this->started($res, $r);
-    }
-
-    public function register(Request $req, Response $res): Response
-    {
-        $b = Io::body($req, 'register');
-        $r = $this->auth->register($b['name'] ?? '', $b['email'], $b['password'], Io::userAgent($req), Io::ip($req, $this->config));
-        return $this->started($res, $r, 201);
     }
 
     public function logout(Request $req, Response $res): Response
@@ -99,8 +92,7 @@ final class AccountController
 
     public function checkReset(Request $req, Response $res): Response
     {
-        $this->auth->checkResetToken(Io::body($req, 'reset-check')['token']);
-        return Io::noContent($res);
+        return Io::json($res, $this->auth->checkResetToken(Io::body($req, 'reset-check')['token']));
     }
 
     public function reset(Request $req, Response $res): Response

@@ -27,7 +27,11 @@ final class SessionRepository
      */
     public function findLive(string $tokenHash): ?array
     {
-        return $this->db->one('SELECT * FROM sessions WHERE token_hash = ? AND expires_at > ?', [$tokenHash, $this->clock->db()]);
+        // A locked family (users.disabled_at) has no live sessions.
+        return $this->db->one(
+            'SELECT s.* FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ? AND u.disabled_at IS NULL',
+            [$tokenHash, $this->clock->db()],
+        );
     }
 
     public function touch(string $userId, string $id, string $expiresAt): void

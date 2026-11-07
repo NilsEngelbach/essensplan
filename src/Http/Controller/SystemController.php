@@ -38,7 +38,6 @@ final class SystemController
             $slots[] = ['key' => $key, 'name' => $s['name'], 'short' => $s['short']];
         }
         return Io::json($res, [
-            'registrationEnabled' => $this->config->bool('REGISTRATION_ENABLED'),
             'minPassword' => AuthService::MIN_PASSWORD,
             'slots' => $slots,
             'categories' => Catalog::CATEGORIES,

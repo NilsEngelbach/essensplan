@@ -28,6 +28,9 @@ final class AuthService
     public const LOCK_SECONDS = 300;
     public const REMEMBER_DAYS = 365;
     public const RESET_MINUTES = 60;
+    public const INVITE_DAYS = 7;
+    public const MISS_WINDOW = 600;
+    public const MAX_MISSES_ALL = 30;
 
     public function __construct(
         private readonly Db $db,
@@ -95,7 +98,7 @@ final class AuthService
         return (bool) $session['remember'] && $age >= 86400;
     }
 
-    /* ── Login, register, logout ──────────────────────────────────────────── */
+    /* ── Login, logout ────────────────────────────────────────────────────── */
 
     /** A real hash, so a login for an unknown e-mail costs the same time. */
     private static function dummyHash(): string
@@ -122,27 +125,15 @@ final class AuthService
             throw new ApiError(401, 'invalid_credentials', 'E-Mail oder Passwort stimmt nicht.');
         }
         $this->limiter->clear($failBucket);
+        // Only told after the right password, so it reveals nothing to a guesser.
+        if ($user['disabled_at'] !== null) {
+            throw new ApiError(403, 'account_disabled', 'Dieses Konto ist gesperrt.');
+        }
         // Supabase's $2a$ hashes (and older costs) are upgraded on the first login.
         if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
             $this->users->update($user['id'], ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);
         }
         return ['user' => $user, ...$this->startSession($user['id'], $remember, 'password', $userAgent, $ip)];
-    }
-
-    /** Only while REGISTRATION_ENABLED=true (D10). */
-    public function register(string $name, string $email, string $password, string $userAgent, ?string $ip): array
-    {
-        if (!$this->config->bool('REGISTRATION_ENABLED')) {
-            throw new ApiError(403, 'registration_disabled', 'Neue Konten sind gerade nicht möglich.');
-        }
-        $this->limiter->hit('register-ip:' . $ip, 5, 3600);
-        $email = $this->validEmail($email);
-        $this->validPassword($password);
-        if ($this->users->emailTaken($email)) {
-            throw ApiError::conflict('Diese E-Mail-Adresse wird schon verwendet.', 'email_taken');
-        }
-        $id = $this->users->create(trim($name) ?: 'Familie', $email, password_hash($password, PASSWORD_DEFAULT));
-        return ['user' => $this->users->find($id), ...$this->startSession($id, true, 'register', $userAgent, $ip)];
     }
 
     public function logout(Principal $p): void
@@ -244,63 +235,96 @@ final class AuthService
         return hash_hmac('sha256', $code, $this->config->secret());
     }
 
-    /** On the new device: the 6-digit code or the QR token. Paired devices always stay logged in. */
+    /**
+     * On the new device: the 6-digit code or the QR token. Paired devices always stay logged in.
+     *
+     * A wrong code can't be tied to one family, so misses are counted per IP
+     * (5 → this device waits 10 minutes) and across the install (30 in 10
+     * minutes → every open code is spent, against guessing from many IPs).
+     * One family's typos never spend another family's code.
+     */
     public function pair(?string $code, ?string $token, string $userAgent, ?string $ip): array
     {
-        $this->limiter->hit('pair-ip:' . $ip, 10, 600);
+        $this->limiter->hit('pair-ip:' . $ip, 20, 600);
         if ($token !== null && $token !== '') {
             $result = $this->claim('token', hash('sha256', $token), $userAgent, $ip);
             return $result ?? throw new ApiError(400, 'link_expired', 'Dieser Code ist abgelaufen oder schon benutzt.');
         }
+        $missBucket = 'pair-miss:' . $ip;
+        $this->checkMisses($missBucket);
         $digits = preg_replace('/\D/', '', (string) $code);
         $result = strlen($digits) === 6 ? $this->claim('code', $this->codeHash($digits), $userAgent, $ip) : null;
         if ($result !== null) {
+            $this->limiter->clear($missBucket);
             return $result;
         }
-        // Wrong guesses count against every open code; five of them spend it.
-        if ($this->links->countMiss(self::MAX_CODE_ATTEMPTS) > 0) {
-            throw new ApiError(400, 'code_spent', 'Zu viele falsche Codes. Lass dir auf dem anderen Gerät einen neuen Code anzeigen.');
+        if ($this->limiter->add('pair-miss-all', self::MISS_WINDOW) >= self::MAX_MISSES_ALL) {
+            $this->links->spendAllOpen();
+        }
+        if ($this->limiter->add($missBucket, self::MISS_WINDOW) >= self::MAX_CODE_ATTEMPTS) {
+            $this->checkMisses($missBucket);
         }
         throw new ApiError(400, 'invalid_code', 'Der Code passt nicht. Schau noch einmal auf das andere Gerät.');
+    }
+
+    private function checkMisses(string $bucket): void
+    {
+        try {
+            $this->limiter->check($bucket, self::MAX_CODE_ATTEMPTS);
+        } catch (ApiError $e) {
+            $min = max(1, (int) ceil(((int) ($e->headers['Retry-After'] ?? 600)) / 60));
+            throw new ApiError(400, 'code_spent', "Zu viele falsche Codes. Warte $min Minuten und lass dir dann auf dem anderen Gerät einen neuen Code anzeigen.", [], $e->headers);
+        }
     }
 
     private function claim(string $by, string $hash, string $userAgent, ?string $ip): ?array
     {
         return $this->db->transaction(function () use ($by, $hash, $userAgent, $ip) {
             $link = $this->links->findOpenBy($by, $hash);
-            if ($link === null) {
+            $user = $link === null ? null : $this->users->find($link['user_id']);
+            if ($link === null || $user === null || $user['disabled_at'] !== null) {
                 return null;
             }
             $started = $this->startSession($link['user_id'], true, 'pairing', $userAgent, $ip);
             if (!$this->links->markUsed($link['id'], $started['session']['id'], $started['session']['device_label'])) {
                 throw new ApiError(400, 'link_expired', 'Dieser Code ist abgelaufen oder schon benutzt.');
             }
-            return ['user' => $this->users->find($link['user_id']), ...$started];
+            return ['user' => $user, ...$started];
         });
     }
 
-    /* ── Password reset ───────────────────────────────────────────────────── */
+    /* ── Password reset and invites ───────────────────────────────────────── */
+
+    /**
+     * Stores a single-use token (only its hash) and returns it. A new token
+     * makes older unused ones of that user useless.
+     */
+    private function issueToken(string $userId, string $purpose, string $validFor): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->db->transaction(function () use ($userId, $token, $purpose, $validFor) {
+            $this->db->exec('DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL', [$userId]);
+            $this->db->insert('password_resets', [
+                'id' => Util::uuid(),
+                'user_id' => $userId,
+                'purpose' => $purpose,
+                'token_hash' => hash('sha256', $token),
+                'created_at' => $this->clock->db(),
+                'expires_at' => $this->clock->db($validFor),
+            ]);
+        });
+        return $token;
+    }
 
     /** Always ends the same way, whether or not the address exists. */
     public function forgotPassword(string $email, ?string $ip): void
     {
         $this->limiter->hit('forgot-ip:' . $ip, 5, 3600);
         $user = $this->users->findByEmail($email);
-        if ($user === null) {
+        if ($user === null || $user['disabled_at'] !== null) {
             return;
         }
-        $token = bin2hex(random_bytes(32));
-        $this->db->transaction(function () use ($user, $token) {
-            // A new mail makes older links useless.
-            $this->db->exec('DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL', [$user['id']]);
-            $this->db->insert('password_resets', [
-                'id' => Util::uuid(),
-                'user_id' => $user['id'],
-                'token_hash' => hash('sha256', $token),
-                'created_at' => $this->clock->db(),
-                'expires_at' => $this->clock->db('+' . self::RESET_MINUTES . ' minutes'),
-            ]);
-        });
+        $token = $this->issueToken($user['id'], 'reset', '+' . self::RESET_MINUTES . ' minutes');
         $url = $this->config->appUrl() . '/passwort-zuruecksetzen?token=' . $token;
         $this->mailer->send(
             $user['email'],
@@ -311,20 +335,42 @@ final class AuthService
         );
     }
 
+    /**
+     * Onboarding a family (CLI only, D20): a welcome mail with a link to set
+     * the password. Valid 7 days; the same page as the reset.
+     */
+    public function invite(string $userId): void
+    {
+        $user = $this->users->find($userId) ?? throw ApiError::notFound('Dieses Konto gibt es nicht.');
+        $token = $this->issueToken($userId, 'invite', '+' . self::INVITE_DAYS . ' days');
+        $url = $this->config->appUrl() . '/passwort-zuruecksetzen?token=' . $token;
+        $this->mailer->send(
+            $user['email'],
+            'Willkommen bei Essensplan',
+            "Hallo {$user['name']},\n\nfür euch ist ein Essensplan eingerichtet: Rezepte, Wochenplan und Einkaufsliste für die ganze Familie.\n\n"
+            . "Über diesen Link legst du dein Passwort fest und bist gleich angemeldet:\n$url\n\n"
+            . 'Der Link gilt ' . self::INVITE_DAYS . " Tage und nur einmal. Weitere Geräte der Familie meldest du danach unter Konto, Geräte an.\n",
+        );
+    }
+
     /** @return array<string, mixed>|null */
     private function liveReset(string $token): ?array
     {
         return $this->db->one(
-            'SELECT * FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?',
+            'SELECT pr.* FROM password_resets pr JOIN users u ON u.id = pr.user_id
+             WHERE pr.token_hash = ? AND pr.used_at IS NULL AND pr.expires_at > ? AND u.disabled_at IS NULL',
             [hash('sha256', $token), $this->clock->db()],
         );
     }
 
-    public function checkResetToken(string $token): void
+    /** @return array{purpose: string} reset or invite, so the page can greet a new family */
+    public function checkResetToken(string $token): array
     {
-        if ($token === '' || $this->liveReset($token) === null) {
+        $reset = $token === '' ? null : $this->liveReset($token);
+        if ($reset === null) {
             throw new ApiError(400, 'reset_invalid', 'Dieser Link ist abgelaufen oder schon benutzt.');
         }
+        return ['purpose' => $reset['purpose']];
     }
 
     public function resetPassword(string $token, string $password, bool $revokeOthers, string $userAgent, ?string $ip): array
@@ -336,12 +382,18 @@ final class AuthService
             $reset = $this->liveReset($token) ?? throw new ApiError(400, 'reset_invalid', 'Dieser Link ist abgelaufen oder schon benutzt.');
             $this->db->exec('UPDATE password_resets SET used_at = ? WHERE id = ?', [$this->clock->db(), $reset['id']]);
             $user = $this->users->find($reset['user_id']);
-            $this->users->update($user['id'], ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);
+            $fields = ['password_hash' => password_hash($password, PASSWORD_DEFAULT)];
+            // The link arrived by mail, so the address works.
+            if ($user['email_verified_at'] === null) {
+                $fields['email_verified_at'] = $this->clock->db();
+            }
+            $this->users->update($user['id'], $fields);
             $this->db->exec('DELETE FROM rate_limits WHERE bucket LIKE ?', ['login-fail:' . $user['email'] . '|%']);
             if ($revokeOthers) {
                 $this->sessions->deleteAllExcept($user['id'], null);
             }
-            return ['user' => $this->users->find($user['id']), ...$this->startSession($user['id'], true, 'reset', $userAgent, $ip)];
+            $via = $reset['purpose'] === 'invite' ? 'invite' : 'reset';
+            return ['user' => $this->users->find($user['id']), ...$this->startSession($user['id'], true, $via, $userAgent, $ip)];
         });
     }
 

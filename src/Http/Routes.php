@@ -31,7 +31,6 @@ final class Routes
 
             ['POST', '/auth/login', [Account::class, 'login'], 'guest', 'login', 'Log in with e-mail and password'],
             ['POST', '/auth/logout', [Account::class, 'logout'], 'session', null, 'Log this device out'],
-            ['POST', '/auth/register', [Account::class, 'register'], 'guest', 'register', 'Create an account (only while REGISTRATION_ENABLED)'],
             ['POST', '/auth/pair', [Account::class, 'pair'], 'guest', 'pair', 'Log a new device in with a code or QR token'],
             ['POST', '/auth/device-links', [Account::class, 'createLink'], 'session', null, 'Show a pairing code and QR token (10 min)'],
             ['GET', '/auth/device-links/{id}', [Account::class, 'getLink'], 'session', null, 'Poll a pairing link'],
@@ -40,8 +39,8 @@ final class Routes
             ['DELETE', '/auth/sessions/{id}', [Account::class, 'revokeSession'], 'session', null, 'Log one device out'],
             ['POST', '/auth/sessions/revoke-others', [Account::class, 'revokeOthers'], 'session', null, 'Log all other devices out'],
             ['POST', '/auth/forgot-password', [Account::class, 'forgot'], 'guest', 'forgot', 'Mail a reset link (always 204)'],
-            ['POST', '/auth/reset-password/check', [Account::class, 'checkReset'], 'guest', 'reset-check', 'Is this reset link still valid?'],
-            ['POST', '/auth/reset-password', [Account::class, 'reset'], 'guest', 'reset', 'Set a new password from the mailed link'],
+            ['POST', '/auth/reset-password/check', [Account::class, 'checkReset'], 'guest', 'reset-check', 'Is this reset or invite link still valid? → {purpose}'],
+            ['POST', '/auth/reset-password', [Account::class, 'reset'], 'guest', 'reset', 'Set the password from the mailed reset or invite link'],
             ['GET', '/me', [Account::class, 'me'], 'profile', null, 'Account, settings, today and the default week'],
             ['PATCH', '/me', [Account::class, 'updateMe'], 'session', 'me-patch', 'Name, e-mail (needs the password) and settings'],
 

@@ -12,7 +12,7 @@ Where the sources disagree, HANDOFF §4 wins (the briefs and D15–D19 are newer
 - PHP 8.2.29 (Local's binary, CLI) with `composer install`;
 - MySQL 8.4.0 **and** MariaDB 10.6.23 (Local's binaries, private instances);
 - `php bin/console migrate` on an empty server, twice (the second run is a no-op);
-- `vendor/bin/phpunit`: 37 tests, 708 assertions, green on both databases;
+- `vendor/bin/phpunit`: 43 tests, 867 assertions, green on both databases (after the D20 change, 2026-11-07);
 - PHPStan level 5 on `src/` and `bin/console`: no errors;
 - `curl` smoke test against `php -S` with a session and with a scoped key: health, recipe CRUD, plan entries, suggestions, `/shopping/current`, MCP `initialize`, `tools/list` and `tools/call`.
 
@@ -52,7 +52,7 @@ Where the sources disagree, HANDOFF §4 wins (the briefs and D15–D19 are newer
 | 429 | `rate_limited` | „Zu viele Versuche. Probier es in 5 Minuten wieder.“ |
 | 500 | `server_error` | „Da ist etwas schiefgelaufen. Versuch es gleich noch einmal.“ |
 
-Auth codes from `lib/auth.ts`, with its exact strings: `invalid_credentials`, `rate_limited`, `invalid_code`, `code_spent`, `link_expired`, `reset_invalid`, `weak_password`, `wrong_password`, `invalid_email`, plus `registration_disabled`.
+Auth codes from `lib/auth.ts`, with its exact strings: `invalid_credentials`, `rate_limited`, `invalid_code`, `code_spent`, `link_expired`, `reset_invalid`, `weak_password`, `wrong_password`, `invalid_email`, plus `account_disabled` („Dieses Konto ist gesperrt.“, only after the right password). The `code_spent` text changed with D20 (§2.5).
 
 ---
 
@@ -80,13 +80,16 @@ Slim's routing middleware only resolves the route (so the later steps can read i
 - Minimum length 10 (`weak_password`: „Das Passwort braucht mindestens 10 Zeichen.“).
 - **Login lockout:** 5 failures per e-mail + IP → locked for 5 minutes (`rate_limited` with the minutes left). Plus 30 login attempts per IP per 15 minutes.
 - **Reset:** `POST /auth/forgot-password` always answers 204. If the account exists, a token (32 random bytes, hex) is mailed as `APP_URL/passwort-zuruecksetzen?token=…`. Stored as SHA-256, valid 60 minutes, single use; a new request invalidates older tokens. Mail is sent with PHPMailer over SMTP (`MAIL_DRIVER=smtp`, Mailpit locally) or written to `storage/mail.log` (`MAIL_DRIVER=log`, the default).
-- **No password change in Konto** (it goes through the reset mail). **No web setup screen**: the owner comes from the Supabase import or `bin/console user:create`.
-- `POST /auth/register` exists only while `REGISTRATION_ENABLED=true` (D10); otherwise 403 `registration_disabled`.
+- **No password change in Konto** (it goes through the reset mail). **No web setup screen and no sign-up over HTTP** (D10, D20): families come from the Supabase import or `bin/console user:create` (§2.8).
 
 ### 2.5 Pairing a new device (D19)
 - A logged-in device creates a link: a 6-digit code (stored as HMAC-SHA256 with `APP_SECRET`) and a 24-byte token for the QR URL `/koppeln/{token}` (stored as SHA-256). Valid 10 minutes, single use. One open link per user: a new one replaces the old.
 - The new device sends `{code}` or `{token}`; it gets a lasting session (`via = pairing`).
-- **Wrong codes count against all open links** (a wrong code can't be tied to one user). After 5 misses those links are spent (`code_spent`: „Zu viele falsche Codes. Lass dir auf dem anderen Gerät einen neuen Code anzeigen.“). Also 10 pairing attempts per IP per 10 minutes.
+- **Wrong codes** can't be tied to one family, so they are counted per IP and across the install, never on another family's link (D20):
+  - 5 misses from one IP within 10 minutes → that device waits 10 minutes (`code_spent`: „Zu viele falsche Codes. Warte 10 Minuten und lass dir dann auf dem anderen Gerät einen neuen Code anzeigen.“). Its family's open code stays valid.
+  - 30 misses across all IPs within 10 minutes (guessing from many addresses) → every open code of every family is spent.
+  - Plus 20 pairing attempts per IP per 10 minutes.
+- A locked family's codes don't work.
 - The trusted device polls `GET /auth/device-links/{id}` every second and sees `usedAt` and `usedByLabel`.
 
 ### 2.6 API keys (§6, D18)
@@ -105,21 +108,29 @@ Slim's routing middleware only resolves the route (so the later steps can read i
 | Any request per API key | 120 / minute |
 | Any request per IP without a key | 300 / minute |
 | Login per IP / per e-mail + IP failures | 30 / 15 min · 5 failures → 5 min lock |
-| Pairing per IP | 10 / 10 min |
+| Pairing per IP | 20 / 10 min · 5 wrong codes → 10 min wait · 30 wrong codes install-wide → all open codes spent |
 | Forgot password per IP | 5 / hour |
+
+### 2.8 Several families (D20)
+- **One account is one family** (D11: the family shares the login and pairs its devices). `users.id` is the tenant key: every table hangs off it, every repository method takes it, and the isolation tests (`IsolationTest`, `FamiliesTest`) cover session, key and MCP.
+- **No sign-up over HTTP.** The operator adds a family on the CLI: `bin/console user:create --email= --name=` stores a random password nobody knows and mails a welcome link (`password_resets.purpose = invite`, 7 days, single use). It opens the same page as a reset (`/passwort-zuruecksetzen?token=…`); `POST /auth/reset-password/check` answers `{purpose: "invite"}` so the page can greet a new family. Setting the password logs that device in (`via = invite`) and marks the address verified.
+- **Lock** (`user:disable`): `users.disabled_at` stops login, sessions, API keys, MCP, pairing and reset links at once; `user:enable` brings back the same devices and keys.
+- **Delete** (`user:delete --yes`): removes the family and every row it owns, children first; other families are untouched (tested by counting rows).
+- **Shared across families:** only the fixed sets (`meal_slots`, categories, tags, sections) and `rate_limits`. E-mail addresses are unique across the install.
+- **Not built:** several logins per family (members). If that comes, a `households` table with `users.household_id` would become the tenant key; today's `user_id` columns would move to it in one migration.
 
 ---
 
 ## 3. Entities
 
-All tables: InnoDB, `utf8mb4` / `utf8mb4_unicode_ci` (accent- and case-insensitive search on MySQL 8 and MariaDB 10.6+). Migration `migrations/001_init.sql`.
+All tables: InnoDB, `utf8mb4` / `utf8mb4_unicode_ci` (accent- and case-insensitive search on MySQL 8 and MariaDB 10.6+). Migrations `001_init.sql` and `002_families.sql` (D20).
 
 | Table | Fields | Notes |
 |---|---|---|
-| `users` | id, name, email UNIQUE, password_hash, email_verified_at, week_start TINYINT (1), planning_weekday TINYINT (5), section_order JSON NULL, created_at, updated_at | NULL `section_order` = default order |
-| `sessions` | id, user_id, token_hash UNIQUE, csrf_token, remember, device_label, user_agent, ip, via ENUM(password, pairing, reset, register), created_at, last_seen_at, expires_at | `id` is public (listing, revoking); the cookie value is never stored |
-| `device_links` | id, user_id, code_hash, token_hash UNIQUE, created_by_session, attempts, created_at, expires_at, used_at, used_by_session, used_by_label, spent_at | |
-| `password_resets` | id, user_id, token_hash UNIQUE, created_at, expires_at, used_at | |
+| `users` | id, name, email UNIQUE, password_hash, email_verified_at, disabled_at, week_start TINYINT (1), planning_weekday TINYINT (5), section_order JSON NULL, created_at, updated_at | One row = one family and the tenant key of every other table (§2.8). NULL `section_order` = default order |
+| `sessions` | id, user_id, token_hash UNIQUE, csrf_token, remember, device_label, user_agent, ip, via ENUM(password, pairing, reset, register, invite) (`register` is unused since D20), created_at, last_seen_at, expires_at | `id` is public (listing, revoking); the cookie value is never stored |
+| `device_links` | id, user_id, code_hash, token_hash UNIQUE, created_by_session, created_at, expires_at, used_at, used_by_session, used_by_label, spent_at | |
+| `password_resets` | id, user_id, purpose ENUM(reset, invite), token_hash UNIQUE, created_at, expires_at, used_at | reset: 60 min · invite: 7 days |
 | `rate_limits` | bucket PK, hits, window_start, window_seconds | |
 | `recipes` | id, user_id, title, description, image_path, category, tags JSON, cooking_time, servings, difficulty, rating, source_url, created_via, created_at, updated_at, deleted_at | FULLTEXT(title, description) for later; search uses LIKE (§5.1) |
 | `ingredients` | id, recipe_id CASCADE, position, name, amount DECIMAL(10,3), unit, notes, component, section | `section` set on save by the word list (`Shopping::classify`) |
@@ -150,7 +161,7 @@ Auth column: `public`, `session` (session only, never a key), or a scope (sessio
 | Method | Route | Auth | Notes |
 |---|---|---|---|
 | GET | `/health` | public | `{status, db, time}` |
-| GET | `/config` | public | `{registrationEnabled, minPassword, slots, categories, tags, difficulties, scopes, sections, presets}` |
+| GET | `/config` | public | `{minPassword, slots, categories, tags, difficulties, scopes, sections, presets}` |
 | GET | `/openapi.json` | public | generated from the route table and the JSON Schemas used for validation |
 
 ### 4.2 Auth and account (all `session`; logged-out ones marked)
@@ -158,7 +169,6 @@ Auth column: `public`, `session` (session only, never a key), or a scope (sessio
 |---|---|---|
 | POST | `/auth/login` (logged out) | `{email, password, remember}` → `{account, session, csrfToken}` + cookie |
 | POST | `/auth/logout` | → 204, cookie cleared |
-| POST | `/auth/register` (logged out, only if enabled) | `{name, email, password}` → like login |
 | POST | `/auth/pair` (logged out) | `{code}` or `{token}` → like login |
 | POST | `/auth/device-links` | → `{id, code, token, url, createdAt, expiresAt}` (201) |
 | GET | `/auth/device-links/{id}` | → `{id, createdAt, expiresAt, usedAt, usedByLabel, spent}` |
@@ -167,7 +177,7 @@ Auth column: `public`, `session` (session only, never a key), or a scope (sessio
 | DELETE | `/auth/sessions/{id}` | → 204 (own session = logout) |
 | POST | `/auth/sessions/revoke-others` | → `{revoked: n}` |
 | POST | `/auth/forgot-password` (logged out or in) | `{email}` → 204 always |
-| POST | `/auth/reset-password/check` (logged out) | `{token}` → 204 or 400 `reset_invalid` |
+| POST | `/auth/reset-password/check` (logged out) | `{token}` → `{purpose: "reset" \| "invite"}` or 400 `reset_invalid` |
 | POST | `/auth/reset-password` (logged out) | `{token, password, revokeOthers}` → like login |
 | GET | `/me` | `profile:read` (implicit for every key) → `{id, name, email, settings: {weekStart, planningWeekday}, today, defaultWeekStart, csrfToken?}` |
 | PATCH | `/me` | `{name?, email?, currentPassword?, settings?: {weekStart?, planningWeekday?}}`; `currentPassword` required only when the e-mail changes |
@@ -319,7 +329,11 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 | Command | Does |
 |---|---|
 | `migrate` | applies `migrations/*.sql` in order, recorded in `schema_migrations` |
-| `user:create --email= --name= [--password=]` | creates an account (prompts for the password if missing) |
+| `user:create --email= [--name=] [--password=] [--no-invite]` | adds a family; without `--password` it gets the invite mail |
+| `user:invite --email=` | sends the invite mail again (replaces the old link) |
+| `user:list` | every family with last use, devices, recipes, keys and status (eingeladen · aktiv · gesperrt) |
+| `user:disable --email=` · `user:enable --email=` | locks a family out at once, or lets it back in with its devices and keys |
+| `user:delete --email= --yes` | deletes a family and everything it owns |
 | `api-key:create --email= --scopes=a,b [--name=]` | prints a new key (for smoke tests) |
 | `purge` | removes soft-deleted entries/items (> 7 days) and recipes (> 30 days), expired sessions, links and reset tokens, activity > 90 days |
 | `openapi:dump [file]` | writes the OpenAPI document |
@@ -328,7 +342,7 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 ---
 
 ## 8. Configuration (`.env`, see `.env.example`)
-`APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `REGISTRATION_ENABLED`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`; AI variables as in MIGRATION_PLAN §8 (unused in this draft).
+`APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`; AI variables as in MIGRATION_PLAN §8 (unused in this draft).
 
 ---
 
@@ -347,14 +361,14 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 1. **Undo windows** (§5.6): 7 days for entries and own items, 30 days for recipes, 10 minutes for un-revoking a key. Confirm.
 2. **Cooking stats count today** (an entry for today counts as cooked).
 3. **Category and tag sets are enforced** on save. Imported recipes with other tags (old data had lowercase tags) must be mapped by the importer.
-4. **Wrong pairing codes spend everyone's open links** (one family per install, so in practice one user). A shared-host install with many users would need a per-user scheme.
+4. **Pairing misses** are per IP (5) and install-wide (30), see §2.5. Families behind one shared IP (a carrier NAT) can block each other's pairing for 10 minutes; the password login still works.
 5. **Login lockout is per e-mail + IP.** A per-account lock would let anyone lock the family out.
 6. **The SPA build path:** `vite.config.ts` uses `base: '/'` with output in `public/app/`, so assets are requested as `/assets/…`. `index.php` serves them from `public/app/` as a fallback; switching Vite to `base: '/app/'` (or the output to `public/`) would let the web server serve them directly.
 7. **Images:** `imageUrl` is stored as given (http(s) URL or `/media/…`); upload, re-encoding and thumbnails come with Phase 6.
 8. **Section classification** uses the word list only; the AI fallback for unknown names comes with Phase 6.
 9. **`recentManualNames`** comes from bought own items; the prototype used a fixed list.
 10. **iPad vs Mac:** iPadOS sends a Mac User-Agent and the server can't see touch support, so an iPad is labelled "Mac · Safari". The prototype's client-side check could tell them apart; the SPA could send a hint at login if this matters.
-11. **SPA wiring is not done** (out of this draft): `frontend/src/lib/api.ts` and `auth.ts` still use localStorage. The contract to wire against is §4; the SPA must send `X-CSRF-Token` (from login or `GET /me`) on unsafe requests and redirect to `/login?zurueck=<path>` on 401.
+11. **SPA wiring is not done** (out of this draft): `frontend/src/lib/api.ts` and `auth.ts` still use localStorage. The contract to wire against is §4; the SPA must send `X-CSRF-Token` (from login or `GET /me`) on unsafe requests and redirect to `/login?zurueck=<path>` on 401. Three D20 follow-ups for the SPA: the reset page greets a new family when `check` answers `purpose: "invite"` (title e.g. „Willkommen“, button „Passwort festlegen“); the login shows `account_disabled`; the prototype's `code_spent` text in `auth.ts` is now the "Warte 10 Minuten …" one.
 12. **`mcp/sdk`** stays in `composer.json` (it installs on 8.2) but is unused; drop it or switch to it at 1.0.
 13. **Rate-limit defaults** (120 per key, 300 per IP per minute) are guesses; tune once real agents run.
 
@@ -366,7 +380,7 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 composer install
 cp .env.example .env          # the PHP block at the end; set APP_SECRET
 php bin/console migrate       # creates DB_NAME if missing
-php bin/console user:create --email=nils@familie.de --name=Nils
+php bin/console user:create --email=nils@familie.de --name=Nils   # invite mail; or --password=…
 php -S localhost:8080 -t public public/index.php    # or the Local site (nginx → public/index.php)
 php bin/console api-key:create --email=nils@familie.de --scopes=recipes:read,mealplan:write
 claude mcp add --transport http essensplan-local http://localhost:8080/mcp --header "Authorization: Bearer esp_…"

@@ -25,6 +25,7 @@ Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per d
 | D13 | UI voice: **"du"**; dark mode required | decided (init) |
 | D18 | **API & Agenten:** no scope presets (rights picked per key; write implies read); setup snippets for Claude Code, Claude Desktop (via mcp-remote), other MCP clients and REST. **claude.ai web and ChatGPT need OAuth** (still out of scope, D4); the UI says so. Activity log with per-action undo (blocked when the target changed since), marks where it happened, avatar dot; 90-day retention. New scopes `shopping:read|write` | decided (shape api-agenten) |
 | D19 | **Login & Geräte:** e-mail + password with "Angemeldet bleiben" (on by default → rolling 1-year session; off → ends with the browser). **New family devices pair** with a logged-in one: a 6-digit code or QR (10 min, single use), no password needed; paired devices stay logged in. Konto lists **Geräte** (sessions, log out one or all others) and **Name und E-Mail** (e-mail change needs the current password). No password change in Konto (reset mail instead), no web setup screen (owner comes from the import / `bin/console user:create`). Sessions are DB rows, not native PHP sessions | decided (shape login) |
+| D20 | **Several families per install.** One account is still one family (D11) and `users.id` the tenant key. No sign-up over HTTP: the operator adds a family with `bin/console user:create`, which mails an invite link (7 days) to set the password; `user:disable` / `user:enable` lock a family out and back in, `user:delete` removes it with all its data. Wrong pairing codes count per IP and install-wide, never against another family's code. Several logins per family stay out of scope (BACKEND_REQUIREMENTS §2.8) | decided (2026-11-07) |
 | D17 | **Kochmodus:** propped-up reading at a distance; one step per screen; tap anywhere for next; per-step ingredients; no timers, no mise en place; "gekocht" stays derived from past plan entries (no explicit cooked events) | decided (shape kochmodus) |
 | D16 | **Einkaufsliste:** days chosen per trip (default: planned days not yet shopped); one store with a user-defined section order; own extra items until bought; "Zuhause prüfen" with learned "meist da"; live list (plan changes print as "neu"); explicit "Einkauf abschließen" (undoable). Not chosen: several stores, two-phone live sync, "which recipe needs it" | decided (shape einkaufsliste) |
 | D15 | **Wochenplan:** a plan entry is a recipe **or** free text (presets Reste · Essen gehen · Auswärts · Bestellen + recent own texts). **No per-entry servings, no notes**; grocery list uses recipe base servings. Mostly Mittagessen is planned; planning happens on the phone in one sit-down. **Wochenbeginn** (default Mo) and **Planungstag** (default Fr; home flips to next week from then) are user settings | decided (shape wochenplan) |
@@ -130,7 +131,7 @@ essensplan/
 | **KI-Import** | Main entry point; **PWA Share Target** (link or photo from the phone); live progress; editable preview | Async jobs needed (progress states)? |
 | **Rezeptliste** | Instant search; filter chips; thumbnail cards; sort by last cooked / rating | Full-text search (MySQL FULLTEXT)? |
 | **Einstellungen → API & Agenten** | Key creation with scope presets; one-time reveal with copy-ready MCP snippets; revoke; activity log | Fixed by §6 |
-| **Login / empty states** | Login only (no sign-up page, D10); password reset; device pairing; empty states for a fresh collection | Decided in D19. Registration disabled by config after the owner exists |
+| **Login / empty states** | Login only (no sign-up page, D10); password reset; device pairing; empty states for a fresh collection | Decided in D19. No sign-up over HTTP; families are added on the CLI with an invite mail (D20) |
 
 ---
 
@@ -212,7 +213,7 @@ password_resets, rate_limits, schema_migrations
 
 | Method | Route | Scope (API key) |
 |---|---|---|
-| POST | `/auth/login`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password` (`/auth/register` only while `REGISTRATION_ENABLED=true`, D10) | session only |
+| POST | `/auth/login`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password` (+ `/check` → reset or invite); no `/auth/register` (D10, D20: families are added on the CLI) | session only |
 | POST / GET / DELETE | `/auth/pair`, `/auth/device-links[/{id}]`, `/auth/sessions[/{id}]`, `/auth/sessions/revoke-others` (D19, details in HANDOFF §4) | session only |
 | GET/PATCH | `/me` | `profile:read` |
 | GET | `/recipes?q&category&tags[]&maxTime&minRating&notCookedSince&sort&limit&cursor` | `recipes:read` |

@@ -30,6 +30,8 @@ abstract class TestCase extends Base
     protected SlimApp $app;
     protected Db $db;
     protected Clock $clock;
+    /** REMOTE_ADDR of the next requests. */
+    protected string $ip = '203.0.113.7';
 
     private const TABLES = [
         'agent_activity', 'api_keys', 'shopping_home_counts', 'section_overrides', 'shopping_manual_items',
@@ -87,7 +89,7 @@ abstract class TestCase extends Base
      */
     protected function call(string $method, string $path, mixed $body = null, ?Actor $as = null, array $headers = []): array
     {
-        $req = (new ServerRequestFactory())->createServerRequest($method, 'http://essen.test' . $path, ['REMOTE_ADDR' => '203.0.113.7']);
+        $req = (new ServerRequestFactory())->createServerRequest($method, 'http://essen.test' . $path, ['REMOTE_ADDR' => $this->ip]);
         parse_str((string) parse_url($path, PHP_URL_QUERY), $query);
         $req = $req->withQueryParams($query)->withHeader('User-Agent', $headers['User-Agent'] ?? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1');
         if ($as !== null) {

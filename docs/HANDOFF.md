@@ -45,7 +45,7 @@ Produce a **first working draft of the PHP backend** on a branch (suggested name
    - CSRF header;
    - `password_verify` accepting `$2a$`/`$2y$` with rehash on login;
    - password reset tokens (SHA-256 stored, 60 min, single use; mail sending can be a logged stub);
-   - `REGISTRATION_ENABLED` switch;
+   - ~~`REGISTRATION_ENABLED` switch~~ (dropped with D20: no sign-up over HTTP; families are added with `bin/console user:create`);
    - rate limits table.
 5. **Domain services and REST**, one service layer shared by REST and MCP:
    - recipes, including search by title **and** ingredient, the filters and `cookingStats`;

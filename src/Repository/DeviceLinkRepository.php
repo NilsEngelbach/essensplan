@@ -60,14 +60,13 @@ final class DeviceLinkRepository
     }
 
     /**
-     * A wrong code can't be tied to one link, so it counts against all open
-     * ones. Returns how many links it spent (reached $max misses).
+     * Too many wrong codes across the install (someone guessing from many
+     * IPs): every open code of every family is spent. Returns how many.
      */
-    public function countMiss(int $max): int
+    public function spendAllOpen(): int
     {
         $now = $this->clock->db();
-        $this->db->exec('UPDATE device_links SET attempts = attempts + 1 WHERE ' . self::OPEN, [$now]);
-        return $this->db->exec('UPDATE device_links SET spent_at = ? WHERE attempts >= ? AND ' . self::OPEN, [$now, $max, $now]);
+        return $this->db->exec('UPDATE device_links SET spent_at = ? WHERE ' . self::OPEN, [$now, $now]);
     }
 
     public function purgeOld(): int

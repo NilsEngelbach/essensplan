@@ -30,7 +30,10 @@ final class ApiKeyService
         if (!str_starts_with($secret, 'esp_')) {
             return null;
         }
-        $key = $this->db->one('SELECT * FROM api_keys WHERE key_hash = ?', [hash('sha256', $secret)]);
+        $key = $this->db->one(
+            'SELECT k.* FROM api_keys k JOIN users u ON u.id = k.user_id WHERE k.key_hash = ? AND u.disabled_at IS NULL',
+            [hash('sha256', $secret)],
+        );
         if ($key === null || $key['revoked_at'] !== null || ($key['expires_at'] !== null && $key['expires_at'] <= $this->clock->db())) {
             return null;
         }

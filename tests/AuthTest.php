@@ -127,19 +127,39 @@ final class AuthTest extends TestCase
         $this->fails(400, 'invalid_code', 'POST', '/api/v1/auth/pair', ['code' => $late['code']]);
     }
 
-    public function testFiveWrongCodesSpendTheOpenLink(): void
+    public function testFiveWrongCodesLockThisDeviceOnly(): void
     {
         $phone = $this->login();
         $link = $this->ok(201, 'POST', '/api/v1/auth/device-links', null, $phone);
         $wrong = str_pad((string) (((int) $link['code'] + 1) % 1_000_000), 6, '0', STR_PAD_LEFT);
+        $this->ip = '198.51.100.1';
         for ($i = 0; $i < 4; $i++) {
             $err = $this->fails(400, 'invalid_code', 'POST', '/api/v1/auth/pair', ['code' => $wrong]);
         }
         $this->assertSame('Der Code passt nicht. Schau noch einmal auf das andere Gerät.', $err['message']);
         $err = $this->fails(400, 'code_spent', 'POST', '/api/v1/auth/pair', ['code' => $wrong]);
-        $this->assertSame('Zu viele falsche Codes. Lass dir auf dem anderen Gerät einen neuen Code anzeigen.', $err['message']);
-        $this->fails(400, 'invalid_code', 'POST', '/api/v1/auth/pair', ['code' => $link['code']]);
+        $this->assertSame('Zu viele falsche Codes. Warte 10 Minuten und lass dir dann auf dem anderen Gerät einen neuen Code anzeigen.', $err['message']);
+        // This device waits, even with the right code …
+        $this->fails(400, 'code_spent', 'POST', '/api/v1/auth/pair', ['code' => $link['code']]);
+        $this->assertFalse($this->ok(200, 'GET', "/api/v1/auth/device-links/{$link['id']}", null, $phone)['spent']);
+        // … after ten minutes it can try again.
+        $this->clock->set('2026-11-12T09:10:01Z');
+        $fresh = $this->ok(201, 'POST', '/api/v1/auth/device-links', null, $phone);
+        $this->ok(200, 'POST', '/api/v1/auth/pair', ['code' => $fresh['code']]);
+    }
+
+    public function testGuessingFromManyIpsSpendsAllOpenCodes(): void
+    {
+        $phone = $this->login();
+        $link = $this->ok(201, 'POST', '/api/v1/auth/device-links', null, $phone);
+        $wrong = str_pad((string) (((int) $link['code'] + 1) % 1_000_000), 6, '0', STR_PAD_LEFT);
+        for ($i = 0; $i < 30; $i++) {
+            $this->ip = '198.51.100.' . (10 + intdiv($i, 3));
+            $this->fails(400, 'invalid_code', 'POST', '/api/v1/auth/pair', ['code' => $wrong]);
+        }
         $this->assertTrue($this->ok(200, 'GET', "/api/v1/auth/device-links/{$link['id']}", null, $phone)['spent']);
+        $this->ip = '198.51.100.99';
+        $this->fails(400, 'invalid_code', 'POST', '/api/v1/auth/pair', ['code' => $link['code']]);
     }
 
     public function testPasswordReset(): void
@@ -153,7 +173,7 @@ final class AuthTest extends TestCase
         preg_match('/token=([0-9a-f]{64})/', $mailer->sent[0]['body'], $m);
         $token = $m[1];
 
-        $this->ok(204, 'POST', '/api/v1/auth/reset-password/check', ['token' => $token]);
+        $this->assertSame(['purpose' => 'reset'], $this->ok(200, 'POST', '/api/v1/auth/reset-password/check', ['token' => $token]));
         $err = $this->fails(400, 'weak_password', 'POST', '/api/v1/auth/reset-password', ['token' => $token, 'password' => 'kurz']);
         $this->assertSame('Das Passwort braucht mindestens 10 Zeichen.', $err['message']);
         $r = $this->ok(200, 'POST', '/api/v1/auth/reset-password', ['token' => $token, 'password' => 'ganz-neues-passwort', 'revokeOthers' => true]);
@@ -181,11 +201,9 @@ final class AuthTest extends TestCase
         $this->fails(422, 'validation_failed', 'PATCH', '/api/v1/me', ['settings' => ['weekStart' => 9]], $me);
     }
 
-    public function testRegistrationSwitch(): void
+    public function testThereIsNoSignUpOverHttp(): void
     {
-        $this->fails(403, 'registration_disabled', 'POST', '/api/v1/auth/register', ['email' => 'neu@familie.de', 'password' => self::PASSWORD]);
-        $this->boot(['REGISTRATION_ENABLED' => 'true']);
-        $r = $this->ok(201, 'POST', '/api/v1/auth/register', ['name' => 'Neu', 'email' => 'neu@familie.de', 'password' => self::PASSWORD]);
-        $this->assertSame('register', $r['session']['via']);
+        $this->fails(404, 'not_found', 'POST', '/api/v1/auth/register', ['email' => 'neu@familie.de', 'password' => self::PASSWORD]);
+        $this->assertArrayNotHasKey('registrationEnabled', $this->ok(200, 'GET', '/api/v1/config'));
     }
 }

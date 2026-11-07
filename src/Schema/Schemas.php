@@ -49,7 +49,6 @@ final class Schemas
             'recipe' => $recipe,
             'recipe-patch' => $patch,
             'login' => $obj(['email' => $str(190), 'password' => $str(1000), 'remember' => ['type' => 'boolean']], ['email', 'password']),
-            'register' => $obj(['name' => $str(100), 'email' => $str(190), 'password' => $str(1000)], ['email', 'password']),
             'pair' => $obj(['code' => $str(12), 'token' => $str(100)], [], ['minProperties' => 1]),
             'forgot' => $obj(['email' => $str(190)], ['email']),
             'reset-check' => $obj(['token' => $str(100)], ['token']),
