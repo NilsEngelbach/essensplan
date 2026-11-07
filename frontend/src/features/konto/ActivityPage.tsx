@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useToast } from '../../components/toast'
 import { listActivity, markActivitySeen, subscribe, UndoBlocked, undoActivity, undoBlockedReason } from '../../lib/api'
+// UndoBlocked is the API error: its message is the server's reason (e.g. „… wurde inzwischen geändert.“).
 import { daysBetween, toIsoDate, todayIso, weekdayLong } from '../../lib/format'
 import type { Activity } from '../../lib/types'
 
@@ -34,9 +35,9 @@ export function ActivityPage() {
     days.set(d, [...(days.get(d) ?? []), a])
   }
 
-  const undo = (a: Activity) => {
+  const undo = async (a: Activity) => {
     try {
-      undoActivity(a.id)
+      await undoActivity(a.id)
       toast.show('Rückgängig gemacht.')
     } catch (e) {
       toast.show(e instanceof UndoBlocked ? e.message : 'Das hat nicht geklappt.', { tone: 'error' })

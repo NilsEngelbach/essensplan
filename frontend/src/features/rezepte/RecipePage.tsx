@@ -264,8 +264,8 @@ function PlanPanel({ recipe }: { recipe: Recipe }) {
 
   const slotName = (k: SlotKey) => SLOTS.find((s) => s.key === k)?.name ?? k
 
-  const plan = (date: string) => {
-    const entry = addPlanEntry({ date, slot, recipeId: recipe.id })
+  const plan = async (date: string) => {
+    const entry = await addPlanEntry({ date, slot, recipeId: recipe.id })
     toast.show(`Für ${dayLabel(date) === 'Heute' || dayLabel(date) === 'Morgen' ? dayLabel(date).toLowerCase() : weekdayLong(date)}, ${slotName(slot)} geplant.`, {
       undo: () => removePlanEntry(entry.id),
     })

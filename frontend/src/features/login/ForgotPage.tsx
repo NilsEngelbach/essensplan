@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import { AuthError, DEMO_EMAIL, DEMO_RESET_TOKEN, requestPasswordReset } from '../../lib/auth'
+import { AuthError, requestPasswordReset } from '../../lib/auth'
 import { AuthHead } from './AuthLayout'
 
 export function ForgotPage() {
@@ -93,12 +93,6 @@ export function ForgotPage() {
         </form>
       )}
 
-      <p className="auth__demo label">
-        Prototyp. Die Mail geht nur an {DEMO_EMAIL}.
-        <Link className="textbtn" to={`/passwort-zuruecksetzen?token=${DEMO_RESET_TOKEN}`}>
-          Link aus der Mail öffnen
-        </Link>
-      </p>
     </>
   )
 }

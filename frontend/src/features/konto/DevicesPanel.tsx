@@ -7,9 +7,10 @@ import {
   currentSession,
   getDeviceLink,
   listSessions,
+  loadSessions,
+  pollDeviceLink,
   revokeOtherSessions,
   revokeSession,
-  simulatePairing,
   subscribeAuth,
   type Session,
 } from '../../lib/auth'
@@ -25,6 +26,10 @@ export function DevicesPanel() {
   const [linkId, setLinkId] = useState<string | null>(null)
   const [flipId, setFlipId] = useState<string | null>(null)
 
+  useEffect(() => {
+    loadSessions().catch(() => toast.show('Die Geräte konnten nicht geladen werden.', { tone: 'error' }))
+  }, [toast])
+
   const sessions = listSessions()
   const me = currentSession()?.id
   const others = sessions.filter((s) => s.id !== me).length
@@ -33,9 +38,13 @@ export function DevicesPanel() {
     if (window.location.hash === '#geraete') document.getElementById('geraete')?.scrollIntoView({ block: 'start' })
   }, [])
 
+  const fail = (e: unknown) => toast.show(e instanceof Error ? e.message : 'Das hat nicht geklappt.', { tone: 'error' })
+  const addDevice = () => createDeviceLink().then((l) => setLinkId(l.id), fail)
+
   const revoke = (s: Session) => {
-    revokeSession(s.id)
-    if (s.id !== me) toast.show(`„${s.deviceLabel}“ ist abgemeldet.`)
+    revokeSession(s.id).then(() => {
+      if (s.id !== me) toast.show(`„${s.deviceLabel}“ ist abgemeldet.`)
+    }, fail)
   }
 
   return (
@@ -56,7 +65,7 @@ export function DevicesPanel() {
       {linkId ? (
         <Pairing
           id={linkId}
-          onRenew={() => setLinkId(createDeviceLink().id)}
+          onRenew={addDevice}
           onConnected={() => {
             // The device that just joined flips into the list.
             const newest = [...listSessions()].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
@@ -64,13 +73,13 @@ export function DevicesPanel() {
           }}
           onClose={() => {
             const link = getDeviceLink(linkId)
-            if (link && !link.usedAt) cancelDeviceLink(linkId)
+            if (link && !link.usedAt) cancelDeviceLink(linkId).catch(() => undefined)
             setLinkId(null)
           }}
         />
       ) : (
         <div className="devices__actions">
-          <button type="button" className="btn" onClick={() => setLinkId(createDeviceLink().id)}>
+          <button type="button" className="btn" onClick={addDevice}>
             Gerät hinzufügen
           </button>
           {others > 0 && (
@@ -78,8 +87,7 @@ export function DevicesPanel() {
               type="button"
               className="textbtn textbtn--danger"
               onClick={() => {
-                const n = revokeOtherSessions()
-                toast.show(n === 1 ? '1 Gerät abgemeldet.' : `${n} Geräte abgemeldet.`)
+                revokeOtherSessions().then((n) => toast.show(n === 1 ? '1 Gerät abgemeldet.' : `${n} Geräte abgemeldet.`), fail)
               }}
             >
               Alle anderen abmelden
@@ -121,14 +129,18 @@ function Pairing({ id, onRenew, onConnected, onClose }: { id: string; onRenew: (
   const headRef = useRef<HTMLHeadingElement>(null)
   // Re-read every second: the code runs down, and the server is asked whether a device joined.
   useEffect(() => {
-    const t = window.setInterval(() => setNow(Date.now()), 1000)
+    const t = window.setInterval(() => {
+      setNow(Date.now())
+      const l = getDeviceLink(id)
+      if (l && !l.usedAt && new Date(l.expiresAt).getTime() > Date.now()) pollDeviceLink(id).catch(() => undefined)
+    }, 1000)
     return () => window.clearInterval(t)
-  }, [])
+  }, [id])
   useEffect(() => headRef.current?.focus(), [id])
 
   const link = getDeviceLink(id)
   const left = link ? Math.max(0, new Date(link.expiresAt).getTime() - now) : 0
-  const state = !link ? 'expired' : link.usedAt ? 'connected' : left === 0 ? 'expired' : 'open'
+  const state = !link ? 'expired' : link.usedAt ? 'connected' : left === 0 || link.spent ? 'expired' : 'open'
 
   const wasConnected = useRef(false)
   useEffect(() => {
@@ -208,13 +220,9 @@ function Pairing({ id, onRenew, onConnected, onClose }: { id: string; onRenew: (
       </div>
 
       <div className="devices__actions">
-        {expired ? (
+        {expired && (
           <button type="button" className="btn" onClick={onRenew}>
             Neuer Code
-          </button>
-        ) : (
-          <button type="button" className="textbtn pair__demo" onClick={() => simulatePairing(id)}>
-            Demo: anderes Gerät verbindet sich
           </button>
         )}
         <button type="button" className="textbtn" onClick={onClose}>

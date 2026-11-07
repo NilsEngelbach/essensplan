@@ -136,10 +136,10 @@ export function WeekPage() {
     navigate({ pathname: `/woche/${target}`, search: q.toString() })
   }
 
-  const pick = (p: Pick, date = selected) => {
+  const pick = async (p: Pick, date = selected) => {
     if (!date) return
     const wasEmpty = inSlot(date).length === 0
-    const entry = addPlanEntry({ date, slot, ...p })
+    const entry = await addPlanEntry({ date, slot, ...p })
     setLastPick(entry)
     if (!wasEmpty || date !== selected) return
     // Move on to the next free day after this one (wrapping), past days skipped.
@@ -178,8 +178,8 @@ export function WeekPage() {
       const e = entries?.find((x) => x.id === data.entryId)
       if (e) move(e, date)
     } else if (data.recipeId) {
-      if (planning) pick({ recipeId: data.recipeId }, date)
-      else addPlanEntry({ date, slot: 'lunch', recipeId: data.recipeId })
+      if (planning) void pick({ recipeId: data.recipeId }, date)
+      else addPlanEntry({ date, slot: 'lunch', recipeId: data.recipeId }).catch(() => undefined)
     }
   }
 

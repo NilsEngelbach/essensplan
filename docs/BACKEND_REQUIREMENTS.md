@@ -363,12 +363,12 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 3. **Category and tag sets are enforced** on save. Imported recipes with other tags (old data had lowercase tags) must be mapped by the importer.
 4. **Pairing misses** are per IP (5) and install-wide (30), see §2.5. Families behind one shared IP (a carrier NAT) can block each other's pairing for 10 minutes; the password login still works.
 5. **Login lockout is per e-mail + IP.** A per-account lock would let anyone lock the family out.
-6. **The SPA build path:** `vite.config.ts` uses `base: '/'` with output in `public/app/`, so assets are requested as `/assets/…`. `index.php` serves them from `public/app/` as a fallback; switching Vite to `base: '/app/'` (or the output to `public/`) would let the web server serve them directly.
+6. ~~SPA build path~~ — resolved 2026-11-07: Vite builds with `base: '/app/'`, so the web server serves the assets directly; `index.php` only answers SPA routes with `app/index.html`.
 7. **Images:** `imageUrl` is stored as given (http(s) URL or `/media/…`); upload, re-encoding and thumbnails come with Phase 6.
 8. **Section classification** uses the word list only; the AI fallback for unknown names comes with Phase 6.
 9. **`recentManualNames`** comes from bought own items; the prototype used a fixed list.
 10. **iPad vs Mac:** iPadOS sends a Mac User-Agent and the server can't see touch support, so an iPad is labelled "Mac · Safari". The prototype's client-side check could tell them apart; the SPA could send a hint at login if this matters.
-11. **SPA wiring is not done** (out of this draft): `frontend/src/lib/api.ts` and `auth.ts` still use localStorage. The contract to wire against is §4; the SPA must send `X-CSRF-Token` (from login or `GET /me`) on unsafe requests and redirect to `/login?zurueck=<path>` on 401. Three D20 follow-ups for the SPA: the reset page greets a new family when `check` answers `purpose: "invite"` (title e.g. „Willkommen“, button „Passwort festlegen“); the login shows `account_disabled`; the prototype's `code_spent` text in `auth.ts` is now the "Warte 10 Minuten …" one.
+11. **SPA wiring: done 2026-11-07** (`frontend/src/lib/http.ts`, `api.ts`, `auth.ts`). The invite greeting is in; `account_disabled` and the new `code_spent` text come straight from the server. Still client-side: the AI import demo (Phase 6) and the cooking-step ingredient matching when `ingredientIds` is null.
 12. **`mcp/sdk`** stays in `composer.json` (it installs on 8.2) but is unused; drop it or switch to it at 1.0.
 13. **Rate-limit defaults** (120 per key, 300 per IP per minute) are guesses; tune once real agents run.
 

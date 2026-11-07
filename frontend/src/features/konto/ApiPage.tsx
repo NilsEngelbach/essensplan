@@ -191,7 +191,8 @@ function CreateKey({ onCancel, onCreated }: { onCancel: () => void; onCreated: (
       onSubmit={(e) => {
         e.preventDefault()
         if (!scopes.length) return
-        onCreated(createApiKey({ name, scopes, validDays: valid === 'never' ? null : Number(valid), client: 'claude-code' }))
+        // Errors (none expected) surface as a toast through the data layer.
+        createApiKey({ name, scopes, validDays: valid === 'never' ? null : Number(valid), client: 'claude-code' }).then(onCreated, () => undefined)
       }}
     >
       <h2 id="create-h" className="panel__title">

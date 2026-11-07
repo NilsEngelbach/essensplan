@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Rocker } from '../../components/controls'
-import { AuthError, DEMO_CODE, DEMO_EMAIL, DEMO_PASSWORD, login, pairWithCode } from '../../lib/auth'
+import { AuthError, login, pairWithCode } from '../../lib/auth'
 import { AuthHead, PasswordInput, safeBack, usePower } from './AuthLayout'
 
 /** "482913" → "482 913": easier to read off one screen and type on another. */
@@ -130,20 +130,6 @@ function PasswordLogin({ back, note, onCode }: { back: string; note: string | nu
         </button>
       </div>
 
-      <p className="auth__demo label">
-        Prototyp. Demo-Zugang: {DEMO_EMAIL} · {DEMO_PASSWORD}
-        <button
-          type="button"
-          className="textbtn"
-          onClick={() => {
-            setEmail(DEMO_EMAIL)
-            setPassword(DEMO_PASSWORD)
-            setError(null)
-          }}
-        >
-          Einsetzen
-        </button>
-      </p>
     </>
   )
 }
@@ -243,12 +229,6 @@ function CodeLogin({ back, onPassword }: { back: string; onPassword: () => void 
         </button>
       </div>
 
-      <p className="auth__demo label">
-        Prototyp. Demo-Code: {groupCode(DEMO_CODE)}
-        <button type="button" className="textbtn" onClick={() => change(DEMO_CODE)}>
-          Einsetzen
-        </button>
-      </p>
     </>
   )
 }

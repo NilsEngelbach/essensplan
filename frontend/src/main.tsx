@@ -23,6 +23,7 @@ import { LoginPage } from './features/login/LoginPage'
 import { ForgotPage } from './features/login/ForgotPage'
 import { ResetPage } from './features/login/ResetPage'
 import { PairPage } from './features/login/PairPage'
+import { bootstrapAuth } from './lib/auth'
 
 // Apply the stored theme before first paint.
 try {
@@ -67,10 +68,19 @@ const router = createBrowserRouter([
   },
 ])
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ToastProvider>
-      <RouterProvider router={router} />
-    </ToastProvider>
-  </React.StrictMode>,
-)
+const root = ReactDOM.createRoot(document.getElementById('root')!)
+
+// Ask the server who this device is before the first route decides between app and login.
+bootstrapAuth()
+  .catch(() => {
+    /* offline or server down: the login screen says so on the next try */
+  })
+  .finally(() =>
+    root.render(
+      <React.StrictMode>
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </React.StrictMode>,
+    ),
+  )

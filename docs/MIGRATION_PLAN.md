@@ -1,6 +1,6 @@
 # Migration Plan: Essensplan → PHP/MySQL on all-inkl, UX-first, with Agent API + MCP
 
-Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅, Login & Geräte shaped + built ✅ (all surfaces done); backend draft 1 ✅ on branch `backend-draft` ([BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md), 37 tests green on MySQL 8.4 + MariaDB 10.6); next: owner review of the draft, then the Local site spike (§3.1) and wiring the SPA**
+Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅, Login & Geräte shaped + built ✅ (all surfaces done); backend draft 1 ✅ on branch `backend-draft` ([BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md), 37 tests green on MySQL 8.4 + MariaDB 10.6); Local site deployed (§3.1 ✅, essen.local) and the SPA wired to the real API (§9 step 1–2, mock data layer replaced); next: owner review, Supabase importer (Phase 8) and the AI import (Phase 6)**
 Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per day, API keys only, Local dev env)
 
 ---
@@ -138,12 +138,12 @@ essensplan/
 ## 3. Phase 2 – Environment spike (runs in parallel with Phase 1)
 
 ### 3.1 Local (`essen.local`), see §12 for details
-- [ ] Junction `app\public` → `C:\DEV\essensplan\public`; "hello Slim" answers on `http://essen.local/api/v1/health`
+- [x] Junction `app\public` → `C:\DEV\essensplan\public`; "hello Slim" answers on `http://essen.local/api/v1/health` (2026-11-07; PHP resolves the junction, `vendor/` and `src/` load)
 - [x] `composer install` works with Local's PHP 8.2.29 (checks package constraints). Verified 2026-11-07 with Local's php.exe on the CLI (all §1 packages, `config.platform.php` 8.2.29), not yet inside the site shell
-- [ ] Database `essensplan` created on `127.0.0.1:10029`
-- [ ] Mail via Local's Mailpit arrives
-- [ ] `Authorization: Bearer` header reaches PHP through nginx
-- [ ] MCP smoke test: `claude mcp add --transport http essensplan-local http://essen.local/mcp --header "Authorization: Bearer <key>"`, then call a test tool
+- [x] Database `essensplan` created on `127.0.0.1:10029` (`bin/console migrate`, 001 + 002)
+- [x] Mail via Local's Mailpit arrives (SMTP 10025, web UI http://127.0.0.1:10024; reset and invite mails checked)
+- [x] `Authorization: Bearer` header reaches PHP through nginx (no extra config needed)
+- [ ] MCP smoke test: `claude mcp add --transport http essensplan-local http://essen.local/mcp --header "Authorization: Bearer <key>"`, then call a test tool. (`initialize` answered on essen.local with curl; the `claude mcp add` step is still to do)
 
 ### 3.2 all-inkl (production)
 - [ ] PHP ≥ 8.2 per domain; extensions `pdo_mysql`, `mbstring`, `intl`, `curl`, `gd`, `fileinfo`, `openssl`, `sodium`
@@ -350,7 +350,7 @@ Screens are **built new in the chosen visual world**; we don't port the old scre
 1. **Reuse logic, not markup:**
    - Port the data access (`lib/supabase.ts` → `lib/api.ts`), contexts and form logic (React Hook Form + Zod).
    - Grocery aggregation moves to the server.
-2. `frontend/` with Vite + React Router + TanStack Query; build to `public/app/`. Locally, the Vite dev server proxies `/api` and `/mcp` to `http://essen.local` (§12).
+2. `frontend/` with Vite + React Router; build to `public/app/` with `base: '/app/'` (assets are plain files for nginx/Apache; `public/index.php` answers every other path with `app/index.html`). Locally, the Vite dev server proxies `/api`, `/mcp` and `/media` to `http://essen.local` (§12). **Done 2026-11-07:** `frontend/src/lib/api.ts` and `auth.ts` talk to `/api/v1` through `lib/http.ts` (CSRF header, 401 → login with `zurueck`); a small cache keeps the screens' synchronous reads. TanStack Query was not needed for this. The AI import in the capture flow is still the demo until Phase 6.
 3. **Per surface, in the order from the screen map:** build → run the detector once → `/impeccable harden`, `onboard`, `clarify` for that surface.
 4. PWA: manifest, minimal service worker (installability only, no offline, D12), **Share Target** for the import (Android; POST handled server-side).
 5. New screen **API & Agenten** (§6).

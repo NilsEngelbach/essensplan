@@ -24,12 +24,14 @@ export interface Ingredient {
   unit: string | null
   notes: string | null
   component: string | null
+  section?: string | null // store section, set by the server on save
 }
 
 export interface Instruction {
   id: string
   stepNumber: number
   description: string
+  ingredientIds?: string[] | null // null: matched by name in the step text (lib/cooking.ts)
 }
 
 export interface CookingStats {
@@ -54,7 +56,12 @@ export interface Recipe {
   ingredients: Ingredient[]
   instructions: Instruction[]
   cookingStats: CookingStats
+  createdVia?: 'app' | 'import' | 'api' | 'mcp'
+  agentChanged?: boolean
 }
+
+/** What lists and suggestion shelves return: a recipe without ingredients and steps. */
+export type RecipeSummary = Omit<Recipe, 'ingredients' | 'instructions'> & { ingredientCount?: number | null }
 
 export type RecipeDraft = Omit<Recipe, 'id' | 'createdAt' | 'updatedAt' | 'cookingStats'>
 
@@ -68,6 +75,8 @@ export interface PlanEntry {
   position: number
   createdVia: 'app' | 'api' | 'mcp'
   seenAt: string | null // set once an agent-created entry has been seen in the app
+  /** Embedded by the server so the week can print titles without loading every recipe. */
+  recipe?: { id: string; title: string; imageUrl: string | null; cookingTime: number | null; category: string } | null
 }
 
 /** Fixed free-text presets; the user's recent own texts are added after them. */
@@ -92,6 +101,7 @@ export interface Trip {
 
 export interface ManualItem {
   id: string
+  key?: string // the line key, m:<id>
   name: string
   section: string
   createdAt: string
@@ -139,7 +149,9 @@ export interface Activity {
   at: string
   summary: string // "hat Do 12. Mittag: Gnocchi-Pfanne geplant"
   target: { type: 'plan' | 'shopping' | 'recipe'; id: string; href: string; label: string }
-  undo: UndoPayload | null
+  undo: UndoPayload | { kind: string } | null
+  /** Why undo is refused now (the target changed since), or null while it is still safe. */
+  undoBlocked?: string | null
   undoneAt: string | null
   seenAt: string | null
 }
@@ -166,7 +178,7 @@ export interface Shelf {
   key: 'langeher' | 'lieblinge' | 'schnell'
   title: string
   reason: string
-  recipes: Recipe[]
+  recipes: RecipeSummary[]
 }
 
 export type SortKey = 'loved' | 'title' | 'lastCooked' | 'newest' | 'time'
@@ -182,6 +194,6 @@ export interface RecipeQuery {
 }
 
 export interface RecipeHit {
-  recipe: Recipe
+  recipe: RecipeSummary
   matchedIngredient: string | null
 }

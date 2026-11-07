@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { BookOpen, CalendarDays, Plus, ShoppingBasket } from 'lucide-react'
 import { Segmented } from '../components/controls'
-import { resetDemo, subscribe, unseenActivityCount } from '../lib/api'
+import { subscribe, unseenActivityCount } from '../lib/api'
+import { onApiError } from '../lib/http'
 import { useToast } from '../components/toast'
 import { getAccount, logout, subscribeAuth } from '../lib/auth'
 
@@ -47,7 +48,6 @@ function AccountMenu({ placement }: { placement: 'header' | 'rail' }) {
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState<ThemeChoice>(readTheme)
   const ref = useRef<HTMLDivElement>(null)
-  const toast = useToast()
   const [, force] = useState(0)
   useEffect(() => subscribe(() => force((n) => n + 1)), [])
   useEffect(() => subscribeAuth(() => force((n) => n + 1)), [])
@@ -123,27 +123,11 @@ function AccountMenu({ placement }: { placement: 'header' | 'rail' }) {
                 </span>
               )}
             </Link>
-            <a className="account__link" href="/demo/credits.json" target="_blank" rel="noreferrer">
-              Fotonachweis (Demo)
-            </a>
-            <button
-              type="button"
-              role="menuitem"
-              className="account__link"
-              onClick={() => {
-                resetDemo()
-                setOpen(false)
-                toast.show('Demo-Daten zurückgesetzt.')
-              }}
-            >
-              Demo-Daten zurücksetzen
-            </button>
             {/* No confirmation: logging in again is the undo. */}
-            <button type="button" role="menuitem" className="account__link account__logout" onClick={() => logout()}>
+            <button type="button" role="menuitem" className="account__link account__logout" onClick={() => void logout()}>
               Abmelden
             </button>
           </div>
-          <p className="account__note label">Prototyp mit Demo-Daten, keine echten Rezepte.</p>
         </div>
       )}
     </div>
@@ -153,6 +137,9 @@ function AccountMenu({ placement }: { placement: 'header' | 'rail' }) {
 export function AppShell() {
   const location = useLocation()
   const navigate = useNavigate()
+  const toast = useToast()
+  // A write that failed in the background (offline, validation, conflict) says so here.
+  useEffect(() => onApiError((e) => toast.show(e.message, { tone: 'error' })), [toast])
   // "/" and "/woche/…" are both the week.
   const weekActive = (to: string) => to === '/' && location.pathname.startsWith('/woche/')
 

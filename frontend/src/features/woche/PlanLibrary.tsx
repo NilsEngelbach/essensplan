@@ -5,7 +5,7 @@ import { LedRamp, Segmented } from '../../components/controls'
 import { listRecipes, planPresets, suggestions } from '../../lib/api'
 import { minutes, relativePast, weekdayShort } from '../../lib/format'
 import { useToast } from '../../components/toast'
-import { SLOTS, type PlanEntry, type Recipe, type RecipeHit, type Shelf, type SlotKey } from '../../lib/types'
+import { SLOTS, type PlanEntry, type RecipeHit, type RecipeSummary, type Shelf, type SlotKey } from '../../lib/types'
 
 export const DRAG_TYPE = 'application/x-essensplan'
 
@@ -279,7 +279,7 @@ function PickList({
   hits: RecipeHit[] | null
   q: string
   plannedOn: Map<string, string[]>
-  onPick: (r: Recipe) => void
+  onPick: (r: RecipeSummary) => void
   dragProps: (id: string) => object
 }) {
   if (hits === null) return <ul className="picklist" aria-busy="true" aria-label="Rezepte werden geladen" />

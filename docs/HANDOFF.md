@@ -19,6 +19,8 @@ Essensplan is a German family meal planner. It is being moved off Next.js/Supaba
 
 **Backend draft 1: done** (2026-11-07, branch `backend-draft`, not merged). Everything in §2 except the PR itself is built; [BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md) describes it, with what was verified where at the top, deviations in §9, open points in §10 and how to run it in §11. Next: the owner reviews it, then the Local site spike (MIGRATION_PLAN §3.1) and wiring the SPA to the real API.
 
+**Local deployment and SPA wiring: done** (2026-11-07). http://essen.local serves the API, MCP and the built SPA (`npm run build` in `frontend/`); the SPA uses the real API, also in `npm run dev` (proxy to essen.local). A demo family is seeded locally (nils@familie.de / essensplan-lokal). The prototype's localStorage mock is gone; `lib/demo-data.ts` only feeds the import demo now.
+
 ## 2. Your task
 
 Produce a **first working draft of the PHP backend** on a branch (suggested name: `backend-draft`), opened as a PR against `main`. Do not merge it.
