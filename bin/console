@@ -13,9 +13,12 @@ use Essensplan\Db;
 use Essensplan\Http\ApiError;
 use Essensplan\Http\OpenApi;
 use Essensplan\Http\Principal;
+use Essensplan\Import\SupabaseImporter;
+use Essensplan\Import\SupabaseSource;
 use Essensplan\Repository\UserRepository;
 use Essensplan\Service\ApiKeyService;
 use Essensplan\Service\FamilyAdmin;
+use Essensplan\Service\MediaStore;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -131,6 +134,8 @@ try {
             $n['reset tokens'] = $db->exec('DELETE FROM password_resets WHERE expires_at <= ?', [$clock->db('-1 day')]);
             $n['rate limits'] = $db->exec('DELETE FROM rate_limits WHERE TIMESTAMPADD(SECOND, window_seconds, window_start) <= ?', [$clock->db()]);
             $n['activity'] = $db->exec('DELETE FROM agent_activity WHERE created_at < ?', [$clock->db('-90 days')]);
+            // Photos no recipe uses any more (also those of the recipes purged above), after a day.
+            $n['photo files'] = $container->get(MediaStore::class)->collectGarbage();
             foreach ($n as $what => $count) {
                 $out(sprintf('%-14s %d', $what, $count));
             }
@@ -139,6 +144,19 @@ try {
         case 'openapi:dump':
             $file = $opts['_'][0] ?? 'php://stdout';
             file_put_contents($file, json_encode(OpenApi::document($config), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
+            break;
+
+        case 'import:supabase':
+            // Phase 8. Reads the old app (read-only) and writes families into this database.
+            $url = $config->get('SUPABASE_DB_URL', $config->get('DIRECT_URL'));
+            if ($url === '') {
+                $fail('Set SUPABASE_DB_URL (or DIRECT_URL) to the Supabase Postgres URL.');
+            }
+            $container->get(SupabaseImporter::class)->run(SupabaseSource::connect($url), [
+                'email' => is_string($opts['email'] ?? null) ? $opts['email'] : null,
+                'replace' => isset($opts['replace']),
+                'images' => !isset($opts['no-images']),
+            ], $out);
             break;
 
         case 'jobs:run':
@@ -158,7 +176,9 @@ try {
                                                         lock a family out (sessions, keys, links) or let it back in
               user:delete --email= --yes                delete a family and everything it owns
               api-key:create --email= [--scopes=a,b] [--name=] [--client=]
-              purge                                     remove old soft-deleted rows, sessions, tokens, activity
+              purge                                     remove old soft-deleted rows, sessions, tokens, activity, unused photos
+              import:supabase [--email=] [--replace] [--no-images]
+                                                        copy families from the old app (SUPABASE_DB_URL or DIRECT_URL)
               openapi:dump [file]                       write the OpenAPI document
               jobs:run                                  (Phase 6)
             TXT);

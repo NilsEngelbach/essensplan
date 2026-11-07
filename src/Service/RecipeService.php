@@ -289,6 +289,7 @@ final class RecipeService
             'title' => $r['title'],
             'description' => $r['description'],
             'imageUrl' => $r['image_path'],
+            'thumbUrl' => MediaStore::thumbOf($r['image_path']),
             'category' => $r['category'],
             'tags' => Util::decode($r['tags']),
             'cookingTime' => $r['cooking_time'] === null ? null : (int) $r['cooking_time'],

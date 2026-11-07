@@ -27,6 +27,7 @@ final class FamilyAdmin
         private readonly Clock $clock,
         private readonly UserRepository $users,
         private readonly AuthService $auth,
+        private readonly MediaStore $media,
     ) {
     }
 
@@ -101,7 +102,7 @@ final class FamilyAdmin
     public function delete(string $email): array
     {
         $user = $this->byEmail($email);
-        return $this->db->transaction(function () use ($user) {
+        $n = $this->db->transaction(function () use ($user) {
             $n = [];
             foreach (self::OWNED as $table) {
                 $n[$table] = $this->db->exec("DELETE FROM $table WHERE user_id = ?", [$user['id']]);
@@ -110,5 +111,8 @@ final class FamilyAdmin
             $n['users'] = $this->db->exec('DELETE FROM users WHERE id = ?', [$user['id']]);
             return $n;
         });
+        // After the commit: a failed delete leaves the photos, not dangling rows.
+        $this->media->deleteAll($user['id']);
+        return $n;
     }
 }

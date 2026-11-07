@@ -16,7 +16,9 @@ Where the sources disagree, HANDOFF §4 wins (the briefs and D15–D19 are newer
 - PHPStan level 5 on `src/` and `bin/console`: no errors;
 - `curl` smoke test against `php -S` with a session and with a scoped key: health, recipe CRUD, plan entries, suggestions, `/shopping/current`, MCP `initialize`, `tools/list` and `tools/call`.
 
-**Not verified yet:** the Local site itself (nginx, junction, Mailpit, `Authorization` through nginx) and anything on all-inkl (Apache `.htaccess`, timeouts, SMTP). See §11 for how to run it.
+**Later the same day:** the Local site (nginx, junction, Mailpit, `Authorization` through nginx; MIGRATION_PLAN §3.1), photo storage (§4.3.1) and the Supabase importer (§7.1, run against the real old database into the Local DB). The suite is now 50 tests, 946 assertions, green on MySQL 8.4. MariaDB is no longer a target (D21).
+
+**Not verified yet:** anything on all-inkl (Apache `.htaccess`, timeouts, SMTP). See §11 for how to run it.
 
 ---
 
@@ -123,7 +125,7 @@ Slim's routing middleware only resolves the route (so the later steps can read i
 
 ## 3. Entities
 
-All tables: InnoDB, `utf8mb4` / `utf8mb4_unicode_ci` (accent- and case-insensitive search on MySQL 8 and MariaDB 10.6+). Migrations `001_init.sql` and `002_families.sql` (D20).
+All tables: InnoDB, `utf8mb4` / `utf8mb4_unicode_ci` (accent- and case-insensitive search). MySQL 8 only (D21). Migrations `001_init.sql` and `002_families.sql` (D20).
 
 | Table | Fields | Notes |
 |---|---|---|
@@ -195,8 +197,16 @@ Auth column: `public`, `session` (session only, never a key), or a scope (sessio
 | DELETE | `/recipes/{id}` | recipes:delete | soft delete; → `{recipe, detachedEntries}` |
 | POST | `/recipes/{id}/restore` | recipes:delete | in-app undo of a delete |
 
+`Recipe` and `RecipeSummary` carry `thumbUrl` (the 400 px variant of a stored photo; a linked photo is its own thumbnail), and so does the recipe embedded in a plan entry.
 `RecipeSummary` = `Recipe` without `ingredients`/`instructions`, plus `ingredientCount`. `loved` = `rating × 100 + min(timesCooked, 99)` (`lovedScore()`).
 Validation (`src/Schema/recipe.schema.json`): title 1–200, category ∈ CATEGORIES, tags ⊂ TAGS, difficulty ∈ DIFFICULTIES or null, rating 1–5 or null, cookingTime 1–1440, servings 1–99, `imageUrl` an http(s) URL or a `/media/…` path, ingredients ≤ 100, steps ≤ 60, `ingredientIds` per step optional.
+
+### 4.3.1 Photos
+| Method | Route | Auth | Notes |
+|---|---|---|---|
+| POST | `/images` | recipes:write | multipart field `file` (the SPA) or the image as the body (`Content-Type: image/*`) → 201 `{url, thumbUrl, width, height}`; put `url` into `imageUrl` |
+
+`src/Service/MediaStore.php`: JPEG, PNG, WebP or GIF up to 15 MB and 30 MP. Every image is decoded and re-encoded with GD (EXIF orientation applied, metadata gone) into `public/media/{userId}/{random}.jpg` (1000 px, quality 82) and `…-thumb.jpg` (400 px); transparency becomes white. The web server serves `/media/` as plain files; names are 96 random bits, so a path is only known to whoever saved it (no per-request auth on photos). Errors: 413 `too_large`, 415 `unsupported_image` / `unsupported_media_type`. `purge` deletes photos no recipe or step refers to (after a day, so an upload whose recipe isn't saved yet survives); `user:delete` removes the family's folder. The SPA downscales a picked photo to 1600 px for the preview and uploads it on save, so a cancelled edit uploads nothing. `MEDIA_DIR` overrides the folder (tests).
 
 ### 4.4 Meal plan
 | Method | Route | Auth | Notes |
@@ -335,14 +345,25 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 | `user:disable --email=` · `user:enable --email=` | locks a family out at once, or lets it back in with its devices and keys |
 | `user:delete --email= --yes` | deletes a family and everything it owns |
 | `api-key:create --email= --scopes=a,b [--name=]` | prints a new key (for smoke tests) |
-| `purge` | removes soft-deleted entries/items (> 7 days) and recipes (> 30 days), expired sessions, links and reset tokens, activity > 90 days |
+| `purge` | removes soft-deleted entries/items (> 7 days) and recipes (> 30 days), expired sessions, links and reset tokens, activity > 90 days, unused photos (> 1 day) |
+| `import:supabase [--email=] [--replace] [--no-images]` | copies families from the old app (§7.1) |
 | `openapi:dump [file]` | writes the OpenAPI document |
 | `jobs:run` | stub for Phase 6 |
+
+### 7.1 Supabase import (Phase 8, `src/Import/`)
+`SupabaseSource` reads the old Postgres over `SUPABASE_DB_URL` (falls back to `DIRECT_URL`) in a read-only transaction; it needs `pdo_pgsql` (on Local: `extension=php_pdo_pgsql.dll`, the DLL and `libpq.dll` ship with Local's PHP). `SupabaseImporter` writes each family in one transaction:
+- **Account:** `auth.users` with its id and bcrypt hash (`$2a$` logs in and is rehashed to `$2y$`), `email_confirmed_at`, name from the user metadata or „Familie“. Without a password (magic link) the account gets a random hash and the report says to send `user:invite`.
+- **Recipes** keep their ids, `created_via = import`, and their timestamps. Category, tags and difficulty are matched ignoring case and umlaut spelling (`Fruhstuck` → Frühstück); an empty or unknown category becomes Hauptspeise and unknown tags are dropped, both counted in the report. (`Cookidoo`, which the old form offered, is in the new set since 2026-11-07.) Out-of-range times, servings and ratings become null. Ingredients keep the old table order and get their `section` from the word list; steps are renumbered 1…n; `ingredient_ids` stay null.
+- **Photos** (recipe and step) are downloaded and stored like uploads (§4.3.1). A failed download keeps the old link and is listed. On Windows without `curl.cainfo` the download uses the system certificate store.
+- **MealPlan rows** become Mittagessen entries (D8) on their Europe/Berlin day, keeping their ids; rows without a recipe are left out; rows not at UTC midnight are counted ("check their day").
+- A family that already has recipes or entries is skipped unless `--replace`, which first deletes its recipes, entries, shopping state and agent log (account, devices and keys stay). An e-mail that belongs to a different local account is never touched.
+
+**Dry run, 2026-11-07** (old database → Local DB): 2 accounts, 69 recipes, 544 ingredients, 277 steps, 35 photos and 123 of 130 plan entries (7 had no recipe), all counts matching the source; 11 recipes had an empty category. Re-run with `--replace` after Cookidoo joined the tag set: the 2 Cookidoo tags are kept. About 24 s, mostly photo downloads.
 
 ---
 
 ## 8. Configuration (`.env`, see `.env.example`)
-`APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`; AI variables as in MIGRATION_PLAN §8 (unused in this draft).
+`APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`, `MEDIA_DIR` (default `public/media`), `SUPABASE_DB_URL` (importer; falls back to `DIRECT_URL`); AI variables as in MIGRATION_PLAN §8 (unused in this draft).
 
 ---
 
@@ -351,7 +372,7 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 2. **List endpoints return summaries:** `/recipes` and suggestion shelves return `RecipeSummary` (no ingredients/steps); the prototype passes full recipes around in memory.
 3. **`/meal-plan` is flat** (`entries[]` with an embedded recipe summary), like `listPlanEntries()`; the MCP tool groups by day and slot.
 4. **`/grocery-list` is replaced by `/shopping/*`**; `get_grocery_list` needs `shopping:read`, not `mealplan:read`.
-5. **`import_recipe_from_url` and `/ai/*`, `/images`** are not in this draft (Phase 6).
+5. **`import_recipe_from_url` and `/ai/*`** are not in this draft (Phase 6). `/images` exists since 2026-11-07 (§4.3.1).
 6. **Settings live on `/me`** (`settings: {weekStart, planningWeekday}`), not a separate endpoint.
 7. **Extra undo kinds** `plan.restore` and `recipe.remove` (agent removed an entry / created a recipe).
 8. **FK `meal_plan_entries.recipe_id` is RESTRICT,** not SET NULL: MySQL forbids a CHECK on a column used in an FK action. The app detaches entries before a recipe is purged.
@@ -360,11 +381,11 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 ## 10. Assumptions / open (for the owner)
 1. **Undo windows** (§5.6): 7 days for entries and own items, 30 days for recipes, 10 minutes for un-revoking a key. Confirm.
 2. **Cooking stats count today** (an entry for today counts as cooked).
-3. **Category and tag sets are enforced** on save. Imported recipes with other tags (old data had lowercase tags) must be mapped by the importer.
+3. **Category and tag sets are enforced** on save. The importer maps the old values (§7.1); recipes with an empty old category land in Hauptspeise. Confirm, or give a better default.
 4. **Pairing misses** are per IP (5) and install-wide (30), see §2.5. Families behind one shared IP (a carrier NAT) can block each other's pairing for 10 minutes; the password login still works.
 5. **Login lockout is per e-mail + IP.** A per-account lock would let anyone lock the family out.
 6. ~~SPA build path~~ — resolved 2026-11-07: Vite builds with `base: '/app/'`, so the web server serves the assets directly; `index.php` only answers SPA routes with `app/index.html`.
-7. **Images:** `imageUrl` is stored as given (http(s) URL or `/media/…`); upload, re-encoding and thumbnails come with Phase 6.
+7. **Images: done 2026-11-07** (§4.3.1). Open: photos are public to anyone who knows the path (fine for a family app?); linked photos (http(s) URLs) are hotlinked, not copied; step photos have no upload in the SPA yet; AI image enhancement is Phase 6.
 8. **Section classification** uses the word list only; the AI fallback for unknown names comes with Phase 6.
 9. **`recentManualNames`** comes from bought own items; the prototype used a fixed list.
 10. **iPad vs Mac:** iPadOS sends a Mac User-Agent and the server can't see touch support, so an iPad is labelled "Mac · Safari". The prototype's client-side check could tell them apart; the SPA could send a hint at login if this matters.
@@ -386,4 +407,4 @@ php bin/console api-key:create --email=nils@familie.de --scopes=recipes:read,mea
 claude mcp add --transport http essensplan-local http://localhost:8080/mcp --header "Authorization: Bearer esp_…"
 ```
 
-Tests need a MySQL 8 or MariaDB 10.6+ server; they recreate their own database (`TEST_DB_NAME`, default `essensplan_test`) on every run. Connection defaults in `phpunit.xml` are the Local site's (`127.0.0.1:10029`, root/root); env vars override them: `DB_PORT=3306 DB_PASS= vendor/bin/phpunit`. `vendor/bin/phpstan analyse` runs the static check.
+Tests need a MySQL 8 server; they recreate their own database (`TEST_DB_NAME`, default `essensplan_test`) on every run. Connection defaults in `phpunit.xml` are the Local site's (`127.0.0.1:10029`, root/root); env vars override them: `DB_PORT=3306 DB_PASS= vendor/bin/phpunit`. `vendor/bin/phpstan analyse` runs the static check.

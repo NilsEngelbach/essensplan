@@ -14,6 +14,7 @@ use Essensplan\Http\Middleware\RateLimit;
 use Essensplan\Http\Middleware\RequireScope;
 use Essensplan\Http\Routes;
 use Essensplan\Service\Mailer;
+use Essensplan\Service\MediaStore;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Slim\App as SlimApp;
@@ -42,6 +43,7 @@ final class App
             Mailer::class => fn () => new Mailer($config, self::root() . '/storage/mail.log'),
             ResponseFactoryInterface::class => fn () => new ResponseFactory(),
             SpaController::class => fn () => new SpaController(self::root() . '/public/app'),
+            MediaStore::class => fn (Db $db) => new MediaStore($config->get('MEDIA_DIR', self::root() . '/public/media'), $db),
             ...$overrides,
         ]);
         return $builder->build();

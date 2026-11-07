@@ -458,7 +458,7 @@ function EntryLine({
         </span>
         {variant === 'main' && recipe?.imageUrl && (
           <span className="went__thumb" aria-hidden="true">
-            <img src={recipe.imageUrl} alt="" loading="lazy" decoding="async" draggable={false} />
+            <img src={recipe.thumbUrl ?? recipe.imageUrl} alt="" loading="lazy" decoding="async" draggable={false} />
           </span>
         )}
         {variant !== 'other' && <span className="went__time num">{recipe ? minutes(recipe.cookingTime) : ''}</span>}

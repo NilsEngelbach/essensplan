@@ -183,8 +183,24 @@ function draftBody(draft: RecipeDraft) {
   }
 }
 
+/** Stores a photo on the server (re-encoded, with a thumbnail); its url goes into imageUrl. */
+export async function uploadImage(file: Blob): Promise<{ url: string; thumbUrl: string }> {
+  const form = new FormData()
+  form.append('file', file, 'foto.jpg')
+  return http('POST', '/images', form)
+}
+
+/** A photo picked on this device (data: or blob: URL) is uploaded on save, so a cancelled edit leaves nothing behind. */
+async function withStoredPhoto(draft: RecipeDraft): Promise<RecipeDraft> {
+  const url = draft.imageUrl
+  if (!url || !/^(data|blob):/.test(url)) return draft
+  const blob = await fetch(url).then((r) => r.blob())
+  return { ...draft, imageUrl: (await uploadImage(blob)).url }
+}
+
 export async function saveRecipe(draft: RecipeDraft, id?: string): Promise<Recipe> {
   return write(async () => {
+    draft = await withStoredPhoto(draft)
     const saved = id
       ? await http<Recipe>('PUT', `/recipes/${encodeURIComponent(id)}`, draftBody(draft))
       : await http<Recipe>('POST', '/recipes', draftBody(draft))

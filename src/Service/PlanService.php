@@ -325,6 +325,7 @@ final class PlanService
                 'id' => $e['recipe_id'],
                 'title' => $e['recipe_title'],
                 'imageUrl' => $e['recipe_image'],
+                'thumbUrl' => MediaStore::thumbOf($e['recipe_image']),
                 'cookingTime' => $e['recipe_time'] === null ? null : (int) $e['recipe_time'],
                 'category' => $e['recipe_category'],
             ],

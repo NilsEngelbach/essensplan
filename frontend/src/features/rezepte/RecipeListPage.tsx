@@ -248,7 +248,7 @@ function RecipeResults({
           <Link to={`/rezepte/${r.id}`} className="entry__link">
             <span className="entry__media" aria-hidden="true">
               {r.imageUrl ? (
-                <img src={r.imageUrl} alt="" loading="lazy" decoding="async" />
+                <img src={r.thumbUrl ?? r.imageUrl} alt="" loading="lazy" decoding="async" />
               ) : (
                 <span className="entry__plate">
                   <span className="entry__plate-title">{r.title}</span>

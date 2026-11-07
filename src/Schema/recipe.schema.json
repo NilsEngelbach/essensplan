@@ -12,7 +12,7 @@
     "tags": {
       "type": "array",
       "maxItems": 8,
-      "items": { "enum": ["Vegetarisch", "Vegan", "Glutenfrei", "Laktosefrei", "Schnell", "Gesund", "Würzig", "Süß"] }
+      "items": { "enum": ["Vegetarisch", "Vegan", "Glutenfrei", "Laktosefrei", "Schnell", "Gesund", "Würzig", "Süß", "Cookidoo"] }
     },
     "cookingTime": { "type": ["integer", "null"], "minimum": 1, "maximum": 1440 },
     "servings": { "type": ["integer", "null"], "minimum": 1, "maximum": 99 },

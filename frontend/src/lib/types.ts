@@ -3,7 +3,7 @@
 export const CATEGORIES = ['Hauptspeise', 'Salat', 'Suppe', 'Beilage', 'Frühstück', 'Dessert', 'Snack'] as const
 export type Category = (typeof CATEGORIES)[number]
 
-export const TAGS = ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß'] as const
+export const TAGS = ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß', 'Cookidoo'] as const
 export type Tag = (typeof TAGS)[number]
 
 export const DIFFICULTIES = ['Einfach', 'Mittel', 'Schwer'] as const
@@ -44,6 +44,8 @@ export interface Recipe {
   title: string
   description: string | null
   imageUrl: string | null
+  /** 400 px variant of an uploaded photo for lists and tiles; a linked photo is its own thumbnail. Set by the server. */
+  thumbUrl?: string | null
   category: Category
   tags: Tag[]
   cookingTime: number | null
@@ -76,7 +78,7 @@ export interface PlanEntry {
   createdVia: 'app' | 'api' | 'mcp'
   seenAt: string | null // set once an agent-created entry has been seen in the app
   /** Embedded by the server so the week can print titles without loading every recipe. */
-  recipe?: { id: string; title: string; imageUrl: string | null; cookingTime: number | null; category: string } | null
+  recipe?: { id: string; title: string; imageUrl: string | null; thumbUrl?: string | null; cookingTime: number | null; category: string } | null
 }
 
 /** Fixed free-text presets; the user's recent own texts are added after them. */

@@ -20,17 +20,17 @@ function amountText(n: number | null): string {
   return n === null ? '' : n.toLocaleString('de-DE')
 }
 
-/** Downscales a picked photo so the prototype can keep it in local storage. */
+/** Downscales a picked photo for the preview and a small upload; the server makes the final 1000 px JPEG on save. */
 function readPhoto(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
-      const scale = Math.min(1, 1000 / Math.max(img.width, img.height))
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height))
       const c = document.createElement('canvas')
       c.width = Math.round(img.width * scale)
       c.height = Math.round(img.height * scale)
       c.getContext('2d')?.drawImage(img, 0, 0, c.width, c.height)
-      resolve(c.toDataURL('image/jpeg', 0.82))
+      resolve(c.toDataURL('image/jpeg', 0.88))
       URL.revokeObjectURL(img.src)
     }
     img.onerror = reject

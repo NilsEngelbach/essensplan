@@ -1,6 +1,6 @@
 # Migration Plan: Essensplan → PHP/MySQL on all-inkl, UX-first, with Agent API + MCP
 
-Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅, Login & Geräte shaped + built ✅ (all surfaces done); backend draft 1 ✅ on branch `backend-draft` ([BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md), 37 tests green on MySQL 8.4 + MariaDB 10.6); Local site deployed (§3.1 ✅, essen.local) and the SPA wired to the real API (§9 step 1–2, mock data layer replaced); next: owner review, Supabase importer (Phase 8) and the AI import (Phase 6)**
+Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅, Login & Geräte shaped + built ✅ (all surfaces done); backend draft 1 ✅ on branch `backend-draft` ([BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md), 37 tests green on MySQL 8.4 + MariaDB 10.6); Local site deployed (§3.1 ✅, essen.local) and the SPA wired to the real API (§9 step 1–2, mock data layer replaced); photo upload with thumbnails ✅; Supabase importer ✅ with a dry run into the Local DB (§10 steps 1–2); next: owner spot-check of the imported data, then the AI import (Phase 6)**
 Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per day, API keys only, Local dev env)
 
 ---
@@ -29,6 +29,7 @@ Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per d
 | D17 | **Kochmodus:** propped-up reading at a distance; one step per screen; tap anywhere for next; per-step ingredients; no timers, no mise en place; "gekocht" stays derived from past plan entries (no explicit cooked events) | decided (shape kochmodus) |
 | D16 | **Einkaufsliste:** days chosen per trip (default: planned days not yet shopped); one store with a user-defined section order; own extra items until bought; "Zuhause prüfen" with learned "meist da"; live list (plan changes print as "neu"); explicit "Einkauf abschließen" (undoable). Not chosen: several stores, two-phone live sync, "which recipe needs it" | decided (shape einkaufsliste) |
 | D15 | **Wochenplan:** a plan entry is a recipe **or** free text (presets Reste · Essen gehen · Auswärts · Bestellen + recent own texts). **No per-entry servings, no notes**; grocery list uses recipe base servings. Mostly Mittagessen is planned; planning happens on the phone in one sit-down. **Wochenbeginn** (default Mo) and **Planungstag** (default Fr; home flips to next week from then) are user settings | decided (shape wochenplan) |
+| D21 | **MySQL only.** No MariaDB compatibility is kept or tested (the owner's call); MySQL 8 features may be used | decided (2026-11-07) |
 | – | Open questions | see §14 |
 
 ---
@@ -151,7 +152,7 @@ essensplan/
 - [ ] **`Authorization` header reaches PHP under Apache.** `.htaccess`: `RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]`
 - [ ] **`max_execution_time` / FastCGI timeout:** endpoint sleeping 150 s. Local allows 1200 s, so **only all-inkl reveals this limit**
 - [ ] Cron available + minimum interval; upload limits ≥ 10 MB; outbound HTTPS to the AI APIs
-- [ ] MySQL vs MariaDB version. Keep SQL compatible with both: JSON columns yes, no MySQL-only functions. (Schema and test suite verified 2026-11-07 on MySQL 8.4.0 and MariaDB 10.6.23 locally; all-inkl's version still to check)
+- [ ] MySQL version on all-inkl (must be MySQL 8; MariaDB is not supported, D21)
 - [ ] SMTP sender + SPF/DKIM
 - [ ] Check which MCP protocol revisions `mcp/sdk` serves: the current spec 2026-07-28 is stateless ([release](https://github.com/modelcontextprotocol/specification/releases/tag/2026-07-28)), while older clients still send `initialize` (2025-11-25)
 
@@ -247,7 +248,7 @@ Errors use one format: `{"error":{"code":"…","message":"…"}}`. The existing 
 
 ## 5. Phase 4 – Backend build
 
-**Draft 1 (2026-11-07, branch `backend-draft`):** steps 1–3 and 5–7 are drafted and tested (private MySQL 8.4 / MariaDB 10.6 instances and `php -S`, not yet the Local site). Step 4: recipes, plan, shopping and suggestions are in; images with variants are not (Phase 6). `import:supabase` is not written (Phase 8).
+**Draft 1 (2026-11-07, branch `backend-draft`):** steps 1–3 and 5–7 are drafted and tested (private MySQL 8.4 / MariaDB 10.6 instances and `php -S`, not yet the Local site). Step 4: recipes, plan, shopping and suggestions are in; images with variants (`POST /images`, 1000 px + 400 px thumbnail) since 2026-11-07. `import:supabase` written and dry-run on 2026-11-07 (Phase 8, BACKEND_REQUIREMENTS §7.1).
 1. Skeleton:
    - Slim app, container, `.env`, `JsonErrors` middleware.
    - `bin/console` (`migrate`, `jobs:run`, `import:supabase`).
@@ -358,14 +359,14 @@ Screens are **built new in the chosen visual world**; we don't port the old scre
 ---
 
 ## 10. Phase 8 – Data migration & cutover
-1. **Importer** `bin/console import:supabase`, run locally:
+1. **Importer** `bin/console import:supabase`, run locally (**written 2026-11-07**, `src/Import/`, BACKEND_REQUIREMENTS §7.1):
    - Enable `extension=php_pdo_pgsql.dll` in the Local site's `conf/php/php.ini.hbs`; the DLL ships with Local.
    - Connect to Supabase via `DIRECT_URL`.
    - `auth.users`: keep IDs and bcrypt hashes, so users keep their passwords.
    - Copy recipes, ingredients and instructions.
    - **Old `MealPlan` rows → `meal_plan_entries`:** convert the date to Europe/Berlin and assign slot **Mittagessen** (D8).
-   - Download the `recipe-images` bucket (service role key), re-encode, create variants, rewrite paths.
-2. **Dry run** into the Local DB; compare counts per user and spot-check in the new UI.
+   - Download the `recipe-images` bucket, re-encode, create variants, rewrite paths. (The bucket is public, so the importer downloads each photo by its URL; no service role key needed.)
+2. **Dry run** into the Local DB; compare counts per user and spot-check in the new UI. **Done 2026-11-07:** all counts match (69 recipes, 544 ingredients, 277 steps, 35 photos, 123 of 130 plan entries: 7 had no recipe); checked through the API. Still to do: the owner logs in at essen.local with the old password and looks through recipes and the history. The final import at cutover runs on an empty DB, or with `--replace`.
 3. **Cutover:**
    1. Freeze writes (maintenance page on Vercel).
    2. Final import → `mysqldump` → import on all-inkl; rsync `public/media/`.

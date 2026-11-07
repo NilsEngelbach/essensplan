@@ -21,6 +21,8 @@ Essensplan is a German family meal planner. It is being moved off Next.js/Supaba
 
 **Local deployment and SPA wiring: done** (2026-11-07). http://essen.local serves the API, MCP and the built SPA (`npm run build` in `frontend/`); the SPA uses the real API, also in `npm run dev` (proxy to essen.local). A demo family is seeded locally (nils@familie.de / essensplan-lokal). The prototype's localStorage mock is gone; `lib/demo-data.ts` only feeds the import demo now.
 
+**Photos and the Supabase importer: done** (2026-11-07). `POST /images` stores re-encoded photos with a 400 px thumbnail (`thumbUrl` on recipes); the SPA uploads on save. `bin/console import:supabase` copies the old app's families (ids and bcrypt hashes kept, photos downloaded, old plans → Mittagessen); a dry run into the Local DB matched every count. See BACKEND_REQUIREMENTS §4.3.1 and §7.1. Next: the owner spot-checks the imported data, then Phase 6 (AI import).
+
 ## 2. Your task
 
 Produce a **first working draft of the PHP backend** on a branch (suggested name: `backend-draft`), opened as a PR against `main`. Do not merge it.
@@ -41,7 +43,7 @@ Produce a **first working draft of the PHP backend** on a branch (suggested name
    - `.env.example`;
    - a `JsonErrors` middleware;
    - `bin/console` with `migrate`.
-3. **Migrations** `migrations/*.sql` (MySQL 8, utf8mb4, also valid on MariaDB 10.6+). Seed the four meal slots.
+3. **Migrations** `migrations/*.sql` (MySQL 8, utf8mb4; MariaDB is not a target, D21). Seed the four meal slots.
 4. **Auth (backend only):**
    - session login/logout;
    - CSRF header;
@@ -194,7 +196,7 @@ Produce a **first working draft of the PHP backend** on a branch (suggested name
 ## 5. Environment
 
 The owner develops on Windows with the "Local" app: `http://essen.local`, MySQL 8.4 at `127.0.0.1:10029` (root/root), nginx, PHP 8.2.29. Details are in MIGRATION_PLAN §12. **That is not available in a cloud sandbox.** There:
-- Install PHP 8.2+ (with `pdo_mysql mbstring intl curl gd sodium`), Composer, and MySQL or MariaDB if missing.
+- Install PHP 8.2+ (with `pdo_mysql mbstring intl curl gd sodium`), Composer, and MySQL 8 if missing.
 - Run tests against a real database. Read the connection from env vars (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`); tests use their own `DB_NAME`.
 - Don't swap in SQLite: the schema relies on MySQL JSON, CHECK and FULLTEXT.
 - `php -S localhost:8080 -t public` is enough for smoke tests.

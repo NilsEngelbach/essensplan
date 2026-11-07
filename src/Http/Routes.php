@@ -6,6 +6,7 @@ namespace Essensplan\Http;
 
 use Essensplan\Http\Controller\AccountController as Account;
 use Essensplan\Http\Controller\AgentController as Agent;
+use Essensplan\Http\Controller\ImageController as Image;
 use Essensplan\Http\Controller\PlanController as Plan;
 use Essensplan\Http\Controller\RecipeController as Recipe;
 use Essensplan\Http\Controller\ShoppingController as Shop;
@@ -51,6 +52,7 @@ final class Routes
             ['PATCH', '/recipes/{id}', [Recipe::class, 'patch'], 'recipes:write', 'recipe-patch', 'Change some fields'],
             ['DELETE', '/recipes/{id}', [Recipe::class, 'delete'], 'recipes:delete', null, 'Delete (entries keep the title)'],
             ['POST', '/recipes/{id}/restore', [Recipe::class, 'restore'], 'recipes:delete', null, 'Undo a delete'],
+            ['POST', '/images', [Image::class, 'upload'], 'recipes:write', null, 'Store a photo (multipart `file` or a raw image body) → {url, thumbUrl}; use url as imageUrl'],
 
             ['GET', '/meal-slots', [Plan::class, 'slots'], 'mealplan:read', null, 'The four fixed slots'],
             ['GET', '/meal-plan', [Plan::class, 'list'], 'mealplan:read', null, 'Entries from..to'],

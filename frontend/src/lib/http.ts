@@ -1,4 +1,4 @@
-// The one door to /api/v1. JSON in and out, the session cookie rides along,
+// The one door to /api/v1. JSON in and out (photos go up as FormData), the session cookie rides along,
 // unsafe requests carry X-CSRF-Token. Errors arrive as {"error":{code,message}}
 // with German, user-facing messages; they surface here as ApiError.
 
@@ -48,7 +48,8 @@ type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export async function http<T>(method: Method, path: string, body?: unknown, retried = false): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const form = body instanceof FormData
+  if (body !== undefined && !form) headers['Content-Type'] = 'application/json'
   if (method !== 'GET' && csrf) headers['X-CSRF-Token'] = csrf
   let res: Response
   try {
@@ -56,7 +57,7 @@ export async function http<T>(method: Method, path: string, body?: unknown, retr
       method,
       headers,
       credentials: 'same-origin',
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : form ? body : JSON.stringify(body),
     })
   } catch {
     throw new ApiError(0, 'offline', OFFLINE)

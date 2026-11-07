@@ -8,7 +8,7 @@ namespace Essensplan\Domain;
 final class Catalog
 {
     public const CATEGORIES = ['Hauptspeise', 'Salat', 'Suppe', 'Beilage', 'Frühstück', 'Dessert', 'Snack'];
-    public const TAGS = ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß'];
+    public const TAGS = ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei', 'Schnell', 'Gesund', 'Würzig', 'Süß', 'Cookidoo'];
     public const DIFFICULTIES = ['Einfach', 'Mittel', 'Schwer'];
 
     public const SLOTS = [

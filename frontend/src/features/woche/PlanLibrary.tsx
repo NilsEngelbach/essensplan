@@ -210,7 +210,7 @@ export function PlanLibrary({
                 <li key={r.id}>
                   <button type="button" className="tile" data-photo={r.imageUrl ? true : undefined} onClick={() => onPick({ recipeId: r.id })} {...dragProps(r.id)}>
                     <span className="tile__media" aria-hidden="true">
-                      {r.imageUrl ? <img src={r.imageUrl} alt="" loading="lazy" decoding="async" draggable={false} /> : <span className="tile__plate">{r.title}</span>}
+                      {r.imageUrl ? <img src={r.thumbUrl ?? r.imageUrl} alt="" loading="lazy" decoding="async" draggable={false} /> : <span className="tile__plate">{r.title}</span>}
                     </span>
                     {r.imageUrl && <span className="tile__title">{r.title}</span>}
                     {!r.imageUrl && <span className="visually-hidden">{r.title}</span>}
@@ -308,7 +308,7 @@ function PickList({
               </span>
               {r.imageUrl && (
                 <span className="pick__thumb" aria-hidden="true">
-                  <img src={r.imageUrl} alt="" loading="lazy" decoding="async" draggable={false} />
+                  <img src={r.thumbUrl ?? r.imageUrl} alt="" loading="lazy" decoding="async" draggable={false} />
                 </span>
               )}
               <span className="pick__time num">{minutes(r.cookingTime)}</span>
