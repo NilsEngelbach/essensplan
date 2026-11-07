@@ -358,7 +358,7 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 - **MealPlan rows** become Mittagessen entries (D8) on their Europe/Berlin day, keeping their ids; rows without a recipe are left out; rows not at UTC midnight are counted ("check their day").
 - A family that already has recipes or entries is skipped unless `--replace`, which first deletes its recipes, entries, shopping state and agent log (account, devices and keys stay). An e-mail that belongs to a different local account is never touched.
 
-**Dry run, 2026-11-07** (old database → Local DB): 2 accounts, 69 recipes, 544 ingredients, 277 steps, 35 photos and 123 of 130 plan entries (7 had no recipe), all counts matching the source; 11 recipes had an empty category. Re-run with `--replace` after Cookidoo joined the tag set: the 2 Cookidoo tags are kept. About 24 s, mostly photo downloads.
+**Dry run, 2026-11-07** (old database → Local DB): 2 accounts, 69 recipes, 544 ingredients, 277 steps, 35 photos and 123 of 130 plan entries (7 had no recipe), all counts matching the source; 11 recipes had an empty category. After Cookidoo joined the tag set, the 2 recipes that had it got the tag back by a one-off update (no re-import). About 24 s, mostly photo downloads.
 
 ---
 

@@ -2423,7 +2423,10 @@ select.input {
   font-size: var(--fs-lead);
   font-weight: 700;
 }
+/* relative: the tiles' visually-hidden titles are absolute; without a positioned
+   ancestor they escape the rail's scroll box and widen the whole page. */
 .shelf__rail {
+  position: relative;
   list-style: none;
   display: flex;
   gap: 10px;
