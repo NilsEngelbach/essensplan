@@ -47,7 +47,7 @@ Status: confirmed 2026-11-07 (`/impeccable shape login`). Built inside "Das Küc
 - `device_links`: code_hash, token_hash, created_by_session, expires_at (+10 min), attempts (max 5), used_at, used_by_session. Single use.
 - `POST /auth/login {email, password, remember}` · `POST /auth/pair {code | token}` · `POST /auth/device-links` + `GET /auth/device-links/{id}` (the trusted device polls) · `GET /auth/sessions` · `DELETE /auth/sessions/{id}` · `POST /auth/sessions/revoke-others` · `PATCH /me {name, email, currentPassword}` · forgot/reset with `revokeOthers`.
 - Paired devices are always persistent sessions.
-- Owner account: imported from Supabase; fallback `bin/console user:create`. No web setup screen.
+- Owner account: imported from the old app at the cutover; new families with `bin/console user:create`. No web setup screen.
 
 ## 7. Out of scope
 - "Passwort ändern" in Konto (goes through the reset mail), passkeys, renaming devices, confirmation mail on e-mail change.

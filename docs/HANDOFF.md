@@ -2,6 +2,8 @@
 
 Written 2026-11-07 for an agent picking this up without the earlier conversation.
 
+> **Historical.** The app has been live on all-inkl since 2026-11-08. The families are imported, and the old Next.js/Supabase app, the importer and the FTP deploy with its `/ops` door are removed. Deploys go over SSH. For the current state, read [CLAUDE.md](../CLAUDE.md), [MIGRATION_PLAN.md](MIGRATION_PLAN.md) (status line) and [DEPLOY.md](DEPLOY.md). The constraint "do not modify the old Next.js app" below no longer applies.
+
 ## 1. Where things stand
 
 Essensplan is a German family meal planner. It is being moved off Next.js/Supabase/Vercel to a self-hosted PHP app on all-inkl. **[docs/MIGRATION_PLAN.md](MIGRATION_PLAN.md) is the master plan.** The work is UX-first: each screen was shaped and prototyped before any backend was written.

@@ -54,8 +54,8 @@ The family also uses the app on their own devices with the owner's login.
   - AI import from URL and photo/screenshot, with an editable preview before saving.
   - AI image enhancement for recipe photos (only available with OpenAI).
 
-**Decided changes (migration in progress, see `docs/MIGRATION_PLAN.md`):**
-- **Platform move:** from Next.js/Supabase/Vercel to self-hosted PHP (Slim 4) + MySQL on all-inkl webspace, with a React (Vite) single-page app.
+**Decided changes (see `docs/MIGRATION_PLAN.md`; live since 2026-11-08):**
+- **Platform move (done 2026-11-08):** from Next.js/Supabase/Vercel to self-hosted PHP (Slim 4) + MySQL on all-inkl webspace, with a React (Vite) single-page app.
 - **Meal slots:** a fixed set: Frühstück, Mittagessen, Abendessen, Snack. Several entries per slot are allowed. Existing plan entries are imported as Mittagessen.
 - **Agent access:** REST API `/api/v1` and MCP server `/mcp`, authenticated with generated, scoped, revocable API keys, plus an activity log of what agents changed. No OAuth for now.
 - **AI providers:** switchable between OpenAI, Anthropic and OpenCode.
@@ -79,8 +79,7 @@ The family also uses the app on their own devices with the owner's login.
 
 ## Evidence on Hand
 
-- **Real content:** the family's existing recipes, ratings and meal plan history in Supabase (to be migrated).
-- **Screenshots:** `docs/ai-import.png` (AI import) and `docs/enhance-image.jpg` (image enhancement before/after).
+- **Real content:** the family's recipes, ratings and meal plan history, imported from the old app on 2026-11-08.
 - **Absences:** no logo, brand assets, testimonials, user research or analytics exist. Do not fabricate any.
 
 ## Product Principles

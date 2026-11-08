@@ -47,7 +47,7 @@ final class AuthTest extends TestCase
         $this->login();
     }
 
-    public function testSupabaseHashIsAcceptedAndRehashed(): void
+    public function testImportedTwoAHashIsAcceptedAndRehashed(): void
     {
         $a2 = '$2a$' . substr(password_hash(self::PASSWORD, PASSWORD_BCRYPT, ['cost' => 10]), 4);
         $this->user('alt@familie.de', 'Alt', $a2);

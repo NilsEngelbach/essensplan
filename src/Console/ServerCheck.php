@@ -11,8 +11,9 @@ use Essensplan\Db;
 use Psr\Container\ContainerInterface;
 
 /**
- * What the host gives us (MIGRATION_PLAN §3.2): `bin/console check` locally,
- * `deploy.sh --check` on all-inkl, where there is no shell.
+ * What the host gives us (MIGRATION_PLAN §3.2): `bin/console check`, on all-inkl through
+ * `deploy.sh --check` over SSH. That is the command-line PHP: the web PHP's limits
+ * (max_execution_time, fastcgi_finish_request) can differ.
  * Each row is [ok (null = info only), label, value].
  */
 final class ServerCheck
@@ -28,9 +29,6 @@ final class ServerCheck
             $rows[] = [extension_loaded($ext), "ext-$ext", extension_loaded($ext) ? 'ok' : 'fehlt'];
         }
         $rows[] = [null, 'ext-exif', extension_loaded('exif') ? 'ok' : 'fehlt (Hochkant-Fotos werden nicht gedreht)'];
-        // TEMPORARY with import:supabase over /ops: the importer needs it.
-        $rows[] = [null, 'ext-pdo_pgsql', extension_loaded('pdo_pgsql') ? 'ok' : 'fehlt (import:supabase geht dann nur lokal)'];
-
         // AI imports run up to a few minutes; the request has to be allowed that long.
         $before = (int) ini_get('max_execution_time');
         $raised = @set_time_limit(300);
@@ -66,10 +64,8 @@ final class ServerCheck
         $rows[] = [strlen($config->get('APP_SECRET')) >= 32, 'APP_SECRET', $config->get('APP_SECRET') === '' ? 'fehlt' : strlen($config->get('APP_SECRET')) . ' Zeichen'];
         $rows[] = [!$prod || $config->secureCookies(), 'APP_URL', $config->appUrl()];
         $rows[] = [!$prod || $config->get('MAIL_DRIVER', 'log') === 'smtp', 'MAIL_DRIVER', $config->get('MAIL_DRIVER', 'log') . ($config->get('MAIL_HOST') !== '' ? ' via ' . $config->get('MAIL_HOST') . ':' . $config->get('MAIL_PORT') : '')];
-        foreach (['CRON_TOKEN', 'OPS_TOKEN'] as $t) {
-            $len = strlen($config->get($t));
-            $rows[] = [$len === 0 ? null : $len >= 32, $t, $len === 0 ? 'nicht gesetzt (aus)' : "$len Zeichen"];
-        }
+        $len = strlen($config->get('CRON_TOKEN'));
+        $rows[] = [$len === 0 ? null : $len >= 32, 'CRON_TOKEN', $len === 0 ? 'nicht gesetzt (aus)' : "$len Zeichen"];
 
         $ai = $c->get(Ai::class);
         $rows[] = [$ai->enabled() ? true : null, 'KI-Import', $ai->enabled() ? $ai->describe() : 'aus (' . $ai->describe() . ')'];

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Front controller: /api/v1 (REST), /mcp (MCP), /media (photos), /ops + /cron (operator), everything else the SPA.
+// Front controller: /api/v1 (REST), /mcp (MCP), /media (photos), /cron (hosting cron), everything else the SPA.
 // The docroot is this folder (Local: junction target; all-inkl: domain docroot).
 
 // php -S localhost:8080 -t public public/index.php: let the built-in server serve real files.
@@ -10,10 +10,10 @@ if (PHP_SAPI === 'cli-server' && is_file(__DIR__ . parse_url((string) $_SERVER['
     return false;
 }
 
-// deploy.sh puts ../.maintenance in place while it uploads code and migrates. Checked before
-// anything is loaded, so a half-uploaded vendor/ never runs. /ops/ stays open for the migration.
+// deploy.sh puts ../.maintenance in place while it swaps the code in and migrates. Checked
+// before anything is loaded, so code and database never run out of step.
 $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
-if (is_file(dirname(__DIR__) . '/.maintenance') && !str_starts_with($path, '/ops/')) {
+if (is_file(dirname(__DIR__) . '/.maintenance')) {
     http_response_code(503);
     header('Retry-After: 30');
     header('Cache-Control: no-store');

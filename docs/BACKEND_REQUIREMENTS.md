@@ -20,7 +20,9 @@ Where the sources disagree, HANDOFF §4 wins (the briefs and D15–D19 are newer
 
 **2026-11-08:** photos behind the session (§4.3.1), the AI import (§4.7, Phase 6), the operator door for hosts without SSH (§4.8) and `deploy.sh` (FTP over TLS, [DEPLOY.md](DEPLOY.md)). 67 tests, 1127 assertions, green on a private MySQL 8.4; PHPStan level 5 clean. `deploy.sh` ran end to end against a local FTPS server (pyftpdlib with TLS) and `php -S`: first deploy (5 007 files in batches, migrations over `/ops` with a DB user that may not create databases), a no-op run, `--check` and `--console`. The AI providers are tested with a fake; no real model was called.
 
-**Not verified yet:** anything on all-inkl (Apache `.htaccess`, FPM timeouts, FTP server, SMTP) and real calls to OpenCode, Anthropic and OpenAI. See §11 for how to run it.
+**Cutover, 2026-11-08 (evening):** first deploys to all-inkl. FTPS lost files (426 / partial uploads), so `deploy.sh` moved to SSH: one archive, swapped in on the server, `bin/console migrate` there ([DEPLOY.md](DEPLOY.md)). The families were imported from Supabase on the server. Afterwards the importer (`import:supabase`, `src/Import/`), the FTP mode and the operator door `/ops` (with `OPS_TOKEN`) were removed, together with the old Next.js/Supabase app. `/cron` stays.
+
+**Not verified yet:** the web PHP's limits on all-inkl (FPM timeouts, `fastcgi_finish_request`), the `Authorization` rewrite from outside, and real calls to Anthropic and OpenAI. See §11 for how to run it.
 
 ---
 
@@ -28,7 +30,7 @@ Where the sources disagree, HANDOFF §4 wins (the briefs and D15–D19 are newer
 
 | Topic | Rule |
 |---|---|
-| Base path | REST under `/api/v1`, MCP at `/mcp`, photos at `/media/…`, operator door at `/ops/…` and `/cron`, everything else is the SPA (`public/app/index.html`) |
+| Base path | REST under `/api/v1`, MCP at `/mcp`, photos at `/media/…`, the hosting cron at `/cron`, everything else is the SPA (`public/app/index.html`) |
 | JSON | camelCase keys, matching `frontend/src/lib/types.ts` |
 | Dates | `YYYY-MM-DD`, always the calendar day in **Europe/Berlin** |
 | Timestamps | ISO 8601 with offset (`2026-11-07T14:03:00+01:00`); stored as UTC `DATETIME` |
@@ -84,11 +86,11 @@ Slim's routing middleware only resolves the route (so the later steps can read i
 - Device label from the User-Agent, same rules as `deviceLabel()` in `auth.ts` ("iPhone · Safari").
 
 ### 2.4 Passwords
-- `password_hash(PASSWORD_DEFAULT)`; `password_verify` accepts Supabase's `$2a$` and `$2y$` bcrypt hashes. `password_needs_rehash` → rehash on successful login.
+- `password_hash(PASSWORD_DEFAULT)`; `password_verify` accepts `$2a$` (accounts imported from the old app) and `$2y$` bcrypt hashes. `password_needs_rehash` → rehash on successful login.
 - Minimum length 10 (`weak_password`: „Das Passwort braucht mindestens 10 Zeichen.“).
 - **Login lockout:** 5 failures per e-mail + IP → locked for 5 minutes (`rate_limited` with the minutes left). Plus 30 login attempts per IP per 15 minutes.
 - **Reset:** `POST /auth/forgot-password` always answers 204. If the account exists, a token (32 random bytes, hex) is mailed as `APP_URL/passwort-zuruecksetzen?token=…`. Stored as SHA-256, valid 60 minutes, single use; a new request invalidates older tokens. Mail is sent with PHPMailer over SMTP (`MAIL_DRIVER=smtp`, Mailpit locally) or written to `storage/mail.log` (`MAIL_DRIVER=log`, the default).
-- **No password change in Konto** (it goes through the reset mail). **No web setup screen and no sign-up over HTTP** (D10, D20): families come from the Supabase import or `bin/console user:create` (§2.8).
+- **No password change in Konto** (it goes through the reset mail). **No web setup screen and no sign-up over HTTP** (D10, D20): families are added with `bin/console user:create` (§2.8); the first ones came from the old app at the cutover.
 
 ### 2.5 Pairing a new device (D19)
 - A logged-in device creates a link: a 6-digit code (stored as HMAC-SHA256 with `APP_SECRET`) and a 24-byte token for the QR URL `/koppeln/{token}` (stored as SHA-256). Valid 10 minutes, single use. One open link per user: a new one replaces the old.
@@ -119,7 +121,7 @@ Slim's routing middleware only resolves the route (so the later steps can read i
 | Pairing per IP | 20 / 10 min · 5 wrong codes → 10 min wait · 30 wrong codes install-wide → all open codes spent |
 | Forgot password per IP | 5 / hour |
 | AI imports per family | `AI_IMPORTS_PER_HOUR` (30) / hour |
-| Wrong ops/cron tokens per IP | 10 / 10 min, then even the right token waits |
+| Wrong cron tokens per IP | 10 / 10 min, then even the right token waits |
 | Photos (`/media/…`) | exempt (a list loads dozens at once; each needs a session or key) |
 
 ### 2.8 Several families (D20)
@@ -288,17 +290,14 @@ Validation (`src/Schema/recipe.schema.json`): title 1–200, category ∈ CATEGO
 
 Every call writes an `ai_usage` row (tokens, duration, success; also failed calls). Without the provider's key the import answers 503 `ai_unavailable` and `/config` says `ai.import: false`. `AI_TIMEOUT` (150 s) per call. Image enhancement (`/ai/enhance-image`) is not built: no surface asks for it.
 
-### 4.8 Operator door (no SSH on all-inkl)
+### 4.8 Hosting cron and maintenance
 | Method | Route | Auth | Does |
 |---|---|---|---|
-| POST | `/ops/migrate` | header `X-Ops-Token: <OPS_TOKEN>` | `bin/console migrate` |
-| POST | `/ops/check` | same | `bin/console check`: PHP, extensions, limits, `fastcgi_finish_request`, MySQL version, pending migrations, writable folders, mail, tokens, AI |
-| POST | `/ops/console` | same | `{command, args: string[]}` for `migrate`, `check`, `user:create`, `user:invite`, `user:list`, `user:disable`, `user:enable`, `purge`, `jobs:run`, `cron`, `media:move`, temporarily `import:supabase` (cutover only). Not over HTTP: `user:delete`, `api-key:create`, `openapi:dump` |
-| GET | `/cron?token=<CRON_TOKEN>` | query token | `bin/console cron` (= `jobs:run` + `purge`) for the hosting's URL cron |
+| GET | `/cron?token=<CRON_TOKEN>` | query token | `bin/console cron` (= `jobs:run` + `purge`) for the hosting's URL cron (`CronController`) |
 
-Plain-text answers (`FEHLER: …` with 400/500 on failure). A token shorter than 32 characters switches its door off; a wrong one answers 404 like an unknown path and counts against the IP (10 per 10 minutes). Before the first migration the rate-limit table does not exist; the door then works without it. `deploy.sh` uses these ([DEPLOY.md](DEPLOY.md)).
+Plain-text answer (`FEHLER: …` with 400/500 on failure). A token shorter than 32 characters switches `/cron` off; a wrong one answers 404 like an unknown path and counts against the IP (10 per 10 minutes). Operator commands run over SSH (`./deploy.sh --console …`, [DEPLOY.md](DEPLOY.md)); the HTTP operator door `/ops` of the FTP deploys is gone.
 
-**Maintenance mode:** while `../.maintenance` exists (deploy.sh puts it there during code uploads), `public/index.php` answers everything except `/ops/` with 503 `maintenance` (JSON for `/api`, `/mcp`, `/media`, a small page otherwise) before loading any code, so a half-uploaded `vendor/` never runs.
+**Maintenance mode:** while `../.maintenance` exists (deploy.sh puts it there while it swaps the code in and migrates), `public/index.php` answers everything with 503 `maintenance` (JSON for `/api`, `/mcp`, `/media`, a small page otherwise) before loading any code, so code and database never run out of step.
 
 ---
 
@@ -389,46 +388,38 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 ---
 
 ## 7. Console (`bin/console`, commands in `src/Console/Console.php`)
-On all-inkl the commands marked † also run over HTTPS: `./deploy.sh --console user:list` (§4.8).
+On all-inkl every command runs over SSH: `./deploy.sh --console user:list` ([DEPLOY.md](DEPLOY.md)).
 
 | Command | Does |
 |---|---|
-| `migrate` † | applies `migrations/*.sql` in order, recorded in `schema_migrations`; creates the database only when it does not exist (hosted databases may not be created) |
-| `check` † | what the server offers (§4.8) |
-| `user:create --email= [--name=] [--password=] [--no-invite]` † | adds a family; without `--password` it gets the invite mail |
-| `user:invite --email=` † | sends the invite mail again (replaces the old link) |
-| `user:list` † | every family with last use, devices, recipes, keys and status (eingeladen · aktiv · gesperrt) |
-| `user:disable --email=` · `user:enable --email=` † | locks a family out at once, or lets it back in with its devices and keys |
+| `migrate` | applies `migrations/*.sql` in order, recorded in `schema_migrations`; creates the database only when it does not exist (hosted databases may not be created) |
+| `check` | what the server offers: PHP, extensions, limits, MySQL version, pending migrations, writable folders, mail, cron token, AI |
+| `user:create --email= [--name=] [--password=] [--no-invite]` | adds a family; without `--password` it gets the invite mail |
+| `user:invite --email=` | sends the invite mail again (replaces the old link) |
+| `user:list` | every family with last use, devices, recipes, keys and status (eingeladen · aktiv · gesperrt) |
+| `user:disable --email=` · `user:enable --email=` | locks a family out at once, or lets it back in with its devices and keys |
 | `user:delete --email= --yes` | deletes a family and everything it owns |
 | `api-key:create --email= --scopes=a,b [--name=]` | prints a new key (for smoke tests) |
-| `purge` † | removes soft-deleted entries/items (> 7 days) and recipes (> 30 days), expired sessions, links and reset tokens, activity > 90 days, import jobs > 1 day, unused photos (> 1 day) |
-| `jobs:run [--limit=5]` † | runs import jobs nobody picked up, fails those stuck > 10 min |
-| `cron` † | `jobs:run` + `purge` (what `/cron?token=` runs) |
-| `media:move` † | moves photos from the old `public/media` into `MEDIA_DIR` (once, 2026-11-08) |
-| `import:supabase [--email=] [--replace] [--no-images]` | copies families from the old app (§7.1) |
+| `purge` | removes soft-deleted entries/items (> 7 days) and recipes (> 30 days), expired sessions, links and reset tokens, activity > 90 days, import jobs > 1 day, unused photos (> 1 day) |
+| `jobs:run [--limit=5]` | runs import jobs nobody picked up, fails those stuck > 10 min |
+| `cron` | `jobs:run` + `purge` (what `/cron?token=` runs) |
+| `media:move` | moves photos from the old `public/media` into `MEDIA_DIR` (once, 2026-11-08) |
 | `openapi:dump [file]` | writes the OpenAPI document |
 
-### 7.1 Supabase import (Phase 8, `src/Import/`)
-`SupabaseSource` reads the old Postgres over `SUPABASE_DB_URL` (falls back to `DIRECT_URL`) in a read-only transaction; it needs `pdo_pgsql` (on Local: `extension=php_pdo_pgsql.dll`, the DLL and `libpq.dll` ship with Local's PHP). `SupabaseImporter` writes each family in one transaction:
-- **Account:** `auth.users` with its id and bcrypt hash (`$2a$` logs in and is rehashed to `$2y$`), `email_confirmed_at`, name from the user metadata or „Familie“. Without a password (magic link) the account gets a random hash and the report says to send `user:invite`.
-- **Recipes** keep their ids, `created_via = import`, and their timestamps. Category, tags and difficulty are matched ignoring case and umlaut spelling (`Fruhstuck` → Frühstück); an empty or unknown category becomes Hauptspeise and unknown tags are dropped, both counted in the report. (`Cookidoo`, which the old form offered, is in the new set since 2026-11-07.) Out-of-range times, servings and ratings become null. Ingredients keep the old table order and get their `section` from the word list; steps are renumbered 1…n; `ingredient_ids` stay null.
-- **Photos** (recipe and step) are downloaded and stored like uploads (§4.3.1). A failed download keeps the old link and is listed. On Windows without `curl.cainfo` the download uses the system certificate store.
-- **MealPlan rows** become Mittagessen entries (D8) on their Europe/Berlin day, keeping their ids; rows without a recipe are left out; rows not at UTC midnight are counted ("check their day").
-- A family that already has recipes or entries is skipped unless `--replace`, which first deletes its recipes, entries, shopping state and agent log (account, devices and keys stay). An e-mail that belongs to a different local account is never touched.
-
-**Dry run, 2026-11-07** (old database → Local DB): 2 accounts, 69 recipes, 544 ingredients, 277 steps, 35 photos and 123 of 130 plan entries (7 had no recipe), all counts matching the source; 11 recipes had an empty category. After Cookidoo joined the tag set, the 2 recipes that had it got the tag back by a one-off update (no re-import). About 24 s, mostly photo downloads.
+### 7.1 Import from the old app (done, code removed)
+The families came from the old Supabase database with `import:supabase`, run on the server at the cutover on 2026-11-08; the importer was removed afterwards. What it did, for reading the data: accounts kept their ids and bcrypt hashes (`$2a$` logs in and is rehashed to `$2y$`); recipes kept their ids and timestamps with `created_via = import`; old categories, tags and difficulties were matched ignoring case and umlaut spelling, an empty category became Hauptspeise; photos were downloaded and stored like uploads; old meal plan rows became Mittagessen entries (D8) on their Europe/Berlin day, rows without a recipe were left out.
 
 ---
 
 ## 8. Configuration (`.env` locally, see `.env.example`; `config.php` on the server, see `config.production.example.php`)
-`APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`, `RATE_LIMIT_KEY`, `RATE_LIMIT_IP`, `MEDIA_DIR` (default `storage/media`), `SUPABASE_DB_URL` (importer; falls back to `DIRECT_URL`).
+`APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`, `RATE_LIMIT_KEY`, `RATE_LIMIT_IP`, `MEDIA_DIR` (default `storage/media`).
 AI (§4.7): `AI_PROVIDER` (opencode | anthropic | openai, default opencode), `OPENCODE_API_KEY`, `OPENCODE_MODEL`, `OPENCODE_IMAGE_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_EFFORT`, `AI_TIMEOUT`, `AI_IMPORTS_PER_HOUR`, `AI_INPUT_DIR` (tests).
-Operator (§4.8): `OPS_TOKEN`, `CRON_TOKEN` (each ≥ 32 characters, empty = off). Deploy settings live in `.env.deploy`, not here ([DEPLOY.md](DEPLOY.md)). When `config.php` exists (a PHP array, uploaded by `deploy.sh --push-config`), it replaces `.env`; real env vars fill in keys it leaves out.
+Cron (§4.8): `CRON_TOKEN` (≥ 32 characters, empty = off). Deploy settings live in `.env.deploy`, not here ([DEPLOY.md](DEPLOY.md)). When `config.php` exists (a PHP array, uploaded by `deploy.sh --push-config`), it replaces `.env`; real env vars fill in keys it leaves out.
 
 ---
 
 ## 9. Deviations from MIGRATION_PLAN §4–§7
-1. **MCP is hand-rolled** (`src/Mcp/Server.php`), not `mcp/sdk`. `mcp/sdk` 0.9 installs on PHP 8.2 and supports both protocol eras, but its handshake-era transport keeps sessions (a session store), and it is pre-1.0. The dispatcher is small and fully stateless. Worth revisiting at `mcp/sdk` 1.0. **2026-11-08:** `mcp/sdk` and the likewise unused `intervention/image` (photos use GD directly) were removed from `composer.json`; they only made the FTP upload bigger.
+1. **MCP is hand-rolled** (`src/Mcp/Server.php`), not `mcp/sdk`. `mcp/sdk` 0.9 installs on PHP 8.2 and supports both protocol eras, but its handshake-era transport keeps sessions (a session store), and it is pre-1.0. The dispatcher is small and fully stateless. Worth revisiting at `mcp/sdk` 1.0. **2026-11-08:** `mcp/sdk` and the likewise unused `intervention/image` (photos use GD directly) were removed from `composer.json`; they only made the upload bigger.
 2. **List endpoints return summaries:** `/recipes` and suggestion shelves return `RecipeSummary` (no ingredients/steps); the prototype passes full recipes around in memory.
 3. **`/meal-plan` is flat** (`entries[]` with an embedded recipe summary), like `listPlanEntries()`; the MCP tool groups by day and slot.
 4. **`/grocery-list` is replaced by `/shopping/*`**; `get_grocery_list` needs `shopping:read`, not `mealplan:read`.
@@ -438,12 +429,12 @@ Operator (§4.8): `OPS_TOKEN`, `CRON_TOKEN` (each ≥ 32 characters, empty = off
 8. **FK `meal_plan_entries.recipe_id` is RESTRICT,** not SET NULL: MySQL forbids a CHECK on a column used in an FK action. The app detaches entries before a recipe is purged.
 9. **`get_profile` tool added,** so `plan_week` can read the settings.
 10. **Photos are no longer plain files** (2026-11-08): `storage/media` + `MediaController` instead of `public/media` (§4.3.1). The plan's "public/media/{userId}" layout is gone.
-11. **Deploy over FTP** (2026-11-08) instead of GitHub Actions + rsync/SSH (MIGRATION_PLAN §10.5): `deploy.sh` builds locally and migrates through `/ops` ([DEPLOY.md](DEPLOY.md)).
+11. **Deploy from the owner's machine over SSH** (2026-11-08) instead of GitHub Actions + rsync (MIGRATION_PLAN §10.5): `deploy.sh` builds locally, sends one archive, swaps it in and migrates on the server ([DEPLOY.md](DEPLOY.md)). The first deploys went over FTPS and lost files; that mode and its `/ops` door are gone.
 
 ## 10. Assumptions / open (for the owner)
 1. **Undo windows** (§5.6): 7 days for entries and own items, 30 days for recipes, 10 minutes for un-revoking a key. Confirm.
 2. **Cooking stats count today** (an entry for today counts as cooked).
-3. **Category and tag sets are enforced** on save. The importer maps the old values (§7.1); recipes with an empty old category land in Hauptspeise. Confirm, or give a better default.
+3. **Category and tag sets are enforced** on save. The import mapped the old values (§7.1); recipes with an empty old category landed in Hauptspeise.
 4. **Pairing misses** are per IP (5) and install-wide (30), see §2.5. Families behind one shared IP (a carrier NAT) can block each other's pairing for 10 minutes; the password login still works.
 5. **Login lockout is per e-mail + IP.** A per-account lock would let anyone lock the family out.
 6. ~~SPA build path~~ — resolved 2026-11-07: Vite builds with `base: '/app/'`, so the web server serves the assets directly; `index.php` only answers SPA routes with `app/index.html`.
@@ -454,8 +445,8 @@ Operator (§4.8): `OPS_TOKEN`, `CRON_TOKEN` (each ≥ 32 characters, empty = off
 11. **SPA wiring: done 2026-11-07** (`frontend/src/lib/http.ts`, `api.ts`, `auth.ts`); the capture flow uses the real `/ai/import` since 2026-11-08 (`lib/demo-data.ts` is gone). Still client-side: the cooking-step ingredient matching when `ingredientIds` is null.
 12. ~~`mcp/sdk`~~: removed 2026-11-08 (§9.1).
 13. **Rate-limit defaults** (120 per key, 300 per IP per minute, 30 AI imports per family and hour) are guesses; tune once real agents run.
-14. **Default AI provider** (MIGRATION_PLAN §14.1): the code defaults to `opencode` (the old app's setting, its key is in the local `.env`). Anthropic and OpenAI are one variable away. None of the three has been called for real yet: try a few links and photos with each before cutover and compare.
-15. **all-inkl and long requests:** whether PHP-FPM there allows `fastcgi_finish_request` and `set_time_limit(300)` is unknown until `./deploy.sh --check` runs on the real host. Without them an import runs inside the request and must finish within the host's limit (often 60–120 s on shared hosting); the poll and cron fallbacks then catch jobs that were cut off.
+14. **Default AI provider** (MIGRATION_PLAN §14.1): the code defaults to `opencode` (the old app's setting). Anthropic and OpenAI are one variable away; try a few links and photos with each and compare.
+15. **all-inkl and long requests:** whether the web PHP there allows `fastcgi_finish_request` and `set_time_limit(300)` is still unknown (`./deploy.sh --check` shows the command-line PHP only). Without them an import runs inside the request and must finish within the host's limit (often 60–120 s on shared hosting); the poll and cron fallbacks then catch jobs that were cut off.
 16. **Recipes saved from an import** get `created_via = app`, not `import` (the draft does not say where it came from). Add an `importJobId` to `POST /recipes` if the difference matters.
 
 ---
@@ -464,7 +455,7 @@ Operator (§4.8): `OPS_TOKEN`, `CRON_TOKEN` (each ≥ 32 characters, empty = off
 
 ```sh
 composer install
-cp .env.example .env          # the PHP block at the end; set APP_SECRET
+cp .env.example .env          # set APP_SECRET
 php bin/console migrate       # creates DB_NAME if missing
 php bin/console user:create --email=nils@familie.de --name=Nils   # invite mail; or --password=…
 php -S localhost:8080 -t public public/index.php    # or the Local site (nginx → public/index.php)
@@ -474,4 +465,4 @@ claude mcp add --transport http essensplan-local http://localhost:8080/mcp --hea
 
 Tests need a MySQL 8 server; they recreate their own database (`TEST_DB_NAME`, default `essensplan_test`) on every run. Connection defaults in `phpunit.xml` are the Local site's (`127.0.0.1:10029`, root/root); env vars override them: `DB_PORT=3306 DB_PASS= vendor/bin/phpunit`. `vendor/bin/phpstan analyse` runs the static check.
 
-**On all-inkl** there is no shell: `./deploy.sh` builds and uploads over FTP, migrates through `/ops/migrate`, and `./deploy.sh --console …` runs the † commands of §7. Setup and day-to-day use: [DEPLOY.md](DEPLOY.md).
+**On all-inkl:** `./deploy.sh` builds locally, swaps the build in over SSH and migrates there; `./deploy.sh --console …` runs any command of §7. Setup and day-to-day use: [DEPLOY.md](DEPLOY.md).

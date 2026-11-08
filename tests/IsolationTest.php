@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Essensplan\Tests;
 
 /**
- * Replaces Supabase RLS: nothing of family A is visible to or changeable by
+ * Replaces row-level security: nothing of family A is visible to or changeable by
  * family B, neither with B's session nor with B's API key (all scopes).
  */
 final class IsolationTest extends TestCase

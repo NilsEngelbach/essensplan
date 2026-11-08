@@ -1,7 +1,7 @@
 # Migration Plan: Essensplan → PHP/MySQL on all-inkl, UX-first, with Agent API + MCP
 
-Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅, Login & Geräte shaped + built ✅ (all surfaces done); backend draft 1 ✅ on branch `backend-draft` ([BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md), 37 tests green on MySQL 8.4 + MariaDB 10.6); Local site deployed (§3.1 ✅, essen.local) and the SPA wired to the real API (§9 step 1–2, mock data layer replaced); photo upload with thumbnails ✅; Supabase importer ✅ with a dry run into the Local DB (§10 steps 1–2); photos behind the session ✅, AI import (Phase 6) ✅ in code (fake-tested, no real model call yet), FTP deploy `deploy.sh` ✅ (tested against a local FTPS server, [DEPLOY.md](DEPLOY.md)); next: owner spot-check of the imported data, try the AI import with real links, first deploy to all-inkl with `./deploy.sh --check` (§3.2)**
-Created: 2026-11-07 · Revised: 2026-11-08 (photos protected, AI import, FTP deploy without SSH)
+Status: **Live on all-inkl since 2026-11-08 (cutover done, §10).** Phases 1–8 are through: all surfaces shaped and built, the PHP backend and the SPA run on all-inkl, the families were imported from Supabase, and the old Next.js/Supabase app, the importer and the FTP deploy are removed. Deploys go over SSH ([DEPLOY.md](DEPLOY.md)). Open: the all-inkl checks in §3.2 (web PHP limits, `Authorization` under Apache, cron, SMTP), real AI provider comparisons (§14.1) and Phase 9 (finish).
+Created: 2026-11-07 · Revised: 2026-11-08 (cutover: SSH deploy, import done, old app removed)
 
 ---
 
@@ -147,13 +147,13 @@ essensplan/
 - [ ] MCP smoke test: `claude mcp add --transport http essensplan-local http://essen.local/mcp --header "Authorization: Bearer <key>"`, then call a test tool. (`initialize` answered on essen.local with curl; the `claude mcp add` step is still to do)
 
 ### 3.2 all-inkl (production)
-`./deploy.sh --check` answers most of these from the server itself (PHP, extensions, `max_execution_time`, `fastcgi_finish_request`, upload limits, MySQL version, mail, AI reachability); see [DEPLOY.md](DEPLOY.md). Deploying needs FTP only (no SSH, no Composer on the server).
-- [ ] PHP ≥ 8.2 per domain; extensions `pdo_mysql`, `mbstring`, `intl`, `curl`, `gd`, `fileinfo`, `openssl`, `sodium`
-- [x] ~~SSH + composer~~ not needed: `deploy.sh` uploads `vendor/` and the SPA over FTPS and migrates via `/ops` (2026-11-08, tested against a local FTPS server). Docroot must point to `<folder>/public`
+`./deploy.sh --check` answers most of these over SSH (PHP, extensions, upload limits, MySQL version, mail, AI reachability; it sees the command-line PHP, so web limits can differ); see [DEPLOY.md](DEPLOY.md). Deploying needs SSH, no Composer on the server.
+- [x] PHP ≥ 8.2 per domain; extensions `pdo_mysql`, `mbstring`, `intl`, `curl`, `gd`, `fileinfo`, `openssl`, `sodium` (the app runs on all-inkl since 2026-11-08)
+- [x] SSH: `deploy.sh` builds `vendor/` and the SPA locally, sends one archive and migrates on the server (2026-11-08). Docroot points to `<folder>/public`; `public/.htaccess` needs `Require all granted` because the app folder's `.htaccess` denies everything
 - [ ] **`Authorization` header reaches PHP under Apache.** `.htaccess`: `RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]`
 - [ ] **`max_execution_time` / FastCGI timeout:** endpoint sleeping 150 s. Local allows 1200 s, so **only all-inkl reveals this limit**
 - [ ] Cron available + minimum interval (URL cron `/cron?token=`); upload limits ≥ 10 MB; outbound HTTPS to the AI APIs
-- [ ] MySQL version on all-inkl (must be MySQL 8; MariaDB is not supported, D21)
+- [x] MySQL version on all-inkl (must be MySQL 8; MariaDB is not supported, D21): migrations ran there
 - [ ] SMTP sender + SPF/DKIM
 - [ ] Check which MCP protocol revisions `mcp/sdk` serves: the current spec 2026-07-28 is stateless ([release](https://github.com/modelcontextprotocol/specification/releases/tag/2026-07-28)), while older clients still send `initialize` (2025-11-25)
 
@@ -361,26 +361,13 @@ Screens are **built new in the chosen visual world**; we don't port the old scre
 
 ---
 
-## 10. Phase 8 – Data migration & cutover
-1. **Importer** `bin/console import:supabase`, run locally (**written 2026-11-07**, `src/Import/`, BACKEND_REQUIREMENTS §7.1):
-   - Enable `extension=php_pdo_pgsql.dll` in the Local site's `conf/php/php.ini.hbs`; the DLL ships with Local.
-   - Connect to Supabase via `DIRECT_URL`.
-   - `auth.users`: keep IDs and bcrypt hashes, so users keep their passwords.
-   - Copy recipes, ingredients and instructions.
-   - **Old `MealPlan` rows → `meal_plan_entries`:** convert the date to Europe/Berlin and assign slot **Mittagessen** (D8).
-   - Download the `recipe-images` bucket, re-encode, create variants, rewrite paths. (The bucket is public, so the importer downloads each photo by its URL; no service role key needed.)
-2. **Dry run** into the Local DB; compare counts per user and spot-check in the new UI. **Done 2026-11-07:** all counts match (69 recipes, 544 ingredients, 277 steps, 35 photos, 123 of 130 plan entries: 7 had no recipe); checked through the API. Still to do: the owner logs in at essen.local with the old password and looks through recipes and the history. The final import at cutover runs on an empty DB, or with `--replace`.
-3. **Cutover:**
-   1. Freeze writes (maintenance page on Vercel).
-   2. Final import → `mysqldump` → import on all-inkl; rsync `public/media/`.
-   3. Switch the domain, smoke-test.
+## 10. Phase 8 – Data migration & cutover ✅ (2026-11-08)
+1. ✅ **Importer** `bin/console import:supabase` (written 2026-11-07, BACKEND_REQUIREMENTS §7.1): accounts with their IDs and bcrypt hashes (users keep their passwords), recipes, ingredients and steps, old `MealPlan` rows as **Mittagessen** entries on their Europe/Berlin day (D8), photos downloaded and re-encoded.
+2. ✅ **Dry run** into the Local DB on 2026-11-07: all counts matched (69 recipes, 544 ingredients, 277 steps, 35 photos, 123 of 130 plan entries: 7 had no recipe).
+3. ✅ **Cutover** on 2026-11-08: deployed to all-inkl, then the import ran on the server over SSH (`./deploy.sh --console import:supabase`), straight from Supabase into the production database, photos included.
 4. **Rollback:** Supabase and Vercel paused (not deleted) for 4 weeks.
-5. **Deploy:** `./deploy.sh` from the owner's machine (2026-11-08, [DEPLOY.md](DEPLOY.md)) instead of GitHub Actions:
-   1. Build locally: `composer install --no-dev -o`, `npm run build`.
-   2. Upload the changes over FTPS (manifest with hashes, maintenance page while code changes).
-   3. Migrate through `POST /ops/migrate` (token-guarded; no SSH on all-inkl).
-   4. Final import data: `mysqldump` → phpMyAdmin, `storage/media/` by FTP.
-6. Delete the old Next.js code, `supabase/` and `prisma/`; update `CLAUDE.md` and `README.md`.
+5. ✅ **Deploy:** `./deploy.sh` from the owner's machine ([DEPLOY.md](DEPLOY.md)) instead of GitHub Actions: build locally (`composer install --no-dev -o`, `npm run build`), send one archive over SSH, swap it in on the server, `bin/console migrate` there. The first deploys went over FTPS and lost files (426 / partial uploads), so that mode was dropped together with its HTTP operator door `/ops`.
+6. ✅ Deleted the old Next.js code, `supabase/`, `prisma/`, the importer and the FTP deploy; `CLAUDE.md` and `README.md` describe the new app.
 
 ---
 

@@ -2,140 +2,57 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Migration in progress.** The app is moving to PHP (Slim 4) + MySQL with a new React SPA in `frontend/`. Plan: [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md). If you are continuing the backend work, start with [docs/HANDOFF.md](docs/HANDOFF.md). Deploying to all-inkl (FTP, no SSH): [docs/DEPLOY.md](docs/DEPLOY.md). The rest of this file describes the old Next.js/Supabase app, which stays until cutover.
-
 ## Project Overview
 
-Essensplan is a German family meal planning application built with Next.js 14, React 18, TypeScript, and Supabase.
-It allows users to manage recipes, plan weekly meals, and organize family cooking with AI import capabilities.
+Essensplan is a German family meal planner: one family's recipe collection, a weekly meal plan with meal slots, a grocery list derived from the plan, a cooking mode, and AI import of recipes from a link or a photo. AI agents use it through a REST API and an MCP server with scoped API keys. Product context: [PRODUCT.md](PRODUCT.md); visual system: [DESIGN.md](DESIGN.md); data model, endpoints, MCP tools and error codes: [docs/BACKEND_REQUIREMENTS.md](docs/BACKEND_REQUIREMENTS.md).
 
-## Key Development Commands
+It runs on all-inkl webspace (Apache, PHP-FPM, MySQL 8) and was moved there from a Next.js/Supabase app, which is gone; the history and decisions (D1–D21) are in [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md).
 
-### Core Development
-- `npm run dev` - Start development server on http://localhost:3000
-- `npm run build` - Create production build
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint code linting
+## Commands
 
-### Database Operations
-- `npm run db:generate` - Generate Prisma client after schema changes
-- `npm run db:push` - Push Prisma schema changes to database
-- `npm run db:studio` - Open Prisma Studio for database management
-- `npx prisma db pull` - Pull database schema changes
-- `npx prisma migrate dev --name <name>` - Create and apply new migration
+Backend (repo root):
+- `composer install`
+- `php bin/console migrate` – apply `migrations/*.sql` (creates the database if missing)
+- `php bin/console help` – all operator commands (users, API keys, purge, jobs, cron, openapi:dump)
+- `vendor/bin/phpunit` – tests; needs MySQL 8 and recreates `essensplan_test` each run (defaults in `phpunit.xml` are the Local site's `127.0.0.1:10029`, root/root)
+- `vendor/bin/phpunit tests/PlanTest.php` – one test file; `--filter testName` for one test
+- `vendor/bin/phpstan analyse`
+
+Frontend (`frontend/`):
+- `npm run dev` – Vite on :5173, proxies `/api` and `/mcp` to `http://essen.local`
+- `npm run build` – type-checks and builds the SPA into `../public/app`
+- `npm run typecheck`
+
+Deploy: `./deploy.sh` (build locally, swap in over SSH, migrate), `./deploy.sh --console <command>` on the server. See [docs/DEPLOY.md](docs/DEPLOY.md).
+
+Local environment: the "Local" site `essen` at http://essen.local (nginx, PHP 8.2, MySQL 8.4 at 127.0.0.1:10029, Mailpit); its docroot is a junction to the repo's `public/`.
 
 ## Architecture
 
-### Tech Stack
-- **Frontend**: Next.js 14 with App Router, React 18, TypeScript
-- **Styling**: Tailwind CSS with custom primary color palette
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Supabase Auth with Row Level Security (RLS)
-- **Storage**: Supabase Storage for recipe images
-- **API**: Supabase Edge Functions
-- **UI Components**: Headless UI, Heroicons, Lucide React
-- **Forms**: React Hook Form with Zod validation
-- **Notifications**: React Hot Toast
+**Backend** (`src/`, namespace `Essensplan\`, PHP 8.2, Slim 4, PHP-DI, plain PDO; no framework ORM):
+- `public/index.php` – front controller: maintenance check, then Slim. `App.php` builds the container and routes: `/api/v1` (REST, table in `Http/Routes.php`), `/mcp`, `/media/{user}/{file}` (photos, family-only), `/cron?token=`, everything else the SPA.
+- `Http/` – controllers, middleware, `Routes.php` (method, path, handler, auth/scope per route), `OpenApi.php` (generated from the same JSON Schemas used for validation, `Schema/`).
+- `Service/` – domain logic shared by REST and MCP (recipes, plan, shopping, auth/sessions/devices, API keys, agent activity and undo, media, mail, rate limits).
+- `Repository/` – SQL. **Every method takes `$userId`**; there is no unscoped lookup. This is what keeps families apart.
+- `Domain/` – pure logic ported from the frontend (shopping aggregation and sections, catalog of categories/tags).
+- `Mcp/` – stateless Streamable HTTP MCP server and its tools.
+- `Ai/` – AI import: page fetching, providers (OpenCode, Anthropic, OpenAI behind `AI_PROVIDER`), import jobs that run after the response.
+- `Console/` – `bin/console` commands, migrator, server check.
 
-### Project Structure
-```
-app/
-├── grocery-list/         # Grocery list planner
-├── meal-plan/            # Weekly meal planning interface
-├── recipes/              # Recipe management (CRUD operations)
-│   ├── [id]/             # Recipe detail and edit pages
-│   └── new/              # Create new recipe
-├── globals.css           # Global styles and Tailwind imports
-├── layout.tsx            # Root layout with providers
-└── page.tsx              # Home page
+**Frontend** (`frontend/src/`, React 18 + react-router 6, no UI library):
+- `features/` – one folder per surface: `rezepte`, `woche`, `einkauf`, `kochen`, `konto`, `login`.
+- `lib/api.ts`, `lib/auth.ts` – the API client; their signatures and `lib/types.ts` are the contract the backend serves.
+- `lib/shopping.ts`, `lib/cooking.ts`, `lib/format.ts` – client-side logic; `src/Domain/Shopping.php` mirrors `shopping.ts`.
+- `styles/tokens.css` – design tokens from DESIGN.md.
 
-components/
-├── AIImportModal.tsx     # Modal for importing recipes via AI
-├── AuthProvider.tsx      # Supabase authentication context
-├── LoginModal.tsx        # User login modal
-├── Navigation.tsx        # Main navigation component
-├── RecipeForm.tsx        # Form for creating/editing recipes
-├── RecipeProvider.tsx    # Recipe data context
-└── SignUpModal.tsx       # User registration modal
+**Configuration:** `.env` locally (template `.env.example`); on the server `config.php`, a PHP array uploaded with `./deploy.sh --push-config` from the gitignored `config.production.php` (template `config.production.example.php`). `Config::load` prefers `config.php` when it exists.
 
-lib/
-├── database.types.ts     # Generated Supabase TypeScript types
-├── supabase-helpers.ts   # Utility functions for Supabase operations
-└── supabase.ts          # Supabase client configuration and auth helpers
+## Conventions
 
-prisma/
-└── schema.prisma        # Database schema with Recipe, Ingredient, Instruction, MealPlan models
-```
-
-### Data Models
-- **Recipe**: Core recipe entity with title, description, category, tags, cooking time, difficulty
-- **Ingredient**: Recipe ingredients with amounts, units, and notes
-- **Instruction**: Step-by-step cooking instructions with optional images
-- **MealPlan**: Calendar entries linking recipes to specific dates
-
-### Authentication & Security
-- All database operations use Row Level Security (RLS) policies
-- Users can only access their own recipes and meal plans
-- Image uploads are organized by user ID in Supabase Storage
-- Authentication handled via Supabase with email/password
-
-## Environment Variables Required
-
-```env
-DATABASE_URL="postgresql://..."
-DIRECT_URL="postgresql://..."
-
-# Supabase (frontend)
-NEXT_PUBLIC_SUPABASE_URL="https://...supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="..."
-# Supabase (edge functions - set via `supabase secrets set ...`)
-SUPABASE_URL="https://...supabase.co"
-SUPABASE_SERVICE_ROLE_KEY="..."
-
-# AI feature switch (openai | opencode), defaults to "opencode"
-AI_PROVIDER="opencode"
-# Public mirror for the frontend (must match AI_PROVIDER)
-NEXT_PUBLIC_AI_PROVIDER="opencode"
-
-# OpenCode Go credentials (used when AI_PROVIDER=opencode)
-OPENCODE_API_KEY="..."        # from https://opencode.ai/auth
-OPENCODE_MODEL="glm-5.2"     # e.g. glm-5.2 | kimi-k3 | deepseek-v4-pro | deepseek-v4-flash
-OPENCODE_IMAGE_MODEL="kimi-k3"  # vision-capable model for screenshot imports
-
-# OpenAI credentials (used when AI_PROVIDER=openai, still required for image enhancement)
-OPENAI_API_KEY="..."
-OPENAI_MODEL="gpt-5-mini"
-```
-
-## Development Guidelines
-
-### Database Changes
-1. Always run `npm run db:generate` after modifying `prisma/schema.prisma`
-2. Use `npm run db:push` for development schema changes
-3. Create proper migrations with `npx prisma migrate dev` for production
-
-### Authentication Context
-- Use `AuthProvider` context for user state management
-- Access current user via the authentication context in components
-- All API routes should validate user authentication before data operations
-
-### Styling Conventions
-- Use Tailwind CSS utility classes
-- Primary color palette defined in `tailwind.config.js` (blue variants)
-- German language used for UI text and content
-- Responsive design with mobile-first approach
-
-### Component Patterns
-- React contexts for global state (Auth, Recipe data)
-- Form validation using React Hook Form + Zod
-- Modal components for overlays (Login, SignUp, AI Import)
-- Only use supabase functions for the ai integration, for data crud the supabase sdk should be used
-
-### AI Integration
-- AI Import:
-  - OpenAI integration for recipe import from images and urls
-  - Endpoint at `/supabase/functions/ai-import.ts`
-  - Structured data extraction for recipe components
-- AI Image Enhancement:
-  - Enhance user uploaded images with AI
-  - Endpoint at `/supabase/functions/enhance-image.ts`
+- **JSON:** camelCase, matching `frontend/src/lib/types.ts`. Dates `YYYY-MM-DD` in Europe/Berlin, timestamps ISO 8601. Errors are `{"error":{"code":"…","message":"…"}}`.
+- **User-visible text is German, "du" voice.** Reuse the strings the frontend already shows.
+- **Middleware order:** JsonErrors → routing → RateLimit → Authenticate (session | API key) → RequireScope → Csrf (session only).
+- **API keys:** `esp_` + base62; only the sha256 hash and a 12-char prefix are stored; the secret is shown once. Scopes: `recipes:read|write|delete`, `mealplan:read|write`, `shopping:read|write`, `ai:use`; write implies read. Every key-authenticated write is logged in `agent_activity` with an undo payload.
+- **Migrations:** add a new `migrations/NNN_name.sql` (MySQL 8, utf8mb4); never edit an applied one. MariaDB is not a target (D21).
+- **Passwords:** bcrypt; `$2a$` hashes from the imported accounts are accepted and rehashed on login.
+- **Never commit secrets:** `.env`, `.env.deploy`, `config.production.php` are gitignored.

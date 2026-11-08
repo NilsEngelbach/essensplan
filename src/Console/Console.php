@@ -11,8 +11,6 @@ use Essensplan\Config;
 use Essensplan\Db;
 use Essensplan\Http\OpenApi;
 use Essensplan\Http\Principal;
-use Essensplan\Import\SupabaseImporter;
-use Essensplan\Import\SupabaseSource;
 use Essensplan\Repository\UserRepository;
 use Essensplan\Service\ApiKeyService;
 use Essensplan\Service\FamilyAdmin;
@@ -20,22 +18,11 @@ use Essensplan\Service\MediaStore;
 use Psr\Container\ContainerInterface;
 
 /**
- * The operator commands behind bin/console. The same code answers
- * POST /ops/console (deploy.sh --console …) on hosts without SSH, for the
- * commands in HTTP_COMMANDS only.
+ * The operator commands behind bin/console (on the server: deploy.sh --console … over SSH).
+ * GET /cron?token= runs the `cron` command for the hosting's cron.
  */
 final class Console
 {
-    /**
-     * Safe to run over HTTP with the ops token: nothing here reads another
-     * family's data or destroys any (user:delete and api-key:create stay CLI-only).
-     *
-     * TEMPORARY: import:supabase is open over HTTP for the one-time migration on all-inkl
-     * (no pdo_pgsql locally needed, no dump/phpMyAdmin round trip). With --replace it
-     * overwrites families. Remove it from this list after the cutover.
-     */
-    public const HTTP_COMMANDS = ['migrate', 'check', 'user:create', 'user:invite', 'user:list', 'user:disable', 'user:enable', 'purge', 'jobs:run', 'cron', 'media:move', 'import:supabase'];
-
     public function __construct(private readonly ContainerInterface $c, private readonly Config $config)
     {
     }
@@ -158,19 +145,6 @@ final class Console
                 file_put_contents($file, json_encode(OpenApi::document($this->config), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
                 break;
 
-            case 'import:supabase':
-                // Phase 8. Reads the old app (read-only) and writes families into this database.
-                $url = $this->config->get('SUPABASE_DB_URL', $this->config->get('DIRECT_URL'));
-                if ($url === '') {
-                    throw new ConsoleError('Set SUPABASE_DB_URL (or DIRECT_URL) to the Supabase Postgres URL.');
-                }
-                $this->c->get(SupabaseImporter::class)->run(SupabaseSource::connect($url), [
-                    'email' => is_string($opts['email'] ?? null) ? $opts['email'] : null,
-                    'replace' => isset($opts['replace']),
-                    'images' => !isset($opts['no-images']),
-                ], $out);
-                break;
-
             default:
                 $out(self::help());
         }
@@ -195,8 +169,6 @@ final class Console
           jobs:run [--limit=5]                      run AI import jobs nobody picked up
           cron                                      jobs:run + purge (what /cron?token= runs)
           media:move                                move photos from public/media (before 2026-11-08) to MEDIA_DIR
-          import:supabase [--email=] [--replace] [--no-images]
-                                                    copy families from the old app (SUPABASE_DB_URL or DIRECT_URL)
           openapi:dump [file]                       write the OpenAPI document
         TXT;
     }

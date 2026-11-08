@@ -47,9 +47,7 @@ return [
     'AI_TIMEOUT' => '150',
     'AI_IMPORTS_PER_HOUR' => '30',
 
-    // Operator door (deploy.sh, docs/DEPLOY.md), at least 32 characters each:
-    //   php -r "echo bin2hex(random_bytes(24));"
-    // OPS_TOKEN must equal DEPLOY_OPS_TOKEN in .env.deploy; CRON_TOKEN is a different one.
-    'OPS_TOKEN' => '',
+    // The hosting's URL cron: https://<domain>/cron?token=<CRON_TOKEN>. At least 32 characters;
+    // empty switches /cron off. php -r "echo bin2hex(random_bytes(24));"
     'CRON_TOKEN' => '',
 ];

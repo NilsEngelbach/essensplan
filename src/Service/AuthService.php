@@ -129,7 +129,7 @@ final class AuthService
         if ($user['disabled_at'] !== null) {
             throw new ApiError(403, 'account_disabled', 'Dieses Konto ist gesperrt.');
         }
-        // Supabase's $2a$ hashes (and older costs) are upgraded on the first login.
+        // $2a$ hashes (accounts imported from the old app) and older costs are upgraded on the first login.
         if (password_needs_rehash($user['password_hash'], PASSWORD_DEFAULT)) {
             $this->users->update($user['id'], ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);
         }
