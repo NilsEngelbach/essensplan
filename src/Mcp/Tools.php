@@ -18,7 +18,7 @@ use Essensplan\Service\ShoppingService;
 use Essensplan\Util;
 
 /**
- * The MCP tools (MIGRATION_PLAN §7 + the shopping tools of HANDOFF §4). Each
+ * The MCP tools (docs/BACKEND.md §6, docs/MCP.md). Each
  * one calls the same service as its REST route, so scopes, validation and
  * agent_activity logging are identical.
  */

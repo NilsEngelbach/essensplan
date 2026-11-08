@@ -11,7 +11,7 @@ use Essensplan\Db;
 use Psr\Container\ContainerInterface;
 
 /**
- * What the host gives us (MIGRATION_PLAN §3.2): `bin/console check`, on all-inkl through
+ * What the host gives us (docs/DEPLOY.md, step 9): `bin/console check`, on all-inkl through
  * `deploy.sh --check` over SSH. That is the command-line PHP: the web PHP's limits
  * (max_execution_time, fastcgi_finish_request) can differ.
  * Each row is [ok (null = info only), label, value].

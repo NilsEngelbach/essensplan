@@ -7,7 +7,7 @@ namespace Essensplan\Ai;
 use Essensplan\Http\ApiError;
 
 /**
- * Fetches a recipe page or photo for the import, SSRF-safe (MIGRATION_PLAN §4.3):
+ * Fetches a recipe page or photo for the import, SSRF-safe (docs/BACKEND.md §4.7):
  * http/https on the default ports only, no user:pass@, every address the host
  * resolves to must be public, the connection is pinned to the checked address
  * (no DNS rebinding), redirects are followed by hand and checked again, and

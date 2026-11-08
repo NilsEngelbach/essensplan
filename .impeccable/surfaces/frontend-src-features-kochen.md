@@ -54,7 +54,7 @@ Status: confirmed 2026-11-07 (`/impeccable shape kochmodus`). Built inside the e
 - **Loading:** a skeleton.
 - **No Wake Lock:** the LED stays off, with the hint "Bildschirm kann ausgehen".
 
-## 6. Backend consequences (→ BACKEND_REQUIREMENTS.md)
+## 6. Backend consequences (→ docs/BACKEND.md)
 - **Ingredients per step:** stored as `instructions.ingredient_ids` (JSON). The AI import fills it; later it becomes editable in the recipe form.
 - **Fallback:** until then, and in the prototype, the links are derived by matching ingredient names in the step text.
 - **No `cooked_events`:** "gekocht" stays derived from past plan entries.

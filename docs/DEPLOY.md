@@ -73,10 +73,11 @@ The script runs in **Git Bash**, which brings `ssh`, `tar` and `curl`. For the b
 
 Every `bin/console` command works; `./deploy.sh --console help` lists them.
 
-## Learned on all-inkl (2026-11-08)
+## Good to know on all-inkl
 
 - **Parent `.htaccess`.** Apache also applies the app folder's `.htaccess` (`Require all denied`) below `public/`, so `public/.htaccess` has to say `Require all granted`. Without it, every URL answers 403.
-- **FTPS uploads were unreliable.** The first deploys went over FTPS: Git Bash's curl (Schannel) got 426 or "partial file" on many uploads and still counted some as sent, so files were missing or empty on the server. That is why deploys go over SSH now, as one archive.
 - **Domain SSL.** Until Let's Encrypt is on for the domain, it serves the `*.kasserver.com` certificate and HTTPS checks fail with `SEC_E_WRONG_PRINCIPAL`.
+- **SSH, not FTP.** FTPS uploads from Git Bash lost files (426 / partial uploads), so deploys go over SSH as one archive (D22).
+- **Agents from outside** need the `Authorization` header to reach PHP; `public/.htaccess` passes it on. Check it with the `curl` call in [MCP.md](MCP.md).
 
-Still to see: the web PHP's limits (see step 9) and the Apache rewrite for `Authorization` (API keys and MCP from outside).
+Not checked yet on the live server: the web PHP's limits (step 9), cron and SMTP sender records. They are tracked in [TODO.md](../TODO.md).

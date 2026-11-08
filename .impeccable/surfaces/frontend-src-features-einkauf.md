@@ -63,7 +63,7 @@ Status: confirmed 2026-11-07 (`/impeccable shape einkaufsliste`). The structure 
 - **Errors:** shown inline plus a toast.
 - **Free-text plan entries** never go on the list.
 
-## 6. Backend consequences (→ BACKEND_REQUIREMENTS.md)
+## 6. Backend consequences (→ docs/BACKEND.md)
 - **`shopping_trips`:** id, user_id, days JSON, created_at, completed_at NULL.
 - **`shopping_item_state`:** trip_id, name_key, checked_at NULL, at_home BOOL, seen_at NULL.
 - **`shopping_manual_items`:** id, user_id, name, section, created_at, bought_at NULL.

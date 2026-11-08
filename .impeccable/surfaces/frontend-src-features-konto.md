@@ -89,7 +89,7 @@ Status: confirmed 2026-11-07 (`/impeccable shape api-agenten`). Built inside "Da
 - **Clipboard unavailable:** the text is selected, with "Markieren und kopieren".
 - **Other states:** an expired key, an empty log, and undo that is blocked.
 
-## 6. Backend consequences (→ BACKEND_REQUIREMENTS.md)
+## 6. Backend consequences (→ docs/BACKEND.md)
 - **Scopes:**
   - `recipes:read|write|delete`
   - `mealplan:read|write`

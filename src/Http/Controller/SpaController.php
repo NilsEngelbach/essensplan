@@ -10,8 +10,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
  * Everything outside /api/v1 and /mcp: the React SPA from public/app.
- * Built assets are served from public/app too, because the Vite config uses
- * base '/' (see BACKEND_REQUIREMENTS §10).
+ * Built assets (Vite base /app/) are normally served by nginx/Apache as plain
+ * files; this serves them too when a request reaches PHP (php -S).
  */
 final class SpaController
 {

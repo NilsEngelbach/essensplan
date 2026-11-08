@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Essensplan is a German family meal planner: one family's recipe collection, a weekly meal plan with meal slots, a grocery list derived from the plan, a cooking mode, and AI import of recipes from a link or a photo. AI agents use it through a REST API and an MCP server with scoped API keys. Product context: [PRODUCT.md](PRODUCT.md); visual system: [DESIGN.md](DESIGN.md); data model, endpoints, MCP tools and error codes: [docs/BACKEND_REQUIREMENTS.md](docs/BACKEND_REQUIREMENTS.md).
+Essensplan is a German family meal planner: one family's recipe collection, a weekly meal plan with meal slots, a grocery list derived from the plan, a cooking mode, and AI import of recipes from a link or a photo. AI agents use it through a REST API and an MCP server with scoped API keys. Product context: [PRODUCT.md](PRODUCT.md); visual system: [DESIGN.md](DESIGN.md); data model, endpoints, MCP tools and error codes: [docs/BACKEND.md](docs/BACKEND.md); connecting agents: [docs/MCP.md](docs/MCP.md).
 
-It runs on all-inkl webspace (Apache, PHP-FPM, MySQL 8) and was moved there from a Next.js/Supabase app, which is gone; the history and decisions (D1–D21) are in [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md).
+It runs on all-inkl webspace (Apache, PHP-FPM, MySQL 8), live since 2026-11-08; it replaced a Next.js/Supabase app, which is gone. Decisions D1–D23, cited in code comments, are in [docs/DECISIONS.md](docs/DECISIONS.md); open work in [TODO.md](TODO.md).
 
 ## Commands
 
@@ -14,18 +14,18 @@ Backend (repo root):
 - `composer install`
 - `php bin/console migrate` – apply `migrations/*.sql` (creates the database if missing)
 - `php bin/console help` – all operator commands (users, API keys, purge, jobs, cron, openapi:dump)
-- `vendor/bin/phpunit` – tests; needs MySQL 8 and recreates `essensplan_test` each run (defaults in `phpunit.xml` are the Local site's `127.0.0.1:10029`, root/root)
+- `vendor/bin/phpunit` – tests; needs MySQL 8 and recreates `essensplan_test` each run (connection from env vars, defaults in `phpunit.xml`)
 - `vendor/bin/phpunit tests/PlanTest.php` – one test file; `--filter testName` for one test
 - `vendor/bin/phpstan analyse`
 
 Frontend (`frontend/`):
-- `npm run dev` – Vite on :5173, proxies `/api` and `/mcp` to `http://essen.local`
+- `npm run dev` – Vite on :5173, proxies `/api`, `/mcp` and `/media` to `http://essen.local`
 - `npm run build` – type-checks and builds the SPA into `../public/app`
 - `npm run typecheck`
 
 Deploy: `./deploy.sh` (build locally, swap in over SSH, migrate), `./deploy.sh --console <command>` on the server. See [docs/DEPLOY.md](docs/DEPLOY.md).
 
-Local environment: the "Local" site `essen` at http://essen.local (nginx, PHP 8.2, MySQL 8.4 at 127.0.0.1:10029, Mailpit); its docroot is a junction to the repo's `public/`.
+Local environment: the "Local" site `essen` at http://essen.local (nginx, PHP 8.2, MySQL 8, Mailpit); its docroot is a junction to the repo's `public/`. Setup: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). This machine's paths, ports and demo login are in the gitignored `LOCAL.md`; read it when you need them, and never copy them into committed files.
 
 ## Architecture
 
@@ -55,4 +55,5 @@ Local environment: the "Local" site `essen` at http://essen.local (nginx, PHP 8.
 - **API keys:** `esp_` + base62; only the sha256 hash and a 12-char prefix are stored; the secret is shown once. Scopes: `recipes:read|write|delete`, `mealplan:read|write`, `shopping:read|write`, `ai:use`; write implies read. Every key-authenticated write is logged in `agent_activity` with an undo payload.
 - **Migrations:** add a new `migrations/NNN_name.sql` (MySQL 8, utf8mb4); never edit an applied one. MariaDB is not a target (D21).
 - **Passwords:** bcrypt; `$2a$` hashes from the imported accounts are accepted and rehashed on login.
-- **Never commit secrets:** `.env`, `.env.deploy`, `config.production.php` are gitignored.
+- **Never commit secrets or machine paths:** `.env`, `.env.deploy`, `config.production.php` and `LOCAL.md` are gitignored.
+- **Docs:** keep them current, not historical. Update `docs/BACKEND.md` with the code, record a new decision as the next D-number in `docs/DECISIONS.md`, and use placeholders (`<repo>`, `essen.example.de`) for paths and domains.

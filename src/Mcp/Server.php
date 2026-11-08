@@ -9,7 +9,7 @@ use Essensplan\Http\Principal;
 use Essensplan\Schema\Schemas;
 
 /**
- * A stateless MCP server over Streamable HTTP (MIGRATION_PLAN §7): one
+ * A stateless MCP server over Streamable HTTP (docs/BACKEND.md §6, D23): one
  * JSON-RPC message per POST, answered as application/json, no session id.
  *
  * Handshake era (2025-03-26 … 2025-11-25): initialize is answered, nothing

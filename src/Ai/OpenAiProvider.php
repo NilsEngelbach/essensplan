@@ -9,7 +9,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 
-/** OpenAI Responses API with a strict json_schema (the old app's provider, MIGRATION_PLAN §8). */
+/** OpenAI Responses API with a strict json_schema (docs/BACKEND.md §4.7). */
 final class OpenAiProvider implements AiProvider
 {
     public function __construct(

@@ -11,7 +11,7 @@ use Essensplan\Http\ApiError;
 use Essensplan\Http\Principal;
 use Essensplan\Util;
 
-/** API keys (MIGRATION_PLAN §6, D18): `esp_` + 40 base62, only sha256 + prefix stored. */
+/** API keys (docs/BACKEND.md §2.6, D18): `esp_` + 40 base62, only sha256 + prefix stored. */
 final class ApiKeyService
 {
     public const UNREVOKE_MINUTES = 10;

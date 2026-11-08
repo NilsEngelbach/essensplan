@@ -26,7 +26,7 @@ final class RecipeService
     }
 
     /**
-     * @param array<string, mixed> $query validated filters (see recipe-query in BACKEND_REQUIREMENTS §4.3)
+     * @param array<string, mixed> $query validated filters (see recipe-query in docs/BACKEND.md §4.3)
      * @return array{items: list<array{recipe: array, matchedIngredient: ?string}>, nextCursor: ?string, total: int}
      */
     public function list(Principal $p, array $query): array

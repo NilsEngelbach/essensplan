@@ -2,9 +2,10 @@
 node_modules/
 /vendor/
 
-# Local settings
+# Local settings and this machine's paths/ports (docs/DEVELOPMENT.md)
 .env
 .env.local
+/LOCAL.md
 
 # Frontend build output (Vite writes the SPA into the PHP docroot)
 /public/app/

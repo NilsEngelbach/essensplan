@@ -10,7 +10,7 @@ use Essensplan\Schema\Schemas;
 use Essensplan\Service\MediaStore;
 
 /**
- * Link or photo → RecipeDraft (the shape POST /recipes takes), MIGRATION_PLAN §8:
+ * Link or photo → RecipeDraft (the shape POST /recipes takes), docs/BACKEND.md §4.7:
  * fetch (SSRF-safe) → JSON-LD or page text → one structured-output call →
  * validate (one retry with the errors fed back) → normalise → store the photo.
  * Steps for the progress display: 0 Quelle lesen · 1 Zutaten erkennen · 2 Schritte ordnen · 3 Fertig.

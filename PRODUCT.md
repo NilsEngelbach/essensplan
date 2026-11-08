@@ -46,34 +46,22 @@ The family also uses the app on their own devices with the owner's login.
 
 ## Capabilities and Constraints
 
-**Existing functionality (to be preserved):**
-- **Recipes:** title, description, image, category, tags, cooking time, servings, difficulty, star rating, source URL, ingredients (amount, unit, note, optional component group such as "Teig") and ordered steps.
-- **Recipe list:** search, category and tag filters, sorting by recent, popular, last cooked and rating.
-- **Plan and list:** meal plan by date, cooking statistics (times cooked, last cooked) derived from past plan entries, grocery list derived from planned recipes.
-- **AI features:**
-  - AI import from URL and photo/screenshot, with an editable preview before saving.
-  - AI image enhancement for recipe photos (only available with OpenAI).
-
-**Decided changes (see `docs/MIGRATION_PLAN.md`; live since 2026-11-08):**
-- **Platform move (done 2026-11-08):** from Next.js/Supabase/Vercel to self-hosted PHP (Slim 4) + MySQL on all-inkl webspace, with a React (Vite) single-page app.
-- **Meal slots:** a fixed set: Frühstück, Mittagessen, Abendessen, Snack. Several entries per slot are allowed. Existing plan entries are imported as Mittagessen.
-- **Agent access:** REST API `/api/v1` and MCP server `/mcp`, authenticated with generated, scoped, revocable API keys, plus an activity log of what agents changed. No OAuth for now.
-- **AI providers:** switchable between OpenAI, Anthropic and OpenCode.
-- **Grocery list:** used in the store, so check-off state must persist (saved on the server). Offline use is **not** required (confirmed 2026-11-07); the app may assume a connection.
+**What the app does** (self-hosted PHP + MySQL on all-inkl with a React single-page app, live since 2026-11-08; decisions in `docs/DECISIONS.md`):
+- **Recipes:** title, description, image, category, tags, cooking time, servings, difficulty, star rating, source URL, ingredients (amount, unit, note, optional component group such as "Teig") and ordered steps. Search by title and ingredient, filters, sorting by "loved", last cooked, newest, time and title.
+- **AI import** from a link or a photo/screenshot, reviewed in the edit form before saving. Providers switchable between OpenCode, Anthropic and OpenAI.
+- **Week plan** with fixed meal slots (Frühstück, Mittagessen, Abendessen, Snack), several entries per slot; an entry is a recipe or a short free text. Suggestions from the family's own history. Cooking statistics (times cooked, last cooked) come from past plan entries.
+- **Shopping list** derived from the plan, used in the store: check-off state lives on the server, sorted by the family's store sections, with own items. No offline mode; the app may assume a connection.
+- **Cooking mode:** one step per screen with that step's ingredients.
+- **Agent access:** REST API `/api/v1` and MCP server `/mcp` with scoped, revocable API keys; an activity log with undo shows what agents changed. No OAuth.
+- **Not built:** AI image enhancement (the old app had it with OpenAI).
 
 **Terminology** (German UI): Rezepte, Wochenplan / Essensplan, Einkaufsliste, KI-Import, Kochmodus. Meal slots: Frühstück, Mittagessen, Abendessen, Snack. Categories: Hauptspeise, Salat, Dessert, Suppe, Beilage, Frühstück, Snack. Tags: Vegetarisch, Vegan, Glutenfrei, Laktosefrei, Schnell, Gesund, Würzig, Süß. Difficulty: Einfach, Mittel, Schwer.
-
-**Undecided** (to be settled in `shape`):
-- Free-text plan entries ("Reste", "Essen gehen").
-- Per-entry servings.
-- Whether the grocery list is persisted with manual extra items.
-- How supermarket sections are grouped.
 
 ## Brand Commitments
 
 - **Name:** "Essensplan".
 - **Language:** German UI.
-- **Voice:** address the user with **"du"** (casual, personal), not "Sie". The current "Sie" copy is to be replaced.
+- **Voice:** address the user with **"du"** (casual, personal), never "Sie".
 - **Sign-off:** the README's "Coded with ❤️ in THE LÄND." is the owner's sign-off.
 - **No logo or other identity assets exist.**
 

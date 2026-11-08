@@ -1,4 +1,4 @@
-// Data layer against /api/v1 (docs/BACKEND_REQUIREMENTS.md §4). Same function
+// Data layer against /api/v1 (docs/BACKEND.md §4). Same function
 // surface the prototype had, so the screens stay as they were:
 // - async reads (listRecipes, getRecipe, listPlanEntries, suggestions,
 //   getShoppingList) fetch every time and never notify;
@@ -395,7 +395,7 @@ export function weekDates(start: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(start, i))
 }
 
-/* ── Import (POST /ai/import, BACKEND_REQUIREMENTS §4.7) ───────────────── */
+/* ── Import (POST /ai/import, docs/BACKEND.md §4.7) ───────────────── */
 
 export const IMPORT_STEPS = ['Quelle lesen', 'Zutaten erkennen', 'Schritte ordnen', 'Fertig'] as const
 

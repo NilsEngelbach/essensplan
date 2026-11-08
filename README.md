@@ -18,13 +18,23 @@ Das eigene Kochbuch und der Essensplan der Familie: Rezepte sammeln, die Woche p
 - **Frontend:** React 18 und TypeScript als Single-Page-App mit Vite (`frontend/`), gebaut nach `public/app`
 - **Hosting:** all-inkl Webspace, Deploy per SSH mit `./deploy.sh`
 
+## Agenten verbinden
+
+In der App unter **Konto → API & Agenten** einen Schlüssel anlegen, dann den angezeigten Befehl ausführen, z. B. für Claude Code:
+
+```sh
+claude mcp add --transport http essensplan https://<deine-domain>/mcp --header "Authorization: Bearer esp_…"
+```
+
+Claude Desktop, Cursor, VS Code, Rechte und Fehlersuche: [docs/MCP.md](docs/MCP.md).
+
 ## Lokal entwickeln
 
-Voraussetzungen: die „Local“-Site `essen` (nginx, PHP 8.2, MySQL 8, Mailpit) mit dem Repo-Ordner `public/` als Docroot, Node 20+.
+Voraussetzungen: eine „Local“-Site `essen` (nginx, PHP 8.2, MySQL 8, Mailpit) mit dem Repo-Ordner `public/` als Docroot, Node 20+. Schritt für Schritt: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 ```sh
 composer install
-cp .env.example .env               # APP_SECRET setzen, Datenbank ist auf Local eingestellt
+cp .env.example .env               # APP_SECRET und Datenbank-Port der Local-Site eintragen
 php bin/console migrate            # legt die Datenbank an
 php bin/console user:create --email=du@familie.de --name=Familie --password=…
 
@@ -32,6 +42,8 @@ cd frontend && npm install
 npm run dev                        # http://localhost:5173, API über http://essen.local
 npm run build                      # baut die SPA nach public/app (dann http://essen.local)
 ```
+
+Rechnerspezifische Pfade und Ports gehören in `LOCAL.md` (nicht im Repo), Einstellungen in `.env`.
 
 Tests und statische Prüfung (brauchen MySQL, die Tests legen ihre eigene Datenbank an):
 
@@ -54,8 +66,12 @@ Einrichtung und Details: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 - [PRODUCT.md](PRODUCT.md): für wen und wozu
 - [DESIGN.md](DESIGN.md): das visuelle System
-- [docs/BACKEND_REQUIREMENTS.md](docs/BACKEND_REQUIREMENTS.md): Datenmodell, Endpunkte, MCP-Werkzeuge, Fehlercodes
-- [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md): der Umzug von der alten Next.js-App und die Entscheidungen dazu
+- [docs/BACKEND.md](docs/BACKEND.md): Datenmodell, Endpunkte, MCP-Server, Konsole, Konfiguration
+- [docs/MCP.md](docs/MCP.md): KI-Agenten verbinden
+- [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): lokal entwickeln und testen
+- [docs/DEPLOY.md](docs/DEPLOY.md): Einrichtung auf all-inkl und Updates
+- [docs/DECISIONS.md](docs/DECISIONS.md): die Entscheidungen D1–D23
+- [TODO.md](TODO.md): was noch offen ist
 
 ---
 

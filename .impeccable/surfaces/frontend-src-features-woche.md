@@ -85,7 +85,7 @@ Status: confirmed 2026-11-07 (`/impeccable shape wochenplan`, one correction: th
 - **Planungstag:** a weekday, default Freitag. From this day until the end of the running week, home opens on the **next** week, with the running week one tap away (‹).
 - **Route:** `/woche/<start date>` (e.g. `/woche/2026-11-16`) instead of ISO week numbers, because the start is configurable. `/` resolves the default week from both settings.
 
-## 7. Backend consequences (→ BACKEND_REQUIREMENTS.md)
+## 7. Backend consequences (→ docs/BACKEND.md)
 - **`meal_plan_entries`:**
   - Holds **either** `recipe_id` **or** free text (`note`), CHECK exactly one.
   - **No `servings` column.** The grocery list scales by each recipe's base servings.
