@@ -293,7 +293,7 @@ Every call writes an `ai_usage` row (tokens, duration, success; also failed call
 |---|---|---|---|
 | POST | `/ops/migrate` | header `X-Ops-Token: <OPS_TOKEN>` | `bin/console migrate` |
 | POST | `/ops/check` | same | `bin/console check`: PHP, extensions, limits, `fastcgi_finish_request`, MySQL version, pending migrations, writable folders, mail, tokens, AI |
-| POST | `/ops/console` | same | `{command, args: string[]}` for `migrate`, `check`, `user:create`, `user:invite`, `user:list`, `user:disable`, `user:enable`, `purge`, `jobs:run`, `cron`, `media:move`. Not over HTTP: `user:delete`, `api-key:create`, `import:supabase`, `openapi:dump` |
+| POST | `/ops/console` | same | `{command, args: string[]}` for `migrate`, `check`, `user:create`, `user:invite`, `user:list`, `user:disable`, `user:enable`, `purge`, `jobs:run`, `cron`, `media:move`, temporarily `import:supabase` (cutover only). Not over HTTP: `user:delete`, `api-key:create`, `openapi:dump` |
 | GET | `/cron?token=<CRON_TOKEN>` | query token | `bin/console cron` (= `jobs:run` + `purge`) for the hosting's URL cron |
 
 Plain-text answers (`FEHLER: …` with 400/500 on failure). A token shorter than 32 characters switches its door off; a wrong one answers 404 like an unknown path and counts against the IP (10 per 10 minutes). Before the first migration the rate-limit table does not exist; the door then works without it. `deploy.sh` uses these ([DEPLOY.md](DEPLOY.md)).
@@ -420,10 +420,10 @@ On all-inkl the commands marked † also run over HTTPS: `./deploy.sh --console 
 
 ---
 
-## 8. Configuration (`.env`, see `.env.example`)
+## 8. Configuration (`.env` locally, see `.env.example`; `config.php` on the server, see `config.production.example.php`)
 `APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`, `RATE_LIMIT_KEY`, `RATE_LIMIT_IP`, `MEDIA_DIR` (default `storage/media`), `SUPABASE_DB_URL` (importer; falls back to `DIRECT_URL`).
 AI (§4.7): `AI_PROVIDER` (opencode | anthropic | openai, default opencode), `OPENCODE_API_KEY`, `OPENCODE_MODEL`, `OPENCODE_IMAGE_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_EFFORT`, `AI_TIMEOUT`, `AI_IMPORTS_PER_HOUR`, `AI_INPUT_DIR` (tests).
-Operator (§4.8): `OPS_TOKEN`, `CRON_TOKEN` (each ≥ 32 characters, empty = off). Deploy settings live in `.env.deploy`, not here ([DEPLOY.md](DEPLOY.md)).
+Operator (§4.8): `OPS_TOKEN`, `CRON_TOKEN` (each ≥ 32 characters, empty = off). Deploy settings live in `.env.deploy`, not here ([DEPLOY.md](DEPLOY.md)). When `config.php` exists (a PHP array, uploaded by `deploy.sh --push-config`), it replaces `.env`; real env vars fill in keys it leaves out.
 
 ---
 

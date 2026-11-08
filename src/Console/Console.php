@@ -28,10 +28,13 @@ final class Console
 {
     /**
      * Safe to run over HTTP with the ops token: nothing here reads another
-     * family's data or destroys any (user:delete, api-key:create and the
-     * importer stay CLI-only).
+     * family's data or destroys any (user:delete and api-key:create stay CLI-only).
+     *
+     * TEMPORARY: import:supabase is open over HTTP for the one-time migration on all-inkl
+     * (no pdo_pgsql locally needed, no dump/phpMyAdmin round trip). With --replace it
+     * overwrites families. Remove it from this list after the cutover.
      */
-    public const HTTP_COMMANDS = ['migrate', 'check', 'user:create', 'user:invite', 'user:list', 'user:disable', 'user:enable', 'purge', 'jobs:run', 'cron', 'media:move'];
+    public const HTTP_COMMANDS = ['migrate', 'check', 'user:create', 'user:invite', 'user:list', 'user:disable', 'user:enable', 'purge', 'jobs:run', 'cron', 'media:move', 'import:supabase'];
 
     public function __construct(private readonly ContainerInterface $c, private readonly Config $config)
     {

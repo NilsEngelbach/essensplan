@@ -6,7 +6,10 @@ namespace Essensplan;
 
 use Dotenv\Dotenv;
 
-/** Settings from the environment (.env locally, real env vars on the host and in tests). */
+/**
+ * Settings. On the server from config.php (a PHP array, uploaded by deploy.sh --push-config);
+ * locally from .env; real env vars fill in what the file leaves out (and drive the tests).
+ */
 final class Config
 {
     /** @param array<string, string> $values */
@@ -16,6 +19,9 @@ final class Config
 
     public static function load(string $root): self
     {
+        if (is_file($root . '/config.php')) {
+            return self::fromFile($root . '/config.php');
+        }
         if (is_file($root . '/.env')) {
             Dotenv::createImmutable($root)->safeLoad();
         }
@@ -24,6 +30,30 @@ final class Config
             if (is_string($k) && is_scalar($v)) {
                 $values[$k] = (string) $v;
             }
+        }
+        foreach (getenv() as $k => $v) {
+            $values[$k] ??= $v;
+        }
+        return new self($values);
+    }
+
+    /** config.php: `return ['APP_ENV' => 'production', …];` with strings, numbers, true/false or null. */
+    public static function fromFile(string $file): self
+    {
+        $data = (static fn (): mixed => require $file)();
+        if (!is_array($data)) {
+            throw new \RuntimeException("$file must return an array.");
+        }
+        $values = [];
+        foreach ($data as $k => $v) {
+            if (!is_string($k) || !(is_scalar($v) || $v === null)) {
+                throw new \RuntimeException("$file: every entry must be 'NAME' => string, number, bool or null.");
+            }
+            $values[$k] = match (true) {
+                $v === true => '1',
+                $v === false => '0',
+                default => (string) $v,
+            };
         }
         foreach (getenv() as $k => $v) {
             $values[$k] ??= $v;

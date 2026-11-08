@@ -28,6 +28,8 @@ final class ServerCheck
             $rows[] = [extension_loaded($ext), "ext-$ext", extension_loaded($ext) ? 'ok' : 'fehlt'];
         }
         $rows[] = [null, 'ext-exif', extension_loaded('exif') ? 'ok' : 'fehlt (Hochkant-Fotos werden nicht gedreht)'];
+        // TEMPORARY with import:supabase over /ops: the importer needs it.
+        $rows[] = [null, 'ext-pdo_pgsql', extension_loaded('pdo_pgsql') ? 'ok' : 'fehlt (import:supabase geht dann nur lokal)'];
 
         // AI imports run up to a few minutes; the request has to be allowed that long.
         $before = (int) ini_get('max_execution_time');

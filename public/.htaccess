@@ -1,5 +1,9 @@
 # Apache (all-inkl). Local runs nginx and ignores this file.
 
+# The app folder's .htaccess denies everything (in case the domain points there by mistake).
+# Apache applies parent .htaccess files here too, so public/ has to open up again.
+Require all granted
+
 Options -Indexes
 
 <IfModule mod_rewrite.c>

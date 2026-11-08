@@ -46,7 +46,7 @@ final class OpsTest extends TestCase
         $this->assertStringContainsString('Created neu@familie.de', $r['body']);
         $this->assertStringContainsString('neu@familie.de', $this->ops('console', ['command' => 'user:list'])['body']);
 
-        foreach (['user:delete', 'api-key:create', 'import:supabase', 'openapi:dump'] as $cmd) {
+        foreach (['user:delete', 'api-key:create', 'openapi:dump'] as $cmd) {
             $r = $this->ops('console', ['command' => $cmd, 'args' => ['--email=neu@familie.de', '--yes']]);
             $this->assertSame(400, $r['status'], $cmd);
         }

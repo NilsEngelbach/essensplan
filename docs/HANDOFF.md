@@ -29,7 +29,7 @@ Essensplan is a German family meal planner. It is being moved off Next.js/Supaba
 - `./deploy.sh`: FTPS upload, no SSH or Composer on the server; migrations and console commands via `/ops` with `OPS_TOKEN`, cron via `/cron?token=` (§4.8, [DEPLOY.md](DEPLOY.md)).
 - 67 tests green.
 
-Next: try the import with real links and photos per provider, then the first deploy to all-inkl (`./deploy.sh --push-env`, then `--check`).
+Next: try the import with real links and photos per provider, then the first deploy to all-inkl (`./deploy.sh --push-config`, then `--check`).
 
 ## 2. Your task
 
