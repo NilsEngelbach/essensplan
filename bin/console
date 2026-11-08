@@ -3,188 +3,28 @@
 
 declare(strict_types=1);
 
-// php bin/console <command> [--option=value …]
+// php bin/console <command> [--option=value …]   (the commands are in src/Console/Console.php)
 
 use Essensplan\App;
-use Essensplan\Clock;
 use Essensplan\Config;
-use Essensplan\Console\Migrator;
-use Essensplan\Db;
+use Essensplan\Console\Console;
 use Essensplan\Http\ApiError;
-use Essensplan\Http\OpenApi;
-use Essensplan\Http\Principal;
-use Essensplan\Import\SupabaseImporter;
-use Essensplan\Import\SupabaseSource;
-use Essensplan\Repository\UserRepository;
-use Essensplan\Service\ApiKeyService;
-use Essensplan\Service\FamilyAdmin;
-use Essensplan\Service\MediaStore;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 date_default_timezone_set('UTC');
 
-$command = $argv[1] ?? 'help';
-$opts = [];
-foreach (array_slice($argv, 2) as $arg) {
-    if (preg_match('/^--([a-z-]+)(?:=(.*))?$/', $arg, $m)) {
-        $opts[$m[1]] = $m[2] ?? true;
-    } else {
-        $opts['_'][] = $arg;
-    }
-}
-$out = fn (string $s) => fwrite(STDOUT, $s . PHP_EOL);
-$fail = function (string $s): never {
-    fwrite(STDERR, $s . PHP_EOL);
-    exit(1);
-};
-
 $config = Config::load(App::root());
-$container = App::container($config);
-$admin = fn (): FamilyAdmin => $container->get(FamilyAdmin::class);
+$console = new Console(App::container($config), $config);
 
 try {
-    switch ($command) {
-        case 'migrate':
-            $name = $config->get('DB_NAME', 'essensplan');
-            if (!preg_match('/^\w+$/', $name)) {
-                $fail("Invalid DB_NAME $name");
-            }
-            // Create the database on a fresh server (Local, CI).
-            Db::connect($config, '')->pdo()->exec("CREATE DATABASE IF NOT EXISTS `$name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            $applied = (new Migrator($container->get(Db::class), App::root() . '/migrations'))->migrate($out);
-            $out($applied ? 'Done.' : 'Nothing to migrate.');
-            break;
-
-        case 'user:create':
-            // A new family (D20). Without --password it gets an invite mail with a link to set one.
-            $user = $admin()->create(
-                (string) ($opts['email'] ?? $fail('--email= is required')),
-                (string) ($opts['name'] ?? 'Familie'),
-                is_string($opts['password'] ?? null) ? $opts['password'] : null,
-                !isset($opts['no-invite']),
-            );
-            $out("Created {$user['email']} ($user[id])" . (isset($opts['password']) ? '' : (isset($opts['no-invite']) ? ', no invite sent' : ', invite mail sent')));
-            break;
-
-        case 'user:invite':
-            $admin()->invite((string) ($opts['email'] ?? $fail('--email= is required')));
-            $out('Invite mail sent.');
-            break;
-
-        case 'user:list':
-            // sprintf pads bytes; names have umlauts.
-            $pad = fn (string $s, int $w) => $s . str_repeat(' ', max(0, $w - mb_strlen($s)));
-            $out(sprintf('%-30s %-16s %-10s %-10s %7s %7s %4s  %s', 'E-Mail', 'Name', 'Seit', 'Zuletzt', 'Geräte', 'Rezepte', 'Keys', 'Status'));
-            foreach ($admin()->list() as $u) {
-                $out(sprintf(
-                    '%-30s %s %-10s %-10s %7d %7d %4d  %s',
-                    $u['email'], $pad(mb_strimwidth($u['name'], 0, 16), 16), substr($u['created_at'], 0, 10), substr((string) $u['last_seen_at'], 0, 10) ?: '–',
-                    $u['devices'], $u['recipes'], $u['api_keys'],
-                    $u['disabled_at'] !== null ? 'gesperrt' : ($u['email_verified_at'] === null && $u['last_seen_at'] === null ? 'eingeladen' : 'aktiv'),
-                ));
-            }
-            break;
-
-        case 'user:disable':
-        case 'user:enable':
-            $email = (string) ($opts['email'] ?? $fail('--email= is required'));
-            $command === 'user:disable' ? $admin()->disable($email) : $admin()->enable($email);
-            $out($command === 'user:disable' ? "$email is locked." : "$email is active again.");
-            break;
-
-        case 'user:delete':
-            $email = (string) ($opts['email'] ?? $fail('--email= is required'));
-            if (($opts['yes'] ?? false) !== true) {
-                $fail("This deletes $email and all its recipes, plans, lists and keys. Add --yes to confirm.");
-            }
-            foreach ($admin()->delete($email) as $table => $count) {
-                $out(sprintf('%-22s %d', $table, $count));
-            }
-            break;
-
-        case 'api-key:create':
-            $user = $container->get(UserRepository::class)->findByEmail((string) ($opts['email'] ?? $fail('--email= is required')))
-                ?? $fail('No such user.');
-            $scopes = array_filter(explode(',', (string) ($opts['scopes'] ?? 'recipes:read,mealplan:read,shopping:read')));
-            $session = ['id' => 'console', 'user_id' => $user['id'], 'csrf_token' => ''];
-            $r = $container->get(ApiKeyService::class)->create(Principal::forSession($session), [
-                'name' => $opts['name'] ?? 'Konsole',
-                'scopes' => array_values($scopes),
-                'client' => $opts['client'] ?? 'rest',
-            ]);
-            $out($r['secret']);
-            break;
-
-        case 'purge':
-            $db = $container->get(Db::class);
-            $clock = $container->get(Clock::class);
-            $n = [
-                'entries' => $db->exec('DELETE FROM meal_plan_entries WHERE deleted_at < ?', [$clock->db('-7 days')]),
-                'manual items' => $db->exec('DELETE FROM shopping_manual_items WHERE deleted_at < ? OR bought_at < ?', [$clock->db('-7 days'), $clock->db('-180 days')]),
-            ];
-            // Recipes go after 30 days; their entries were detached on delete and only lose the link back.
-            $old = $db->column('SELECT id FROM recipes WHERE deleted_at < ?', [$clock->db('-30 days')]);
-            if ($old) {
-                $db->exec('UPDATE meal_plan_entries SET detached_recipe_id = NULL WHERE detached_recipe_id IN (' . Db::marks($old) . ')', $old);
-                $n['recipes'] = $db->exec('DELETE FROM recipes WHERE id IN (' . Db::marks($old) . ')', $old);
-            }
-            $n['sessions'] = $db->exec('DELETE FROM sessions WHERE expires_at <= ?', [$clock->db()]);
-            $n['device links'] = $db->exec('DELETE FROM device_links WHERE expires_at <= ?', [$clock->db('-1 day')]);
-            $n['reset tokens'] = $db->exec('DELETE FROM password_resets WHERE expires_at <= ?', [$clock->db('-1 day')]);
-            $n['rate limits'] = $db->exec('DELETE FROM rate_limits WHERE TIMESTAMPADD(SECOND, window_seconds, window_start) <= ?', [$clock->db()]);
-            $n['activity'] = $db->exec('DELETE FROM agent_activity WHERE created_at < ?', [$clock->db('-90 days')]);
-            // Photos no recipe uses any more (also those of the recipes purged above), after a day.
-            $n['photo files'] = $container->get(MediaStore::class)->collectGarbage();
-            foreach ($n as $what => $count) {
-                $out(sprintf('%-14s %d', $what, $count));
-            }
-            break;
-
-        case 'openapi:dump':
-            $file = $opts['_'][0] ?? 'php://stdout';
-            file_put_contents($file, json_encode(OpenApi::document($config), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
-            break;
-
-        case 'import:supabase':
-            // Phase 8. Reads the old app (read-only) and writes families into this database.
-            $url = $config->get('SUPABASE_DB_URL', $config->get('DIRECT_URL'));
-            if ($url === '') {
-                $fail('Set SUPABASE_DB_URL (or DIRECT_URL) to the Supabase Postgres URL.');
-            }
-            $container->get(SupabaseImporter::class)->run(SupabaseSource::connect($url), [
-                'email' => is_string($opts['email'] ?? null) ? $opts['email'] : null,
-                'replace' => isset($opts['replace']),
-                'images' => !isset($opts['no-images']),
-            ], $out);
-            break;
-
-        case 'jobs:run':
-            $out('No job runner yet (Phase 6: AI import).');
-            break;
-
-        default:
-            $out(<<<TXT
-            Essensplan console
-
-              migrate                                   apply migrations/*.sql (creates the database if needed)
-              user:create --email= [--name=] [--password=] [--no-invite]
-                                                        add a family; without --password an invite mail is sent
-              user:invite --email=                      send the invite mail again (link valid 7 days)
-              user:list                                 all families with devices, recipes, keys
-              user:disable --email= / user:enable --email=
-                                                        lock a family out (sessions, keys, links) or let it back in
-              user:delete --email= --yes                delete a family and everything it owns
-              api-key:create --email= [--scopes=a,b] [--name=] [--client=]
-              purge                                     remove old soft-deleted rows, sessions, tokens, activity, unused photos
-              import:supabase [--email=] [--replace] [--no-images]
-                                                        copy families from the old app (SUPABASE_DB_URL or DIRECT_URL)
-              openapi:dump [file]                       write the OpenAPI document
-              jobs:run                                  (Phase 6)
-            TXT);
-    }
+    $console->run($argv[1] ?? 'help', Console::parse(array_slice($argv, 2)), function (string $s): void {
+        fwrite(STDOUT, $s . PHP_EOL);
+    });
 } catch (ApiError $e) {
-    $fail($e->getMessage());
+    fwrite(STDERR, $e->getMessage() . PHP_EOL);
+    exit(1);
 } catch (Throwable $e) {
-    $fail($e::class . ': ' . $e->getMessage());
+    fwrite(STDERR, ($e instanceof Essensplan\Console\ConsoleError ? '' : $e::class . ': ') . $e->getMessage() . PHP_EOL);
+    exit(1);
 }

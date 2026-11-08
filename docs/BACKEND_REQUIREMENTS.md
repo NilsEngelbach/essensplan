@@ -18,7 +18,9 @@ Where the sources disagree, HANDOFF §4 wins (the briefs and D15–D19 are newer
 
 **Later the same day:** the Local site (nginx, junction, Mailpit, `Authorization` through nginx; MIGRATION_PLAN §3.1), photo storage (§4.3.1) and the Supabase importer (§7.1, run against the real old database into the Local DB). The suite is now 50 tests, 946 assertions, green on MySQL 8.4. MariaDB is no longer a target (D21).
 
-**Not verified yet:** anything on all-inkl (Apache `.htaccess`, timeouts, SMTP). See §11 for how to run it.
+**2026-11-08:** photos behind the session (§4.3.1), the AI import (§4.7, Phase 6), the operator door for hosts without SSH (§4.8) and `deploy.sh` (FTP over TLS, [DEPLOY.md](DEPLOY.md)). 67 tests, 1127 assertions, green on a private MySQL 8.4; PHPStan level 5 clean. `deploy.sh` ran end to end against a local FTPS server (pyftpdlib with TLS) and `php -S`: first deploy (5 007 files in batches, migrations over `/ops` with a DB user that may not create databases), a no-op run, `--check` and `--console`. The AI providers are tested with a fake; no real model was called.
+
+**Not verified yet:** anything on all-inkl (Apache `.htaccess`, FPM timeouts, FTP server, SMTP) and real calls to OpenCode, Anthropic and OpenAI. See §11 for how to run it.
 
 ---
 
@@ -26,7 +28,7 @@ Where the sources disagree, HANDOFF §4 wins (the briefs and D15–D19 are newer
 
 | Topic | Rule |
 |---|---|
-| Base path | REST under `/api/v1`, MCP at `/mcp`, everything else is the SPA (`public/app/index.html`) |
+| Base path | REST under `/api/v1`, MCP at `/mcp`, photos at `/media/…`, operator door at `/ops/…` and `/cron`, everything else is the SPA (`public/app/index.html`) |
 | JSON | camelCase keys, matching `frontend/src/lib/types.ts` |
 | Dates | `YYYY-MM-DD`, always the calendar day in **Europe/Berlin** |
 | Timestamps | ISO 8601 with offset (`2026-11-07T14:03:00+01:00`); stored as UTC `DATETIME` |
@@ -53,6 +55,10 @@ Where the sources disagree, HANDOFF §4 wins (the briefs and D15–D19 are newer
 | 422 | `validation_failed` | „Bitte prüf deine Eingaben.“ + `details: [{path, message}]` |
 | 429 | `rate_limited` | „Zu viele Versuche. Probier es in 5 Minuten wieder.“ |
 | 500 | `server_error` | „Da ist etwas schiefgelaufen. Versuch es gleich noch einmal.“ |
+| 503 | `maintenance` | „Essensplan wird gerade aktualisiert. Versuch es in einer Minute noch einmal.“ (during a deploy, §4.8) |
+| 503 | `ai_unavailable` | „Der KI-Import ist auf diesem Server nicht eingerichtet. Du kannst das Rezept selbst eingeben.“ |
+
+AI import errors arrive on the job (`error: {code, message}`, §4.7): `no_recipe`, `fetch_failed`, `url_blocked`, `ai_failed`, `ai_busy`, `ai_refused`, `import_timeout`, `import_failed`.
 
 Auth codes from `lib/auth.ts`, with its exact strings: `invalid_credentials`, `rate_limited`, `invalid_code`, `code_spent`, `link_expired`, `reset_invalid`, `weak_password`, `wrong_password`, `invalid_email`, plus `account_disabled` („Dieses Konto ist gesperrt.“, only after the right password). The `code_spent` text changed with D20 (§2.5).
 
@@ -112,6 +118,9 @@ Slim's routing middleware only resolves the route (so the later steps can read i
 | Login per IP / per e-mail + IP failures | 30 / 15 min · 5 failures → 5 min lock |
 | Pairing per IP | 20 / 10 min · 5 wrong codes → 10 min wait · 30 wrong codes install-wide → all open codes spent |
 | Forgot password per IP | 5 / hour |
+| AI imports per family | `AI_IMPORTS_PER_HOUR` (30) / hour |
+| Wrong ops/cron tokens per IP | 10 / 10 min, then even the right token waits |
+| Photos (`/media/…`) | exempt (a list loads dozens at once; each needs a session or key) |
 
 ### 2.8 Several families (D20)
 - **One account is one family** (D11: the family shares the login and pairs its devices). `users.id` is the tenant key: every table hangs off it, every repository method takes it, and the isolation tests (`IsolationTest`, `FamiliesTest`) cover session, key and MCP.
@@ -146,7 +155,8 @@ All tables: InnoDB, `utf8mb4` / `utf8mb4_unicode_ci` (accent- and case-insensiti
 | `shopping_home_counts` | user_id, name_key, count | "meist da" from 2 |
 | `api_keys` | id, user_id, name, prefix, key_hash UNIQUE, scopes JSON, client, last_used_at, last_used_ip, expires_at, revoked_at, created_at | |
 | `agent_activity` | id, user_id, api_key_id, key_name, channel ENUM(rest, mcp), action, target_type, target_id, target_label, target_href, summary, undo_payload JSON, created_at, undone_at, seen_at | 90-day retention |
-| `ai_usage`, `ai_jobs` | as in MIGRATION_PLAN §4.1 | tables only; filled in Phase 6 |
+| `ai_usage` | id, user_id, api_key_id, feature (`import-url` · `import-photo`), provider, model, input_tokens, output_tokens, duration_ms, success, created_at | one row per model call, also failed ones; kept for a cost overview |
+| `ai_jobs` | id, user_id, type (`recipe-import`), status ENUM(queued, running, done, failed), progress (step 0–3), input JSON, result JSON (`{draft}`), error (`{code, message}`), created_at, finished_at | §4.7; purged after a day |
 | `schema_migrations` | version, applied_at | written by `bin/console migrate` |
 
 **Recipe delete:** soft delete. Its live plan entries get `note = title`, `recipe_id = NULL`, `detached_recipe_id = id`, so the week keeps the day. Restoring the recipe re-links the entries whose note is still the title.
@@ -163,7 +173,7 @@ Auth column: `public`, `session` (session only, never a key), or a scope (sessio
 | Method | Route | Auth | Notes |
 |---|---|---|---|
 | GET | `/health` | public | `{status, db, time}` |
-| GET | `/config` | public | `{minPassword, slots, categories, tags, difficulties, scopes, sections, presets}` |
+| GET | `/config` | public | `{minPassword, slots, categories, tags, difficulties, scopes, sections, presets, ai: {import}}` |
 | GET | `/openapi.json` | public | generated from the route table and the JSON Schemas used for validation |
 
 ### 4.2 Auth and account (all `session`; logged-out ones marked)
@@ -206,7 +216,9 @@ Validation (`src/Schema/recipe.schema.json`): title 1–200, category ∈ CATEGO
 |---|---|---|---|
 | POST | `/images` | recipes:write | multipart field `file` (the SPA) or the image as the body (`Content-Type: image/*`) → 201 `{url, thumbUrl, width, height}`; put `url` into `imageUrl` |
 
-`src/Service/MediaStore.php`: JPEG, PNG, WebP or GIF up to 15 MB and 30 MP. Every image is decoded and re-encoded with GD (EXIF orientation applied, metadata gone) into `public/media/{userId}/{random}.jpg` (1000 px, quality 82) and `…-thumb.jpg` (400 px); transparency becomes white. The web server serves `/media/` as plain files; names are 96 random bits, so a path is only known to whoever saved it (no per-request auth on photos). Errors: 413 `too_large`, 415 `unsupported_image` / `unsupported_media_type`. `purge` deletes photos no recipe or step refers to (after a day, so an upload whose recipe isn't saved yet survives); `user:delete` removes the family's folder. The SPA downscales a picked photo to 1600 px for the preview and uploads it on save, so a cancelled edit uploads nothing. `MEDIA_DIR` overrides the folder (tests).
+| GET | `/media/{userId}/{name}.jpg` | session, or a key with recipes:read | the photo (also `…-thumb.jpg`); another family's photo answers 404 like a missing one, logged out 401 |
+
+`src/Service/MediaStore.php`: JPEG, PNG, WebP or GIF up to 15 MB and 30 MP. Every image is decoded and re-encoded with GD (EXIF orientation applied, metadata gone) into `storage/media/{userId}/{random}.jpg` (1000 px, quality 82) and `…-thumb.jpg` (400 px); transparency becomes white. **Photos are protected (2026-11-08):** `storage/` is outside the docroot, and `MediaController` serves a photo only to a session of its family (the cookie rides along with `<img>`, SameSite=Lax) or an API key with `recipes:read`. Answers carry `Cache-Control: private, max-age=31536000, immutable` and an ETag (304 on `If-None-Match`): names never change, so a browser asks once. URLs stay `/media/…`, so stored `imageUrl`s did not change; `bin/console media:move` moved the files out of the old `public/media`. Errors: 413 `too_large`, 415 `unsupported_image` / `unsupported_media_type`. `purge` deletes photos no recipe or step refers to (after a day, so an upload whose recipe isn't saved yet survives); `user:delete` removes the family's folder. The SPA downscales a picked photo to 1600 px for the preview and uploads it on save, so a cancelled edit uploads nothing. `MEDIA_DIR` overrides the folder (tests).
 
 ### 4.4 Meal plan
 | Method | Route | Auth | Notes |
@@ -247,6 +259,46 @@ Validation (`src/Schema/recipe.schema.json`): title 1–200, category ∈ CATEGO
 | GET | `/agent-activity/unseen-count` | `{count, recipeIds}` (`recipeIds` = the "vom Agenten geändert" marks) |
 | POST | `/agent-activity/seen` | `{ids?}` or `{recipeId}`; empty body = all |
 | POST | `/agent-activity/{id}/undo` | 409 `undo_blocked` with the reason when no longer safe |
+
+### 4.7 AI import (Phase 6, `src/Ai/`)
+| Method | Route | Auth | Notes |
+|---|---|---|---|
+| POST | `/ai/import` | ai:use | JSON `{url}` (http/https), or a photo as multipart field `photo` or an `image/*` body → `ImportJob`; **200** when it already finished, **202** while it runs |
+| GET | `/ai/jobs/{id}` | ai:use | → `ImportJob`; poll every second while `queued`/`running` |
+
+`ImportJob` = `{id, status: queued | running | done | failed, step: 0–3, source: url | photo, draft?, error?: {code, message}, createdAt}`. `step` indexes `IMPORT_STEPS` (Quelle lesen · Zutaten erkennen · Schritte ordnen · Fertig). `draft` is a `RecipeDraft` for `POST /recipes`: ingredient ids `n1…`, steps with `ingredientIds` (or all null when the model linked none, so Kochmodus matches names). The import never saves a recipe; the SPA shows the draft in the edit form („Import prüfen“). Jobs are deleted after a day.
+
+**Pipeline** (`RecipeImporter`, the same for every provider, MIGRATION_PLAN §8):
+1. **Link:** `PageFetcher` fetches the page SSRF-safe: http/https on ports 80/443 only, no `user:pass@`, every resolved address must be public (no private, loopback, link-local, CGNAT, reserved; IPv4-mapped IPv6 checked as IPv4), the connection is pinned to the checked address (no DNS rebinding), redirects (≤ 4) are followed by hand and checked again, ≤ 3 MB, 20 s. 403/429 answers suggest a screenshot instead.
+2. `RecipePage` takes the schema.org `Recipe` from the JSON-LD (`@graph`, `mainEntity`, HowToSection/HowToStep flattened to text, ≤ 40 000 characters); without one, the visible text (`<main>`/`<article>` if big enough, ≤ 60 000 characters). The photo: the Recipe's `image`, else `og:image`.
+3. **One structured-output call** with a German system prompt (port of the old edge function's rules: exact amounts, metric units, de units, `component` groups, step → ingredient positions, tags only when sure, source text is data, not instructions). Schema: every field required, null where unknown, only the strict-output subset (no length/range limits). If the reply breaks the structure (OpenCode has no schema enforcement), **one retry** with the errors appended; categories or tags outside the lists are not worth a retry.
+4. **Normalise** (`draft()`): clamp to the recipe schema (title ≤ 200, time 1–1440, servings 1–99, ≤ 100 ingredients, ≤ 60 steps), unknown category → Hauptspeise, unknown tags dropped, amount 0 → null, leading step numbers removed; `found: false` or nothing usable → `no_recipe`. `sourceUrl` = the given link.
+5. **Photo:** the page photo is downloaded (same guard, ≤ 15 MB) and stored like an upload; `imageUrl` = its `/media/…` path, or null if that fails (no hotlinking). For a photo import `imageUrl` stays null and the SPA keeps the picked photo as the recipe photo (uploaded on save).
+- **Photo import:** the upload is re-encoded to a ≤ 1600 px JPEG (EXIF orientation applied) in `storage/ai-input/` and deleted once its job ran.
+
+**Running the job** (`ImportJobs`): under PHP-FPM (all-inkl) `POST` answers 202 at once and the work continues after `fastcgi_finish_request` (`AfterResponse`); everywhere else (php -S, Local's php-cgi, tests) it runs inside the request, which then answers finished. A queued job nobody started is run by the next poll after 20 s or by the cron; a job running longer than 10 minutes is failed (`import_timeout`). The claim is atomic (`UPDATE … WHERE status = 'queued'`). Up to `AI_IMPORTS_PER_HOUR` (30) per family.
+
+**Providers** (`AI_PROVIDER`, default `opencode` like the old app; `Ai::fromConfig`):
+
+| Provider | Call | Default model | Notes |
+|---|---|---|---|
+| `opencode` | chat completions at `opencode.ai/zen/go/v1`, `response_format: json_object`, schema in the system prompt | `OPENCODE_MODEL` glm-5.2, photos `OPENCODE_IMAGE_MODEL` kimi-k3 | fences, text around the object and a `{"recipe": …}` wrapper are tolerated; `reasoning_content` used when `content` is empty |
+| `anthropic` | official SDK (`anthropic-ai/sdk`), `output_config.format` json_schema | `ANTHROPIC_MODEL` claude-opus-5-5, `ANTHROPIC_EFFORT` low | thinking at the model's default (adaptive); **server-side fallbacks on** (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`): a policy decline is retried on the default fallback model in the same call; a remaining `refusal` → `ai_refused` |
+| `openai` | Responses API, strict json_schema | `OPENAI_MODEL` gpt-5-mini, `OPENAI_EFFORT` low | |
+
+Every call writes an `ai_usage` row (tokens, duration, success; also failed calls). Without the provider's key the import answers 503 `ai_unavailable` and `/config` says `ai.import: false`. `AI_TIMEOUT` (150 s) per call. Image enhancement (`/ai/enhance-image`) is not built: no surface asks for it.
+
+### 4.8 Operator door (no SSH on all-inkl)
+| Method | Route | Auth | Does |
+|---|---|---|---|
+| POST | `/ops/migrate` | header `X-Ops-Token: <OPS_TOKEN>` | `bin/console migrate` |
+| POST | `/ops/check` | same | `bin/console check`: PHP, extensions, limits, `fastcgi_finish_request`, MySQL version, pending migrations, writable folders, mail, tokens, AI |
+| POST | `/ops/console` | same | `{command, args: string[]}` for `migrate`, `check`, `user:create`, `user:invite`, `user:list`, `user:disable`, `user:enable`, `purge`, `jobs:run`, `cron`, `media:move`. Not over HTTP: `user:delete`, `api-key:create`, `import:supabase`, `openapi:dump` |
+| GET | `/cron?token=<CRON_TOKEN>` | query token | `bin/console cron` (= `jobs:run` + `purge`) for the hosting's URL cron |
+
+Plain-text answers (`FEHLER: …` with 400/500 on failure). A token shorter than 32 characters switches its door off; a wrong one answers 404 like an unknown path and counts against the IP (10 per 10 minutes). Before the first migration the rate-limit table does not exist; the door then works without it. `deploy.sh` uses these ([DEPLOY.md](DEPLOY.md)).
+
+**Maintenance mode:** while `../.maintenance` exists (deploy.sh puts it there during code uploads), `public/index.php` answers everything except `/ops/` with 503 `maintenance` (JSON for `/api`, `/mcp`, `/media`, a small page otherwise) before loading any code, so a half-uploaded `vendor/` never runs.
 
 ---
 
@@ -330,25 +382,31 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 | `suggest_meals` | recipes:read | readOnly · same shelves as `/suggestions` |
 | `get_grocery_list` | shopping:read | readOnly |
 | `add_grocery_item` | shopping:write | – |
+| `import_recipe_from_url` | ai:use (+ recipes:write to save) | openWorld · `{url, save?}`: the app's own import (§4.7), synchronous; saves the recipe unless `save: false`, which returns the draft only |
 
 **Prompts:** `plan_week` (reads `week_start` / `planning_weekday` and targets `defaultWeekStart` unless a week is given; optional wishes) and `shopping_for_week`.
 
 ---
 
-## 7. Console (`bin/console`)
+## 7. Console (`bin/console`, commands in `src/Console/Console.php`)
+On all-inkl the commands marked † also run over HTTPS: `./deploy.sh --console user:list` (§4.8).
+
 | Command | Does |
 |---|---|
-| `migrate` | applies `migrations/*.sql` in order, recorded in `schema_migrations` |
-| `user:create --email= [--name=] [--password=] [--no-invite]` | adds a family; without `--password` it gets the invite mail |
-| `user:invite --email=` | sends the invite mail again (replaces the old link) |
-| `user:list` | every family with last use, devices, recipes, keys and status (eingeladen · aktiv · gesperrt) |
-| `user:disable --email=` · `user:enable --email=` | locks a family out at once, or lets it back in with its devices and keys |
+| `migrate` † | applies `migrations/*.sql` in order, recorded in `schema_migrations`; creates the database only when it does not exist (hosted databases may not be created) |
+| `check` † | what the server offers (§4.8) |
+| `user:create --email= [--name=] [--password=] [--no-invite]` † | adds a family; without `--password` it gets the invite mail |
+| `user:invite --email=` † | sends the invite mail again (replaces the old link) |
+| `user:list` † | every family with last use, devices, recipes, keys and status (eingeladen · aktiv · gesperrt) |
+| `user:disable --email=` · `user:enable --email=` † | locks a family out at once, or lets it back in with its devices and keys |
 | `user:delete --email= --yes` | deletes a family and everything it owns |
 | `api-key:create --email= --scopes=a,b [--name=]` | prints a new key (for smoke tests) |
-| `purge` | removes soft-deleted entries/items (> 7 days) and recipes (> 30 days), expired sessions, links and reset tokens, activity > 90 days, unused photos (> 1 day) |
+| `purge` † | removes soft-deleted entries/items (> 7 days) and recipes (> 30 days), expired sessions, links and reset tokens, activity > 90 days, import jobs > 1 day, unused photos (> 1 day) |
+| `jobs:run [--limit=5]` † | runs import jobs nobody picked up, fails those stuck > 10 min |
+| `cron` † | `jobs:run` + `purge` (what `/cron?token=` runs) |
+| `media:move` † | moves photos from the old `public/media` into `MEDIA_DIR` (once, 2026-11-08) |
 | `import:supabase [--email=] [--replace] [--no-images]` | copies families from the old app (§7.1) |
 | `openapi:dump [file]` | writes the OpenAPI document |
-| `jobs:run` | stub for Phase 6 |
 
 ### 7.1 Supabase import (Phase 8, `src/Import/`)
 `SupabaseSource` reads the old Postgres over `SUPABASE_DB_URL` (falls back to `DIRECT_URL`) in a read-only transaction; it needs `pdo_pgsql` (on Local: `extension=php_pdo_pgsql.dll`, the DLL and `libpq.dll` ship with Local's PHP). `SupabaseImporter` writes each family in one transaction:
@@ -363,20 +421,24 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 ---
 
 ## 8. Configuration (`.env`, see `.env.example`)
-`APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`, `MEDIA_DIR` (default `public/media`), `SUPABASE_DB_URL` (importer; falls back to `DIRECT_URL`); AI variables as in MIGRATION_PLAN §8 (unused in this draft).
+`APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`, `RATE_LIMIT_KEY`, `RATE_LIMIT_IP`, `MEDIA_DIR` (default `storage/media`), `SUPABASE_DB_URL` (importer; falls back to `DIRECT_URL`).
+AI (§4.7): `AI_PROVIDER` (opencode | anthropic | openai, default opencode), `OPENCODE_API_KEY`, `OPENCODE_MODEL`, `OPENCODE_IMAGE_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_EFFORT`, `AI_TIMEOUT`, `AI_IMPORTS_PER_HOUR`, `AI_INPUT_DIR` (tests).
+Operator (§4.8): `OPS_TOKEN`, `CRON_TOKEN` (each ≥ 32 characters, empty = off). Deploy settings live in `.env.deploy`, not here ([DEPLOY.md](DEPLOY.md)).
 
 ---
 
 ## 9. Deviations from MIGRATION_PLAN §4–§7
-1. **MCP is hand-rolled** (`src/Mcp/Server.php`), not `mcp/sdk`. `mcp/sdk` 0.9 installs on PHP 8.2 and supports both protocol eras, but its handshake-era transport keeps sessions (a session store), and it is pre-1.0. The dispatcher is small and fully stateless. Worth revisiting at `mcp/sdk` 1.0.
+1. **MCP is hand-rolled** (`src/Mcp/Server.php`), not `mcp/sdk`. `mcp/sdk` 0.9 installs on PHP 8.2 and supports both protocol eras, but its handshake-era transport keeps sessions (a session store), and it is pre-1.0. The dispatcher is small and fully stateless. Worth revisiting at `mcp/sdk` 1.0. **2026-11-08:** `mcp/sdk` and the likewise unused `intervention/image` (photos use GD directly) were removed from `composer.json`; they only made the FTP upload bigger.
 2. **List endpoints return summaries:** `/recipes` and suggestion shelves return `RecipeSummary` (no ingredients/steps); the prototype passes full recipes around in memory.
 3. **`/meal-plan` is flat** (`entries[]` with an embedded recipe summary), like `listPlanEntries()`; the MCP tool groups by day and slot.
 4. **`/grocery-list` is replaced by `/shopping/*`**; `get_grocery_list` needs `shopping:read`, not `mealplan:read`.
-5. **`import_recipe_from_url` and `/ai/*`** are not in this draft (Phase 6). `/images` exists since 2026-11-07 (§4.3.1).
+5. **AI (2026-11-08, §4.7):** `/ai/import` takes a link or a photo (one endpoint instead of separate ones) and always returns a job; `import_recipe_from_url` runs synchronously and has no `get_import_status` companion. `/ai/enhance-image` is not built. `/images` exists since 2026-11-07 (§4.3.1).
 6. **Settings live on `/me`** (`settings: {weekStart, planningWeekday}`), not a separate endpoint.
 7. **Extra undo kinds** `plan.restore` and `recipe.remove` (agent removed an entry / created a recipe).
 8. **FK `meal_plan_entries.recipe_id` is RESTRICT,** not SET NULL: MySQL forbids a CHECK on a column used in an FK action. The app detaches entries before a recipe is purged.
 9. **`get_profile` tool added,** so `plan_week` can read the settings.
+10. **Photos are no longer plain files** (2026-11-08): `storage/media` + `MediaController` instead of `public/media` (§4.3.1). The plan's "public/media/{userId}" layout is gone.
+11. **Deploy over FTP** (2026-11-08) instead of GitHub Actions + rsync/SSH (MIGRATION_PLAN §10.5): `deploy.sh` builds locally and migrates through `/ops` ([DEPLOY.md](DEPLOY.md)).
 
 ## 10. Assumptions / open (for the owner)
 1. **Undo windows** (§5.6): 7 days for entries and own items, 30 days for recipes, 10 minutes for un-revoking a key. Confirm.
@@ -385,13 +447,16 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 4. **Pairing misses** are per IP (5) and install-wide (30), see §2.5. Families behind one shared IP (a carrier NAT) can block each other's pairing for 10 minutes; the password login still works.
 5. **Login lockout is per e-mail + IP.** A per-account lock would let anyone lock the family out.
 6. ~~SPA build path~~ — resolved 2026-11-07: Vite builds with `base: '/app/'`, so the web server serves the assets directly; `index.php` only answers SPA routes with `app/index.html`.
-7. **Images: done 2026-11-07** (§4.3.1). Open: photos are public to anyone who knows the path (fine for a family app?); linked photos (http(s) URLs) are hotlinked, not copied; step photos have no upload in the SPA yet; AI image enhancement is Phase 6.
-8. **Section classification** uses the word list only; the AI fallback for unknown names comes with Phase 6.
+7. **Images: done 2026-11-07, protected since 2026-11-08** (§4.3.1). Open: photos linked as http(s) URLs (old recipes, agents) are still hotlinked, not copied (the AI import copies its photos); step photos have no upload in the SPA yet; AI image enhancement is not built (no surface asks for it). The seeded demo family's pictures under `public/media/<id>/demo/` keep working as plain files locally; they are not part of a deploy.
+8. **Section classification** uses the word list only; an AI fallback for unknown names is not built (it would cost a call per unknown ingredient).
 9. **`recentManualNames`** comes from bought own items; the prototype used a fixed list.
 10. **iPad vs Mac:** iPadOS sends a Mac User-Agent and the server can't see touch support, so an iPad is labelled "Mac · Safari". The prototype's client-side check could tell them apart; the SPA could send a hint at login if this matters.
-11. **SPA wiring: done 2026-11-07** (`frontend/src/lib/http.ts`, `api.ts`, `auth.ts`). The invite greeting is in; `account_disabled` and the new `code_spent` text come straight from the server. Still client-side: the AI import demo (Phase 6) and the cooking-step ingredient matching when `ingredientIds` is null.
-12. **`mcp/sdk`** stays in `composer.json` (it installs on 8.2) but is unused; drop it or switch to it at 1.0.
-13. **Rate-limit defaults** (120 per key, 300 per IP per minute) are guesses; tune once real agents run.
+11. **SPA wiring: done 2026-11-07** (`frontend/src/lib/http.ts`, `api.ts`, `auth.ts`); the capture flow uses the real `/ai/import` since 2026-11-08 (`lib/demo-data.ts` is gone). Still client-side: the cooking-step ingredient matching when `ingredientIds` is null.
+12. ~~`mcp/sdk`~~: removed 2026-11-08 (§9.1).
+13. **Rate-limit defaults** (120 per key, 300 per IP per minute, 30 AI imports per family and hour) are guesses; tune once real agents run.
+14. **Default AI provider** (MIGRATION_PLAN §14.1): the code defaults to `opencode` (the old app's setting, its key is in the local `.env`). Anthropic and OpenAI are one variable away. None of the three has been called for real yet: try a few links and photos with each before cutover and compare.
+15. **all-inkl and long requests:** whether PHP-FPM there allows `fastcgi_finish_request` and `set_time_limit(300)` is unknown until `./deploy.sh --check` runs on the real host. Without them an import runs inside the request and must finish within the host's limit (often 60–120 s on shared hosting); the poll and cron fallbacks then catch jobs that were cut off.
+16. **Recipes saved from an import** get `created_via = app`, not `import` (the draft does not say where it came from). Add an `importJobId` to `POST /recipes` if the difference matters.
 
 ---
 
@@ -408,3 +473,5 @@ claude mcp add --transport http essensplan-local http://localhost:8080/mcp --hea
 ```
 
 Tests need a MySQL 8 server; they recreate their own database (`TEST_DB_NAME`, default `essensplan_test`) on every run. Connection defaults in `phpunit.xml` are the Local site's (`127.0.0.1:10029`, root/root); env vars override them: `DB_PORT=3306 DB_PASS= vendor/bin/phpunit`. `vendor/bin/phpstan analyse` runs the static check.
+
+**On all-inkl** there is no shell: `./deploy.sh` builds and uploads over FTP, migrates through `/ops/migrate`, and `./deploy.sh --console …` runs the † commands of §7. Setup and day-to-day use: [DEPLOY.md](DEPLOY.md).

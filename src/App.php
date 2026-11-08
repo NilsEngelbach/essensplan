@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Essensplan;
 
 use DI\ContainerBuilder;
+use Essensplan\Ai\Ai;
 use Essensplan\Http\Controller\McpController;
+use Essensplan\Http\Controller\MediaController;
+use Essensplan\Http\Controller\OpsController;
 use Essensplan\Http\Controller\SpaController;
 use Essensplan\Http\Middleware\Authenticate;
 use Essensplan\Http\Middleware\Csrf;
@@ -43,7 +46,8 @@ final class App
             Mailer::class => fn () => new Mailer($config, self::root() . '/storage/mail.log'),
             ResponseFactoryInterface::class => fn () => new ResponseFactory(),
             SpaController::class => fn () => new SpaController(self::root() . '/public/app'),
-            MediaStore::class => fn (Db $db) => new MediaStore($config->get('MEDIA_DIR', self::root() . '/public/media'), $db),
+            Ai::class => fn (Db $db, Clock $clock) => Ai::fromConfig($config, $db, $clock),
+            MediaStore::class => fn (Db $db) => new MediaStore($config->get('MEDIA_DIR', self::root() . '/storage/media'), $db),
             ...$overrides,
         ]);
         return $builder->build();
@@ -62,8 +66,13 @@ final class App
         });
         $app->post('/mcp', [McpController::class, 'post'])->setName('mcp post');
         $app->map(['GET', 'DELETE', 'PUT', 'PATCH'], '/mcp', [McpController::class, 'other'])->setName('spa mcp-other');
-        // Everything outside the API is the SPA; unknown /api/… paths stay JSON 404s.
-        $app->get('/{path:(?!api/).*}', SpaController::class)->setName('spa');
+        // Operator door for hosts without SSH (deploy.sh) and the hosting cron; token-guarded in the controller.
+        $app->post('/ops/{action}', [OpsController::class, 'ops'])->setName('ops action');
+        $app->get('/cron', [OpsController::class, 'cron'])->setName('ops cron');
+        // Recipe photos, for their own family only (they live outside the docroot).
+        $app->get('/media/{user}/{file}', [MediaController::class, 'get'])->setName('media get');
+        // Everything else outside the API is the SPA; unknown /api/… and /media/… paths stay JSON 404s.
+        $app->get('/{path:(?!api/|media/|ops/).*}', SpaController::class)->setName('spa');
 
         // Slim runs the last added first: JsonErrors → routing → RateLimit → Authenticate → RequireScope → Csrf.
         $app->add(Csrf::class);

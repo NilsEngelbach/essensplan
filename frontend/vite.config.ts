@@ -15,7 +15,7 @@ export default defineConfig(({ command }) => ({
     proxy: {
       '/api': { target: 'http://essen.local', changeOrigin: true },
       '/mcp': { target: 'http://essen.local', changeOrigin: true },
-      // Uploaded and seeded recipe photos live in the PHP app's public/media.
+      // Recipe photos are served by the PHP app (storage/media, for the logged-in family only).
       '/media': { target: 'http://essen.local', changeOrigin: true },
     },
   },

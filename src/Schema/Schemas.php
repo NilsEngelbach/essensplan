@@ -70,6 +70,7 @@ final class Schemas
             'trip-days' => $obj(['days' => ['type' => 'array', 'maxItems' => 31, 'items' => $date]], ['days']),
             'item-patch' => $obj(['checked' => ['type' => 'boolean'], 'atHome' => ['type' => 'boolean'], 'section' => ['enum' => Shopping::SECTIONS]], [], ['minProperties' => 1]),
             'keys' => $obj(['keys' => $ids], ['keys']),
+            'ai-import' => $obj(['url' => ['type' => 'string', 'maxLength' => 2000, 'pattern' => '^https?://\S+$']], ['url']),
             'manual-item' => $obj(['name' => $str(60, 1)], ['name']),
             'section-order' => $obj(['sections' => ['type' => 'array', 'items' => ['enum' => Shopping::SECTIONS]]], ['sections']),
             'api-key' => $obj([

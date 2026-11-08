@@ -61,7 +61,8 @@ abstract class TestCase extends Base
         $this->boot();
     }
 
-    protected function boot(array $config = []): void
+    /** @param array<string, mixed> $overrides container entries (fakes) */
+    protected function boot(array $config = [], array $overrides = []): void
     {
         $cfg = self::config($config);
         $this->clock = new Clock();
@@ -71,6 +72,7 @@ abstract class TestCase extends Base
             Db::class => $db,
             Clock::class => $this->clock,
             Mailer::class => new Mailer($cfg, '/dev/null'),
+            ...$overrides,
         ]);
         $this->db = $db;
         $this->app = App::create($this->c);

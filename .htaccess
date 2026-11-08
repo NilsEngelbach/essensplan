@@ -1,0 +1,3 @@
+# all-inkl: the domain points at public/ (KAS → Domain → Ziel …/public). If it points at this
+# folder by mistake, nothing is served: not the code, not .env, not storage/ with the photos.
+Require all denied

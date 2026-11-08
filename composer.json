@@ -16,9 +16,7 @@
         "phpmailer/phpmailer": "^6.9",
         "opis/json-schema": "^2.4",
         "guzzlehttp/guzzle": "^7.9",
-        "anthropic-ai/sdk": "^1.6",
-        "mcp/sdk": "^0.9",
-        "intervention/image": "^3.11"
+        "anthropic-ai/sdk": "^1.6"
     },
     "require-dev": {
         "phpstan/phpstan": "^2.1",

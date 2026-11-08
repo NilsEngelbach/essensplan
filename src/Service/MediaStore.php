@@ -8,7 +8,8 @@ use Essensplan\Db;
 use Essensplan\Http\ApiError;
 
 /**
- * Recipe photos on disk under public/media/{userId}/. Every image is decoded
+ * Recipe photos on disk under storage/media/{userId}/ (outside the docroot;
+ * MediaController serves them to their family only). Every image is decoded
  * and re-encoded (strips EXIF and anything that isn't pixels) into two JPEGs:
  * the photo (1000 px) and a thumbnail (400 px) for lists and tiles.
  * Names are random, so a path is only known to whoever saved it.
@@ -67,6 +68,16 @@ final class MediaStore
             }
         }
         return ['url' => "/media/$userId/$name.jpg", 'thumbUrl' => "/media/$userId/$name-thumb.jpg", 'width' => $w, 'height' => $h];
+    }
+
+    /** The stored file behind /media/{userId}/{file}, or null for anything else (traversal, other names). */
+    public function file(string $userId, string $file): ?string
+    {
+        if (!preg_match("/^[0-9a-f-]{36}$/", $userId) || !preg_match("/^[0-9a-f]{24}(-thumb)?\.jpg$/", $file)) {
+            return null;
+        }
+        $path = $this->dir . "/$userId/$file";
+        return is_file($path) ? $path : null;
     }
 
     /** The list-size variant of a stored photo; other URLs (links, old demo files) are their own thumbnail. */
@@ -131,7 +142,7 @@ final class MediaStore
     }
 
     /** Phones store portrait photos sideways plus an EXIF hint; re-encoding drops the hint, so apply it. */
-    private static function orient(\GdImage $img, string $bytes): \GdImage
+    public static function orient(\GdImage $img, string $bytes): \GdImage
     {
         if (!function_exists('exif_read_data')) {
             return $img;

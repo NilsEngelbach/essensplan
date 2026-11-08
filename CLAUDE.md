@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Migration in progress.** The app is moving to PHP (Slim 4) + MySQL with a new React SPA in `frontend/`. Plan: [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md). If you are continuing the backend work, start with [docs/HANDOFF.md](docs/HANDOFF.md). The rest of this file describes the old Next.js/Supabase app, which stays until cutover.
+> **Migration in progress.** The app is moving to PHP (Slim 4) + MySQL with a new React SPA in `frontend/`. Plan: [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md). If you are continuing the backend work, start with [docs/HANDOFF.md](docs/HANDOFF.md). Deploying to all-inkl (FTP, no SSH): [docs/DEPLOY.md](docs/DEPLOY.md). The rest of this file describes the old Next.js/Supabase app, which stays until cutover.
 
 ## Project Overview
 

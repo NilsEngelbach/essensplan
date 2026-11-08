@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Essensplan\Http\Controller;
 
+use Essensplan\Ai\Ai;
 use Essensplan\Clock;
 use Essensplan\Config;
 use Essensplan\Db;
@@ -17,7 +18,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class SystemController
 {
-    public function __construct(private readonly Db $db, private readonly Clock $clock, private readonly Config $config)
+    public function __construct(private readonly Db $db, private readonly Clock $clock, private readonly Config $config, private readonly Ai $ai)
     {
     }
 
@@ -46,6 +47,7 @@ final class SystemController
             'scopes' => Catalog::SCOPES,
             'sections' => Shopping::SECTIONS,
             'presets' => Catalog::PRESETS,
+            'ai' => ['import' => $this->ai->enabled()],
         ]);
     }
 

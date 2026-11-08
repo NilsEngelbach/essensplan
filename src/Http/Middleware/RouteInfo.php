@@ -24,6 +24,12 @@ final class RouteInfo
         if (str_starts_with((string) $route->getName(), 'mcp ')) {
             return ['POST', '/mcp', [], 'mcp', null, ''];
         }
+        if (str_starts_with((string) $route->getName(), 'ops ')) {
+            return ['POST', '/ops', [], 'public', null, ''];
+        }
+        if (str_starts_with((string) $route->getName(), 'media ')) {
+            return ['GET', '/media', [], 'media', null, ''];
+        }
         if (str_starts_with((string) $route->getName(), 'spa ')) {
             return ['GET', '/', [], 'public', null, ''];
         }

@@ -122,3 +122,11 @@ supabase/config.toml
 /public/app/
 /public/media/
 /storage/
+
+# Deploy (deploy.sh): credentials, the server's .env, the local build, the maintenance flag
+.env.deploy
+.env.production
+/.deploy/
+/.deploy-manifest
+/.maintenance
+/public/version.txt

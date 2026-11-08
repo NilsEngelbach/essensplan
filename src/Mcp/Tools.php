@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Essensplan\Mcp;
 
+use Essensplan\Ai\ImportJobs;
 use Essensplan\Clock;
 use Essensplan\Domain\Catalog;
+use Essensplan\Http\ApiError;
 use Essensplan\Http\Controller\RecipeController;
 use Essensplan\Http\Principal;
 use Essensplan\Schema\Schemas;
@@ -28,6 +30,7 @@ final class Tools
         private readonly RecipeService $recipes,
         private readonly PlanService $plan,
         private readonly ShoppingService $shopping,
+        private readonly ImportJobs $imports,
     ) {
     }
 
@@ -100,6 +103,28 @@ final class Tools
                 'annotations' => ['title' => 'Rezept speichern', 'readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => false, 'openWorldHint' => false],
                 'inputSchema' => Schemas::get('recipe'),
                 'run' => fn (Principal $p, array $a) => $this->recipes->create($p, $a),
+            ],
+            'import_recipe_from_url' => [
+                'scope' => 'ai:use',
+                'description' => 'Read a recipe from a web page with the app\'s own AI import (the same as "Rezept lesen" in the app) and, unless save is false, save it to the family\'s recipes (needs recipes:write too). Takes 10–60 s. Prefer this over create_recipe when you only have a link.',
+                'annotations' => ['title' => 'Rezept aus Link importieren', 'readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => false, 'openWorldHint' => true],
+                'inputSchema' => ['type' => 'object', 'required' => ['url'], 'additionalProperties' => false, 'properties' => [
+                    'url' => ['type' => 'string', 'maxLength' => 2000, 'pattern' => '^https?://\S+$', 'description' => 'The recipe page'],
+                    'save' => ['type' => 'boolean', 'description' => 'Default true. false: only return the draft (to change it and save it with create_recipe).'],
+                ]],
+                'run' => function (Principal $p, array $a) {
+                    $save = ($a['save'] ?? true) !== false;
+                    if ($save && !$p->can('recipes:write')) {
+                        throw new ApiError(403, 'forbidden_scope', 'Zum Speichern fehlt diesem Schlüssel das Recht recipes:write. Ruf das Werkzeug mit save: false auf, dann bekommst du nur den Entwurf.');
+                    }
+                    $job = $this->imports->create($p, ['url' => trim($a['url'])]);
+                    $this->imports->run($job['id']);
+                    $job = ImportJobs::json($this->imports->poll($p, $job['id']));
+                    if ($job['status'] !== 'done') {
+                        throw new ApiError(422, $job['error']['code'] ?? 'import_failed', $job['error']['message'] ?? 'Das Lesen ist fehlgeschlagen.');
+                    }
+                    return $save ? ['saved' => true, 'recipe' => $this->recipes->create($p, $job['draft'])] : ['saved' => false, 'draft' => $job['draft']];
+                },
             ],
             'update_recipe' => [
                 'scope' => 'recipes:write',

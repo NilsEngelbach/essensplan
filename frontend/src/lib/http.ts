@@ -62,7 +62,8 @@ export async function http<T>(method: Method, path: string, body?: unknown, retr
   } catch {
     throw new ApiError(0, 'offline', OFFLINE)
   }
-  if (res.status === 204 || res.status === 202) return undefined as T
+  if (res.status === 204) return undefined as T
+  // 202 may carry a body (an import job that is still running) or none.
   const data = await res.json().catch(() => null)
   if (res.ok) return data as T
 

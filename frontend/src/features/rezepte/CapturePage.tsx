@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Camera, ClipboardPaste, Link2, X } from 'lucide-react'
 import { IMPORT_STEPS, ImportError, importRecipe } from '../../lib/api'
+import { photoBlob, readPhoto } from '../../lib/photo'
 import type { RecipeDraft } from '../../lib/types'
 
 type Phase = { kind: 'input' } | { kind: 'reading'; step: number } | { kind: 'error'; message: string }
@@ -56,10 +57,13 @@ export function CapturePage() {
   const start = async () => {
     cancelled.current = false
     setPhase({ kind: 'reading', step: 0 })
+    const url = link.trim() && !/^https?:\/\//i.test(link.trim()) ? `https://${link.trim()}` : link.trim()
     try {
-      const draft = await importRecipe(link || photo?.name || '', (step) => !cancelled.current && setPhase({ kind: 'reading', step }))
+      const source = url ? { url } : { photo: await photoBlob(photo?.preview ?? '') }
+      const draft = await importRecipe(source, (step) => !cancelled.current && setPhase({ kind: 'reading', step }), () => cancelled.current)
       if (cancelled.current) return
-      if (photo) draft.imageUrl = photo.preview
+      // A photo of a cookbook page becomes the recipe photo unless the web page brought one (uploaded on save).
+      if (photo && !draft.imageUrl) draft.imageUrl = photo.preview
       navigate('/rezepte/neu/pruefen', { state: { draft, imported: true }, replace: true })
     } catch (e) {
       if (cancelled.current) return
@@ -144,7 +148,11 @@ export function CapturePage() {
                   className="visually-hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0]
-                    if (f) setPhoto({ name: f.name, preview: URL.createObjectURL(f) })
+                    if (f)
+                      readPhoto(f).then(
+                        (preview) => setPhoto({ name: f.name, preview }),
+                        () => setPhase({ kind: 'error', message: 'Dieses Foto lässt sich nicht öffnen. Versuch ein anderes.' }),
+                      )
                   }}
                 />
                 {photo ? (
@@ -179,7 +187,6 @@ export function CapturePage() {
                 Ohne Link selbst eingeben
               </button>
             </div>
-            <p className="capture__demo label">Prototyp: Ein Link mit „fehler“ zeigt den Fehlerfall.</p>
           </>
         )}
       </div>

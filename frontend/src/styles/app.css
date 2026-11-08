@@ -1524,10 +1524,6 @@ kbd,
 .capture__go .textbtn {
   align-self: center;
 }
-.capture__demo {
-  text-align: center;
-}
-
 .alert {
   display: flex;
   flex-direction: column;

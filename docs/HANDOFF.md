@@ -23,6 +23,14 @@ Essensplan is a German family meal planner. It is being moved off Next.js/Supaba
 
 **Photos and the Supabase importer: done** (2026-11-07). `POST /images` stores re-encoded photos with a 400 px thumbnail (`thumbUrl` on recipes); the SPA uploads on save. `bin/console import:supabase` copies the old app's families (ids and bcrypt hashes kept, photos downloaded, old plans → Mittagessen); a dry run into the Local DB matched every count. See BACKEND_REQUIREMENTS §4.3.1 and §7.1. Next: the owner spot-checks the imported data, then Phase 6 (AI import).
 
+**Photos protected, AI import, FTP deploy: done** (2026-11-08):
+- Photos moved to `storage/media/` (outside the docroot). `/media/…` now goes through PHP and serves a photo only to its family's session or a key with `recipes:read` (BACKEND_REQUIREMENTS §4.3.1). Locally they were moved with `bin/console media:move`.
+- Phase 6: `POST /ai/import` (link or photo) → job → draft. Providers: OpenCode (default), Anthropic, OpenAI. The SPA capture flow and MCP `import_recipe_from_url` use it (§4.7). Tested with a fake provider only.
+- `./deploy.sh`: FTPS upload, no SSH or Composer on the server; migrations and console commands via `/ops` with `OPS_TOKEN`, cron via `/cron?token=` (§4.8, [DEPLOY.md](DEPLOY.md)).
+- 67 tests green.
+
+Next: try the import with real links and photos per provider, then the first deploy to all-inkl (`./deploy.sh --push-env`, then `--check`).
+
 ## 2. Your task
 
 Produce a **first working draft of the PHP backend** on a branch (suggested name: `backend-draft`), opened as a PR against `main`. Do not merge it.

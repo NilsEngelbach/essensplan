@@ -22,7 +22,8 @@ final class RateLimit implements MiddlewareInterface
     public function process(Request $req, Handler $handler): Response
     {
         $def = RouteInfo::def($req);
-        if ($def !== null && $def[3] !== 'public') {
+        // Photos are exempt: a recipe list loads dozens at once, and each needs a session anyway.
+        if ($def !== null && !in_array($def[3], ['public', 'media'], true)) {
             $bearer = Authenticate::bearer($req);
             if ($bearer !== null) {
                 $this->limiter->hit('key:' . substr(hash('sha256', $bearer), 0, 32), $this->config->int('RATE_LIMIT_KEY', 120), 60);

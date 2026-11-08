@@ -1,7 +1,7 @@
 # Migration Plan: Essensplan → PHP/MySQL on all-inkl, UX-first, with Agent API + MCP
 
-Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅, Login & Geräte shaped + built ✅ (all surfaces done); backend draft 1 ✅ on branch `backend-draft` ([BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md), 37 tests green on MySQL 8.4 + MariaDB 10.6); Local site deployed (§3.1 ✅, essen.local) and the SPA wired to the real API (§9 step 1–2, mock data layer replaced); photo upload with thumbnails ✅; Supabase importer ✅ with a dry run into the Local DB (§10 steps 1–2); next: owner spot-check of the imported data, then the AI import (Phase 6)**
-Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per day, API keys only, Local dev env)
+Status: **Phase 1 in progress – init ✅, critique ✅ (17/40), audit ✅, shape app-shell ✅, shape rezepte ✅ (world: „Das Küchengerät“), Rezepte prototype built + reviewed (ship) ✅, DESIGN.md ✅, shape wochenplan ✅ (structure: „Tagleiste + Rezepte“), Wochenplan prototype built ✅, shape einkaufsliste ✅ („Kassenzettel“), Einkauf prototype built ✅, Kochmodus shaped + built ✅, API & Agenten shaped + built ✅, Login & Geräte shaped + built ✅ (all surfaces done); backend draft 1 ✅ on branch `backend-draft` ([BACKEND_REQUIREMENTS.md](BACKEND_REQUIREMENTS.md), 37 tests green on MySQL 8.4 + MariaDB 10.6); Local site deployed (§3.1 ✅, essen.local) and the SPA wired to the real API (§9 step 1–2, mock data layer replaced); photo upload with thumbnails ✅; Supabase importer ✅ with a dry run into the Local DB (§10 steps 1–2); photos behind the session ✅, AI import (Phase 6) ✅ in code (fake-tested, no real model call yet), FTP deploy `deploy.sh` ✅ (tested against a local FTPS server, [DEPLOY.md](DEPLOY.md)); next: owner spot-check of the imported data, try the AI import with real links, first deploy to all-inkl with `./deploy.sh --check` (§3.2)**
+Created: 2026-11-07 · Revised: 2026-11-08 (photos protected, AI import, FTP deploy without SSH)
 
 ---
 
@@ -54,14 +54,14 @@ Created: 2026-11-07 · Revised: 2026-11-07 (UX-first order, multiple meals per d
 | HTTP | Slim 4 (router + PSR-15 middleware) |
 | DB | MySQL 8 via PDO; repositories with plain SQL; `migrations/*.sql` + `bin/console migrate` |
 | Auth | DB-backed sessions (one row per device, D19) + CSRF for the browser; **generated API keys** (Bearer, scoped) for agents |
-| Storage | `public/media/{userId}/…` + generated thumbnails |
+| Storage | `storage/media/{userId}/…` (outside the docroot, served to the family only) + generated thumbnails |
 | Frontend | React 18 + Vite + React Router + TanStack Query; built into `public/app/` |
 | AI | PHP providers: OpenAI, Anthropic (`anthropic-ai/sdk`), OpenCode |
 | MCP | Streamable HTTP, stateless. Draft 1 uses a small hand-rolled JSON-RPC server (`src/Mcp/`); `mcp/sdk` 0.9 installs but keeps sessions for the handshake era (BACKEND_REQUIREMENTS §9) |
 | Mail | PHPMailer (Mailpit locally, all-inkl SMTP in production) |
 | Jobs | `ai_jobs` table + cron `bin/console jobs:run` |
 
-**Composer packages:** `slim/slim`, `slim/psr7`, `php-di/php-di`, `vlucas/phpdotenv`, `phpmailer/phpmailer`, `opis/json-schema`, `guzzlehttp/guzzle`, `anthropic-ai/sdk`, `mcp/sdk`, `intervention/image`; dev: `phpunit/phpunit`.
+**Composer packages:** `slim/slim`, `slim/psr7`, `php-di/php-di`, `vlucas/phpdotenv`, `phpmailer/phpmailer`, `opis/json-schema`, `guzzlehttp/guzzle`, `anthropic-ai/sdk`; dev: `phpunit/phpunit`, `phpstan/phpstan`. (`mcp/sdk` and `intervention/image` were dropped on 2026-11-08: unused, and every file has to go up by FTP.)
 Each must support PHP 8.2; `composer install` in Phase 2 confirms this.
 
 **Built in-house (was Laravel's job), each with tests:**
@@ -78,8 +78,8 @@ essensplan/
 ├── public/            ← docroot (Local: junction target; all-inkl: domain docroot)
 │   ├── index.php      ← Slim front controller: /api/v1, /mcp, SPA fallback
 │   ├── .htaccess      ← Apache (all-inkl) only; nginx (Local) ignores it
-│   ├── app/           ← Vite build output
-│   └── media/         ← uploaded/imported images (gitignored)
+│   └── app/           ← Vite build output
+├── storage/           ← media/ (photos), ai-input/, mail.log (gitignored, written by PHP)
 ├── src/               Http/, Mcp/, Service/, Repository/, Ai/, Schema/
 ├── frontend/          ← new React SPA source
 ├── migrations/  bin/console  tests/  composer.json  .env
@@ -147,11 +147,12 @@ essensplan/
 - [ ] MCP smoke test: `claude mcp add --transport http essensplan-local http://essen.local/mcp --header "Authorization: Bearer <key>"`, then call a test tool. (`initialize` answered on essen.local with curl; the `claude mcp add` step is still to do)
 
 ### 3.2 all-inkl (production)
+`./deploy.sh --check` answers most of these from the server itself (PHP, extensions, `max_execution_time`, `fastcgi_finish_request`, upload limits, MySQL version, mail, AI reachability); see [DEPLOY.md](DEPLOY.md). Deploying needs FTP only (no SSH, no Composer on the server).
 - [ ] PHP ≥ 8.2 per domain; extensions `pdo_mysql`, `mbstring`, `intl`, `curl`, `gd`, `fileinfo`, `openssl`, `sodium`
-- [ ] SSH + composer (otherwise CI uploads `vendor/`); docroot can point to `essensplan/public`
+- [x] ~~SSH + composer~~ not needed: `deploy.sh` uploads `vendor/` and the SPA over FTPS and migrates via `/ops` (2026-11-08, tested against a local FTPS server). Docroot must point to `<folder>/public`
 - [ ] **`Authorization` header reaches PHP under Apache.** `.htaccess`: `RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]`
 - [ ] **`max_execution_time` / FastCGI timeout:** endpoint sleeping 150 s. Local allows 1200 s, so **only all-inkl reveals this limit**
-- [ ] Cron available + minimum interval; upload limits ≥ 10 MB; outbound HTTPS to the AI APIs
+- [ ] Cron available + minimum interval (URL cron `/cron?token=`); upload limits ≥ 10 MB; outbound HTTPS to the AI APIs
 - [ ] MySQL version on all-inkl (must be MySQL 8; MariaDB is not supported, D21)
 - [ ] SMTP sender + SPF/DKIM
 - [ ] Check which MCP protocol revisions `mcp/sdk` serves: the current spec 2026-07-28 is stateless ([release](https://github.com/modelcontextprotocol/specification/releases/tag/2026-07-28)), while older clients still send `initialize` (2025-11-25)
@@ -313,6 +314,8 @@ Errors use one format: `{"error":{"code":"…","message":"…"}}`. The existing 
 ---
 
 ## 8. Phase 6 – AI features in PHP
+
+**Status 2026-11-08: built** (BACKEND_REQUIREMENTS §4.7): `src/Ai/` with `AiProvider` (OpenCode, Anthropic via the official SDK with structured output and server-side fallbacks, OpenAI Responses), `PageFetcher` (SSRF guard), `RecipePage` (JSON-LD first), `RecipeImporter` (one retry, normalising, photo copied), `ImportJobs` (`ai_jobs`, after-response under FPM, poll/cron fallback). REST `/ai/import` + `/ai/jobs/{id}`, MCP `import_recipe_from_url`, the SPA capture flow uses it. Tested with a fake provider; **no real model call yet**. Not built: image enhancement (no surface asks for it), the per-user monthly cap. Deviations from the sketch below: one `RecipeImporter` instead of `RecipeExtractor`/`ImageEnhancer`/`UrlContentFetcher`/`RecipeNormalizer`/`AiManager` classes; the extraction schema lives in code (`RecipeImporter::schema()`), the saved draft is still validated by `recipe.schema.json`; the default provider stays `opencode` until §14.1 is decided.
 - **Structure** (`src/Ai/`):
   - `RecipeExtractor` and `ImageEnhancer` interfaces.
   - `OpenAiProvider` (Responses API, strict json_schema).
@@ -372,10 +375,11 @@ Screens are **built new in the chosen visual world**; we don't port the old scre
    2. Final import → `mysqldump` → import on all-inkl; rsync `public/media/`.
    3. Switch the domain, smoke-test.
 4. **Rollback:** Supabase and Vercel paused (not deleted) for 4 weeks.
-5. **Deploy** (GitHub Actions):
-   1. `composer install --no-dev -o`, `npm ci && npm run build`.
-   2. rsync/SFTP.
-   3. `php bin/console migrate`.
+5. **Deploy:** `./deploy.sh` from the owner's machine (2026-11-08, [DEPLOY.md](DEPLOY.md)) instead of GitHub Actions:
+   1. Build locally: `composer install --no-dev -o`, `npm run build`.
+   2. Upload the changes over FTPS (manifest with hashes, maintenance page while code changes).
+   3. Migrate through `POST /ops/migrate` (token-guarded; no SSH on all-inkl).
+   4. Final import data: `mysqldump` → phpMyAdmin, `storage/media/` by FTP.
 6. Delete the old Next.js code, `supabase/` and `prisma/`; update `CLAUDE.md` and `README.md`.
 
 ---
@@ -447,6 +451,6 @@ Both are covered by the all-inkl checks in §3.2.
 
 ## 14. Open decisions
 
-1. **Default AI provider and model:** Anthropic `claude-opus-5-5` (effort low), Sonnet 5.5, OpenAI or OpenCode? (All stay switchable.)
+1. **Default AI provider and model:** Anthropic `claude-opus-5-5` (effort low), Sonnet 5.5, OpenAI or OpenCode? (All stay switchable.) The code defaults to OpenCode, the old app's setting; compare all three on real links and photos first (BACKEND_REQUIREMENTS §10.14).
 2. ~~Free-text entries and per-entry servings~~: decided (D15).
 3. ~~Grocery list details~~: decided (D16).

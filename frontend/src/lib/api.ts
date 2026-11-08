@@ -7,7 +7,6 @@
 // - writes go to the server one after another, then refresh the cache and
 //   notify subscribers, which re-read. Failed background writes surface as a
 //   toast through onApiError (see AppShell).
-import { demoImport } from './demo-data'
 import { addDays, todayIso, weekdayIndex, weekStartOf } from './format'
 import { ApiError, http, qs, reportError } from './http'
 import { getMe, setMe, subscribeAuth, type Me } from './auth'
@@ -396,7 +395,7 @@ export function weekDates(start: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(start, i))
 }
 
-/* ── Import (Phase 6: the AI import runs on the server later) ───────────── */
+/* ── Import (POST /ai/import, BACKEND_REQUIREMENTS §4.7) ───────────────── */
 
 export const IMPORT_STEPS = ['Quelle lesen', 'Zutaten erkennen', 'Schritte ordnen', 'Fertig'] as const
 
@@ -404,16 +403,59 @@ export class ImportError extends Error {}
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** Still a demo: returns a sample draft. The real import comes with /ai/import (MIGRATION_PLAN §8). */
-export async function importRecipe(source: string, onStep: (index: number) => void): Promise<RecipeDraft> {
-  for (let i = 0; i < IMPORT_STEPS.length - 1; i++) {
-    onStep(i)
-    await delay(900)
-    if (i === 0 && /fehler|error/i.test(source)) throw new ImportError('Auf dieser Seite wurde kein Rezept gefunden.')
+type ServerDraft = Omit<RecipeDraft, 'instructions'> & { instructions: { description: string; ingredientIds: string[] | null }[] }
+
+interface ImportJob {
+  id: string
+  status: 'queued' | 'running' | 'done' | 'failed'
+  step: number // index into IMPORT_STEPS
+  draft?: ServerDraft
+  error?: { code: string; message: string }
+}
+
+const IMPORT_FAILED = 'Das Lesen ist fehlgeschlagen. Prüf die Verbindung und versuch es noch einmal.'
+
+/**
+ * Reads a recipe from a link or a photo with the server's AI import. Under PHP-FPM the
+ * server answers at once (202) and the job is polled; elsewhere the POST waits for the
+ * result, so the first steps advance on a timer meanwhile.
+ */
+export async function importRecipe(
+  source: { url: string } | { photo: Blob },
+  onStep: (index: number) => void,
+  cancelled: () => boolean = () => false,
+): Promise<RecipeDraft> {
+  onStep(0)
+  const tick = setTimeout(() => onStep(1), 1500)
+  let job: ImportJob
+  try {
+    if ('url' in source) {
+      job = await http<ImportJob>('POST', '/ai/import', { url: source.url })
+    } else {
+      const form = new FormData()
+      form.append('photo', source.photo, 'foto.jpg')
+      job = await http<ImportJob>('POST', '/ai/import', form)
+    }
+    while (job.status === 'queued' || job.status === 'running') {
+      if (job.step > 0) clearTimeout(tick)
+      onStep(Math.min(job.step, IMPORT_STEPS.length - 2))
+      await delay(1000)
+      if (cancelled()) throw new ImportError('')
+      job = await http<ImportJob>('GET', `/ai/jobs/${job.id}`)
+    }
+  } catch (e) {
+    if (e instanceof ImportError) throw e
+    throw new ImportError(e instanceof ApiError ? e.message : IMPORT_FAILED)
+  } finally {
+    clearTimeout(tick)
   }
+  if (job.status !== 'done' || !job.draft) throw new ImportError(job.error?.message ?? IMPORT_FAILED)
   onStep(IMPORT_STEPS.length - 1)
   await delay(300)
-  return demoImport(source)
+  return {
+    ...job.draft,
+    instructions: job.draft.instructions.map((s, i) => ({ id: `m${i}`, stepNumber: i + 1, description: s.description, ingredientIds: s.ingredientIds })),
+  }
 }
 
 /* ── Einkauf ─────────────────────────────────────────────────────────────── */
