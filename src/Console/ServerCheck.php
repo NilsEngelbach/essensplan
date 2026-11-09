@@ -69,7 +69,9 @@ final class ServerCheck
 
         $ai = $c->get(Ai::class);
         $rows[] = [$ai->enabled() ? true : null, 'KI-Import', $ai->enabled() ? $ai->describe() : 'aus (' . $ai->describe() . ')'];
-        $rows[] = [null, 'KI erreichbar', self::reachable($ai->endpoint())];
+        foreach ($ai->endpoints() as $name => $url) {
+            $rows[] = [null, "KI erreichbar ($name)", self::reachable($url)];
+        }
         return $rows;
     }
 

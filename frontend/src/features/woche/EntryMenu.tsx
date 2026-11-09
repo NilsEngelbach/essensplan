@@ -1,18 +1,21 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Trash2 } from 'lucide-react'
+import { BookOpen, Minus, Plus, Trash2 } from 'lucide-react'
+import { entryServings } from '../../lib/api'
 import { dayOfMonth, weekdayShort } from '../../lib/format'
-import type { PlanEntry } from '../../lib/types'
+import { MAX_SERVINGS, MIN_SERVINGS, type PlanEntry } from '../../lib/types'
 
 /**
- * The small menu behind a planned entry: open the recipe, move it to another
- * day of this week (slot kept), or take it out of the plan.
+ * The small menu behind a planned entry: open the recipe, cook it for other
+ * servings (D24), move it to another day of this week (slot kept), or take
+ * it out of the plan.
  */
 export function EntryMenu({
   entry,
   title,
   days,
   onMove,
+  onServings,
   onRemove,
   onClose,
 }: {
@@ -20,10 +23,18 @@ export function EntryMenu({
   title: string
   days: string[]
   onMove: (date: string) => void
+  onServings: (servings: number) => void
   onRemove: () => void
   onClose: () => void
 }) {
   const ref = useRef<HTMLDivElement>(null)
+  const { servings: initial, own } = entryServings(entry)
+  // Local, so quick taps count up at once while the writes queue behind.
+  const [servings, setServings] = useState(initial)
+  const step = (n: number) => {
+    setServings(n)
+    onServings(n)
+  }
 
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('a, button')?.focus()
@@ -44,10 +55,33 @@ export function EntryMenu({
   return (
     <div className="emenu" ref={ref} role="group" aria-label={`${title}: Aktionen`}>
       {entry.recipeId && (
-        <Link to={`/rezepte/${entry.recipeId}`} className="emenu__item">
+        <Link to={`/rezepte/${entry.recipeId}${servings !== own ? `?portionen=${servings}` : ''}`} className="emenu__item">
           <BookOpen size={18} strokeWidth={2} aria-hidden="true" />
           Rezept öffnen
         </Link>
+      )}
+      {entry.recipeId && (
+        <div className="emenu__servings" role="group" aria-labelledby={`serv-${entry.id}`}>
+          <span id={`serv-${entry.id}`} className="label">
+            Portionen
+          </span>
+          {servings !== own && (
+            <button type="button" className="textbtn emenu__reset" aria-label={`Zurück auf ${own} Portionen wie im Rezept`} onClick={() => step(own)}>
+              zurück auf {own}
+            </button>
+          )}
+          <div className="cook__servings">
+            <button type="button" className="iconbtn" aria-label="Eine Portion weniger" disabled={servings <= MIN_SERVINGS} onClick={() => step(servings - 1)}>
+              <Minus size={16} strokeWidth={2.25} aria-hidden="true" />
+            </button>
+            <span className="cook__portions" aria-live="polite">
+              <span className="num">{servings}</span> <span className="label">Port.</span>
+            </span>
+            <button type="button" className="iconbtn" aria-label="Eine Portion mehr" disabled={servings >= MAX_SERVINGS} onClick={() => step(servings + 1)}>
+              <Plus size={16} strokeWidth={2.25} aria-hidden="true" />
+            </button>
+          </div>
+        </div>
       )}
       <div className="emenu__move" role="group" aria-labelledby={`move-${entry.id}`}>
         <span id={`move-${entry.id}`} className="label">

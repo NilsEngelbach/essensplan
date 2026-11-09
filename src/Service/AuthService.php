@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Essensplan\Service;
 
+use Essensplan\Ai\Ai;
 use Essensplan\Clock;
 use Essensplan\Config;
 use Essensplan\Db;
@@ -41,6 +42,7 @@ final class AuthService
         private readonly DeviceLinkRepository $links,
         private readonly RateLimiter $limiter,
         private readonly Mailer $mailer,
+        private readonly Ai $ai,
     ) {
     }
 
@@ -407,7 +409,9 @@ final class AuthService
             'id' => $u['id'],
             'name' => $u['name'],
             'email' => $u['email'],
-            'settings' => ['weekStart' => (int) $u['week_start'], 'planningWeekday' => (int) $u['planning_weekday']],
+            'settings' => ['weekStart' => (int) $u['week_start'], 'planningWeekday' => (int) $u['planning_weekday'], 'aiProvider' => $this->ai->chosen($u['id'])],
+            // Off without a configured provider: the app hides the import (D25). Several: Konto offers a choice.
+            'ai' => ['import' => $this->ai->enabled(), 'providers' => $this->ai->providers()],
             'today' => $today,
             'defaultWeekStart' => Util::defaultWeekStart($today, (int) $u['week_start'], (int) $u['planning_weekday']),
         ];
@@ -436,6 +440,12 @@ final class AuthService
                 }
                 $fields['email'] = $email;
             }
+        }
+        if (isset($patch['settings']['aiProvider'])) {
+            if (!$this->ai->configured($patch['settings']['aiProvider'])) {
+                throw ApiError::field('settings.aiProvider', 'Diesen KI-Anbieter gibt es auf diesem Server nicht.');
+            }
+            $fields['ai_provider'] = $patch['settings']['aiProvider'];
         }
         foreach (['weekStart' => 'week_start', 'planningWeekday' => 'planning_weekday'] as $k => $col) {
             if (isset($patch['settings'][$k])) {

@@ -13,6 +13,7 @@ use Essensplan\Ai\RecipeImporter;
 use Essensplan\Clock;
 use Essensplan\Db;
 use Essensplan\Http\ApiError;
+use Essensplan\Mcp\Tools;
 
 /** A provider that answers from a queue and records what it was asked. */
 final class FakeProvider implements AiProvider
@@ -22,9 +23,13 @@ final class FakeProvider implements AiProvider
     /** @var list<array{system: string, user: string, image: ?array}> */
     public array $calls = [];
 
+    public function __construct(private readonly string $name = 'fake')
+    {
+    }
+
     public function name(): string
     {
-        return 'fake';
+        return $this->name;
     }
 
     public function model(bool $vision): string
@@ -88,7 +93,7 @@ final class AiImportTest extends TestCase
         $this->dir = sys_get_temp_dir() . '/esp-ai-' . bin2hex(random_bytes(4));
         $ai = $this->ai;
         $this->boot(['MEDIA_DIR' => "$this->dir/media", 'AI_INPUT_DIR' => "$this->dir/input", ...$config], [
-            Ai::class => fn (Db $db, Clock $clock) => new Ai($db, $clock, $enabled ? $ai : null, 'OPENCODE_API_KEY'),
+            Ai::class => fn (Db $db, Clock $clock) => new Ai($db, $clock, $enabled ? ['opencode' => $ai] : [], 'kein KI-Schlüssel gesetzt'),
             PageFetcher::class => $this->web,
         ]);
     }
@@ -290,6 +295,51 @@ final class AiImportTest extends TestCase
         $error = $this->fails(503, 'ai_unavailable', 'POST', '/api/v1/ai/import', ['url' => self::URL], $this->login());
         $this->assertStringContainsString('selbst eingeben', $error['message']);
         $this->assertFalse($this->ok(200, 'GET', '/api/v1/config')['ai']['import']);
+    }
+
+    /** Optional AI (D25): off hides the import everywhere; several providers are a family setting. */
+    public function testAiIsOptionalAndTheProviderSelectable(): void
+    {
+        $this->assertArrayHasKey('import_recipe_from_url', $this->c->get(Tools::class)->all());
+        $this->user();
+        $me = $this->ok(200, 'GET', '/api/v1/me', null, $this->login());
+        $this->assertSame([true, 'opencode', 1], [$me['ai']['import'], $me['settings']['aiProvider'], count($me['ai']['providers'])]);
+
+        // Off: nothing offered, the MCP tool is gone, the MCP and REST API stay.
+        $this->bootWith([], false);
+        $this->user();
+        $actor = $this->login();
+        $me = $this->ok(200, 'GET', '/api/v1/me', null, $actor);
+        $this->assertSame([false, null, []], [$me['ai']['import'], $me['settings']['aiProvider'], $me['ai']['providers']]);
+        $this->assertArrayNotHasKey('import_recipe_from_url', $this->c->get(Tools::class)->all());
+        $this->assertArrayHasKey('add_meal', $this->c->get(Tools::class)->all());
+        $this->fails(422, 'validation_failed', 'PATCH', '/api/v1/me', ['settings' => ['aiProvider' => 'opencode']], $actor);
+
+        // Two providers: the default first, the family can switch.
+        $first = new FakeProvider('opencode');
+        $second = new FakeProvider('anthropic');
+        $this->web = new FakeFetcher();
+        $this->boot(['MEDIA_DIR' => "$this->dir/media", 'AI_INPUT_DIR' => "$this->dir/input"], [
+            Ai::class => fn (Db $db, Clock $clock) => new Ai($db, $clock, ['opencode' => $first, 'anthropic' => $second]),
+            PageFetcher::class => $this->web,
+        ]);
+        $this->web->pages[self::URL] = ['type' => 'text/html', 'body' => self::page()];
+        $this->user();
+        $actor = $this->login();
+        $me = $this->ok(200, 'GET', '/api/v1/me', null, $actor);
+        $this->assertSame(['opencode', 'anthropic'], array_column($me['ai']['providers'], 'key'));
+        $this->assertSame('opencode', $me['settings']['aiProvider']);
+
+        $first->replies[] = self::reply();
+        $this->ok(200, 'POST', '/api/v1/ai/import', ['url' => self::URL], $actor);
+        $this->assertSame([1, 0], [count($first->calls), count($second->calls)]);
+
+        $this->assertSame('anthropic', $this->ok(200, 'PATCH', '/api/v1/me', ['settings' => ['aiProvider' => 'anthropic']], $actor)['settings']['aiProvider']);
+        $second->replies[] = self::reply();
+        $this->ok(200, 'POST', '/api/v1/ai/import', ['url' => self::URL], $actor);
+        $this->assertSame([1, 1], [count($first->calls), count($second->calls)]);
+        $this->assertSame(['opencode', 'anthropic'], $this->db->column('SELECT provider FROM ai_usage ORDER BY id'));
+        $this->fails(422, 'validation_failed', 'PATCH', '/api/v1/me', ['settings' => ['aiProvider' => 'openai']], $actor);
     }
 
     public function testAForgottenJobIsPickedUpByThePoll(): void

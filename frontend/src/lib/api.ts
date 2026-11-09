@@ -11,7 +11,9 @@ import { addDays, todayIso, weekdayIndex, weekStartOf } from './format'
 import { ApiError, http, qs, reportError } from './http'
 import { getMe, setMe, subscribeAuth, type Me } from './auth'
 import {
+  DEFAULT_SERVINGS,
   type Activity,
+  type AiProviderInfo,
   type ApiClient,
   type ApiKey,
   type ManualItem,
@@ -295,9 +297,11 @@ function planChanged() {
 }
 
 /** Adds a recipe or a free-text entry at the end of that day's slot. */
-export async function addPlanEntry(input: { date: string; slot: SlotKey; recipeId?: string; note?: string }): Promise<PlanEntry> {
+export async function addPlanEntry(input: { date: string; slot: SlotKey; recipeId?: string; note?: string; servings?: number }): Promise<PlanEntry> {
   const note = input.note?.trim().slice(0, 80) || undefined
-  const body = note ? { date: input.date, slot: input.slot, note } : { date: input.date, slot: input.slot, recipeId: input.recipeId }
+  const body = note
+    ? { date: input.date, slot: input.slot, note }
+    : { date: input.date, slot: input.slot, recipeId: input.recipeId, ...(input.servings ? { servings: input.servings } : {}) }
   return write(async () => {
     const entry = await http<PlanEntry>('POST', '/meal-plan/entries', body)
     rememberEntries([entry])
@@ -315,6 +319,30 @@ export function movePlanEntry(id: string, date: string): PlanEntry | null {
     planChanged()
   })
   return entry
+}
+
+/**
+ * Cooks a recipe entry for other servings; null (or the recipe's own number)
+ * goes back to the recipe's servings (D24). Returns the entry as it was.
+ */
+export function setPlanEntryServings(id: string, servings: number | null): PlanEntry | null {
+  const entry = entryIndex.get(id)
+  if (!entry) return null
+  const own = entry.recipe?.servings ?? DEFAULT_SERVINGS
+  const value = servings === own ? null : servings
+  entryIndex.set(id, { ...entry, servings: value })
+  fire(async () => {
+    rememberEntries([await http<PlanEntry>('PATCH', `/meal-plan/entries/${encodeURIComponent(id)}`, { servings: value })])
+    planChanged()
+  })
+  return entry
+}
+
+/** Servings a plan entry cooks for, and whether that differs from the recipe. */
+export function entryServings(e: PlanEntry): { servings: number; own: number; scaled: boolean } {
+  const own = e.recipe?.servings ?? DEFAULT_SERVINGS
+  const servings = e.servings ?? own
+  return { servings, own, scaled: servings !== own }
 }
 
 /** Puts an entry back exactly as it was (undo for move and remove). */
@@ -367,6 +395,16 @@ export async function suggestions(weekStart: string, slot: SlotKey): Promise<She
 
 export function getSettings(): Settings {
   return getMe()?.settings ?? DEFAULT_SETTINGS
+}
+
+/** Whether this server reads recipes from links and photos (D25). */
+export function aiImportEnabled(): boolean {
+  return getMe()?.ai?.import ?? false
+}
+
+/** The AI providers to choose from; a choice is only offered with two or more. */
+export function aiProviders(): AiProviderInfo[] {
+  return getMe()?.ai?.providers ?? []
 }
 
 export function saveSettings(patch: Partial<Settings>) {

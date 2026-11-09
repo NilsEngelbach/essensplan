@@ -61,7 +61,7 @@ final class Routes
             ['GET', '/meal-slots', [Plan::class, 'slots'], 'mealplan:read', null, 'The four fixed slots'],
             ['GET', '/meal-plan', [Plan::class, 'list'], 'mealplan:read', null, 'Entries from..to'],
             ['POST', '/meal-plan/entries', [Plan::class, 'add'], 'mealplan:write', 'plan-entry', 'Plan a recipe or a text'],
-            ['PATCH', '/meal-plan/entries/{id}', [Plan::class, 'move'], 'mealplan:write', 'plan-entry-patch', 'Move or reorder an entry'],
+            ['PATCH', '/meal-plan/entries/{id}', [Plan::class, 'move'], 'mealplan:write', 'plan-entry-patch', 'Move, reorder or change the servings of an entry'],
             ['DELETE', '/meal-plan/entries/{id}', [Plan::class, 'remove'], 'mealplan:write', null, 'Remove an entry'],
             ['POST', '/meal-plan/entries/{id}/restore', [Plan::class, 'restore'], 'mealplan:write', null, 'Undo a remove'],
             ['POST', '/meal-plan/seen', [Plan::class, 'seen'], 'session', 'ids', 'Agent-made entries were seen'],

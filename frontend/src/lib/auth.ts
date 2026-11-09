@@ -3,7 +3,7 @@
 // module caches who is logged in, the device list and open pairing links so
 // components can read them synchronously, and notifies on change.
 import { ApiError, http, onUnauthorized, setCsrf } from './http'
-import type { Settings } from './types'
+import type { AiProviderInfo, Settings } from './types'
 
 export { ApiError as AuthError }
 
@@ -17,6 +17,8 @@ export interface Account {
 export interface Me extends Account {
   id: string
   settings: Settings
+  /** Off without a configured provider: the app then hides the AI import (D25). */
+  ai?: { import: boolean; providers: AiProviderInfo[] }
   today: string
   defaultWeekStart: string
   csrfToken?: string

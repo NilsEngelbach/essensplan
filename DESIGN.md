@@ -591,7 +591,8 @@ All of these are instant under reduced motion.
 
 ### Entry Menu
 A floating `panel` menu with a seam, 10px corners, 4px padding and the Float shadow. It is up to 312px wide, and below 1024px it is the full width minus 32px. It contains:
-- "Rezept öffnen", when the entry is a recipe.
+- "Rezept öffnen", when the entry is a recipe. It opens the dial at the entry's servings.
+- "Portionen", when the entry is a recipe: a Label left, the Kochmodus servings pill (− "6 Port." +, 1–12) right, and a small green "zurück auf 4" text button (the recipe's servings) between them only while the value differs. A seam above it. An entry with other servings shows "6 Port." in `label` (0.75rem/620, tabular) after its title.
 - A move row under a Label line, then seven 44px day buttons with a seam, each showing the weekday over the number. The entry's own day is pressed in and disabled.
 - "Aus dem Plan nehmen" in `danger-ink`.
 

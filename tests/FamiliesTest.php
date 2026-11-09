@@ -146,7 +146,10 @@ final class FamiliesTest extends TestCase
 
     public function testMigrationsAreRecorded(): void
     {
-        $this->assertSame(['001_init', '002_families'], $this->db->column('SELECT version FROM schema_migrations ORDER BY version'));
+        $files = array_map(fn ($f) => basename($f, '.sql'), glob(dirname(__DIR__) . '/migrations/*.sql') ?: []);
+        sort($files);
+        $this->assertContains('002_families', $files);
+        $this->assertSame($files, $this->db->column('SELECT version FROM schema_migrations ORDER BY version'));
         $this->assertSame([], (new Migrator($this->db, dirname(__DIR__) . '/migrations'))->migrate(), 'nothing left to apply');
     }
 }

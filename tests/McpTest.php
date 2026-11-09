@@ -74,6 +74,12 @@ final class McpTest extends TestCase
         $this->assertSame('Linsensuppe', $plan['days'][0]['slots']['lunch'][0]['title']);
         $this->assertSame('Fr', $plan['days'][0]['weekday']);
 
+        $set = $this->rpc($key, 'tools/call', ['name' => 'set_meal_servings', 'arguments' => ['id' => $added['structuredContent']['id'], 'servings' => 8]])['body']['result'];
+        $this->assertFalse($set['isError'], json_encode($set));
+        $this->assertSame(8, $set['structuredContent']['servings']);
+        $plan = $this->rpc($key, 'tools/call', ['name' => 'get_meal_plan', 'arguments' => ['from' => '2026-11-13', 'to' => '2026-11-13']])['body']['result']['structuredContent'];
+        $this->assertSame([8, 4], [$plan['days'][0]['slots']['lunch'][0]['servings'], $plan['days'][0]['slots']['lunch'][0]['recipeServings']]);
+
         $grocery = $this->rpc($key, 'tools/call', ['name' => 'get_grocery_list'])['body']['result']['structuredContent'];
         $this->assertSame(['2026-11-13'], $grocery['days']);
         $this->rpc($key, 'tools/call', ['name' => 'add_grocery_item', 'arguments' => ['name' => 'Backpapier']]);

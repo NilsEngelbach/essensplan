@@ -193,7 +193,7 @@ final class AuthTest extends TestCase
     {
         $me = $this->login();
         $r = $this->ok(200, 'PATCH', '/api/v1/me', ['name' => 'Nils E.', 'settings' => ['weekStart' => 0, 'planningWeekday' => 4]], $me);
-        $this->assertSame(['weekStart' => 0, 'planningWeekday' => 4], $r['settings']);
+        $this->assertSame(['weekStart' => 0, 'planningWeekday' => 4, 'aiProvider' => null], $r['settings']);
         $this->assertSame('Nils E.', $r['name']);
         $this->fails(400, 'wrong_password', 'PATCH', '/api/v1/me', ['email' => 'neu@familie.de'], $me);
         $this->fails(400, 'invalid_email', 'PATCH', '/api/v1/me', ['email' => 'kaputt', 'currentPassword' => self::PASSWORD], $me);

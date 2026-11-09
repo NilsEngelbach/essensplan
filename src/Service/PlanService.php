@@ -15,11 +15,18 @@ use Essensplan\Util;
 
 /**
  * Meal plan entries (D3, D7, D15): a recipe or free text per entry, several
- * per slot, ordered by position. Plus presets and suggestion shelves.
+ * per slot, ordered by position. A recipe entry may cook for other servings
+ * than the recipe (D24). Plus presets and suggestion shelves.
  */
 final class PlanService
 {
     public const MAX_RANGE_DAYS = 62;
+
+    /** Per-entry servings, the same range as the servings dial (D24). */
+    public const MIN_SERVINGS = 1;
+    public const MAX_SERVINGS = 12;
+    /** What a recipe without servings counts as, like the recipe page and Kochmodus. */
+    public const DEFAULT_SERVINGS = 4;
 
     private const SLOT_CATEGORIES = [
         'breakfast' => ['Frühstück'],
@@ -57,7 +64,7 @@ final class PlanService
             throw ApiError::field('to', 'Höchstens ' . self::MAX_RANGE_DAYS . ' Tage auf einmal.');
         }
         $rows = $this->db->all(
-            'SELECT e.*, r.title AS recipe_title, r.image_path AS recipe_image, r.cooking_time AS recipe_time, r.category AS recipe_category
+            'SELECT e.*, r.title AS recipe_title, r.image_path AS recipe_image, r.cooking_time AS recipe_time, r.category AS recipe_category, r.servings AS recipe_servings
              FROM meal_plan_entries e
              LEFT JOIN recipes r ON r.id = e.recipe_id AND r.user_id = e.user_id
              WHERE e.user_id = ? AND e.deleted_at IS NULL AND e.date BETWEEN ? AND ?
@@ -71,7 +78,7 @@ final class PlanService
     private function row(string $userId, string $id, bool $withDeleted = false): ?array
     {
         return $this->db->one(
-            'SELECT e.*, r.title AS recipe_title, r.image_path AS recipe_image, r.cooking_time AS recipe_time, r.category AS recipe_category
+            'SELECT e.*, r.title AS recipe_title, r.image_path AS recipe_image, r.cooking_time AS recipe_time, r.category AS recipe_category, r.servings AS recipe_servings
              FROM meal_plan_entries e
              LEFT JOIN recipes r ON r.id = e.recipe_id AND r.user_id = e.user_id
              WHERE e.id = ? AND e.user_id = ?' . ($withDeleted ? '' : ' AND e.deleted_at IS NULL'),
@@ -91,10 +98,14 @@ final class PlanService
         $slot = $in['slot'];
         $note = isset($in['note']) ? mb_substr(trim((string) $in['note']), 0, 80) : '';
         $recipeId = $in['recipeId'] ?? null;
+        $servings = isset($in['servings']) ? (int) $in['servings'] : null;
         if (($note === '') === ($recipeId === null)) {
             throw ApiError::field('recipeId', 'Ein Eintrag braucht ein Rezept oder einen Text, nicht beides.');
         }
-        return $this->db->transaction(function () use ($p, $date, $slot, $note, $recipeId) {
+        if ($servings !== null && $recipeId === null) {
+            throw ApiError::field('servings', 'Portionen gibt es nur bei Rezepten.');
+        }
+        return $this->db->transaction(function () use ($p, $date, $slot, $note, $recipeId, $servings) {
             if ($recipeId !== null && !$this->recipeRepo->exists($p->userId, $recipeId)) {
                 throw ApiError::notFound('Rezept nicht gefunden.');
             }
@@ -107,17 +118,61 @@ final class PlanService
                 'meal_slot_id' => Catalog::slotId($slot),
                 'recipe_id' => $recipeId,
                 'note' => $recipeId === null ? $note : null,
+                'servings' => $servings,
                 'position' => $this->nextPosition($p->userId, $date, $slot),
                 'created_via' => $p->via(),
                 'created_at' => $now,
                 'updated_at' => $now,
             ]);
             $entry = $this->get($p, $id);
-            $this->log->record($p, 'plan.add', $this->target($entry), 'hat ' . $this->where($entry) . ': ' . $this->label($entry) . ' geplant', [
+            $for = $servings === null ? '' : ' für ' . self::servingsLabel($servings);
+            $this->log->record($p, 'plan.add', $this->target($entry), 'hat ' . $this->where($entry) . ': ' . $this->label($entry) . $for . ' geplant', [
                 'kind' => 'plan.remove', 'entryId' => $id,
             ]);
             return $entry;
         });
+    }
+
+    /** PATCH: servings and/or a move, in one transaction. */
+    public function update(Principal $p, string $id, array $in): array
+    {
+        return $this->db->transaction(function () use ($p, $id, $in) {
+            $entry = array_key_exists('servings', $in) ? $this->setServings($p, $id, $in['servings'] === null ? null : (int) $in['servings']) : null;
+            unset($in['servings']);
+            return $in === [] ? ($entry ?? $this->get($p, $id)) : $this->move($p, $id, $in);
+        });
+    }
+
+    /** Cook this entry for other servings; null goes back to the recipe's own (D24). */
+    public function setServings(Principal $p, string $id, ?int $servings): array
+    {
+        return $this->db->transaction(function () use ($p, $id, $servings) {
+            $before = $this->row($p->userId, $id) ?? throw ApiError::notFound('Diesen Eintrag gibt es nicht mehr.');
+            if ($servings !== null && $before['recipe_id'] === null) {
+                throw ApiError::field('servings', 'Portionen gibt es nur bei Rezepten.');
+            }
+            $old = $before['servings'] === null ? null : (int) $before['servings'];
+            if ($old === $servings) {
+                return $this->json($before);
+            }
+            $now = $this->clock->dbMicro();
+            $this->db->exec(
+                'UPDATE meal_plan_entries SET servings = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+                [$servings, $now, $id, $p->userId],
+            );
+            $entry = $this->get($p, $id);
+            $what = $servings === null ? 'auf die Portionen aus dem Rezept zurückgesetzt' : 'auf ' . self::servingsLabel($servings) . ' gesetzt';
+            $this->log->record($p, 'plan.servings', $this->target($entry), 'hat ' . $this->where($entry) . ': ' . $this->label($entry) . ' ' . $what, [
+                'kind' => 'plan.servings', 'entryId' => $id, 'servings' => $old, 'afterUpdatedAt' => $now,
+            ]);
+            return $entry;
+        });
+    }
+
+    /** "1 Portion", "6 Portionen" */
+    public static function servingsLabel(int $n): string
+    {
+        return $n . ($n === 1 ? ' Portion' : ' Portionen');
     }
 
     /**
@@ -317,6 +372,8 @@ final class PlanService
             'slot' => Catalog::slotKey((int) $e['meal_slot_id']),
             'recipeId' => $e['recipe_id'],
             'note' => $e['note'],
+            // Kept on a detached entry so it comes back when the recipe does, but only a recipe entry has servings.
+            'servings' => $e['recipe_id'] === null || $e['servings'] === null ? null : (int) $e['servings'],
             'position' => (int) $e['position'],
             'createdVia' => $e['created_via'],
             'seenAt' => Util::iso($e['seen_at']),
@@ -328,6 +385,7 @@ final class PlanService
                 'thumbUrl' => MediaStore::thumbOf($e['recipe_image']),
                 'cookingTime' => $e['recipe_time'] === null ? null : (int) $e['recipe_time'],
                 'category' => $e['recipe_category'],
+                'servings' => $e['recipe_servings'] === null ? null : (int) $e['recipe_servings'],
             ],
         ];
     }

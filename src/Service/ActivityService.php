@@ -78,6 +78,7 @@ final class ActivityService
                 $e = $entry($u['entryId'], true);
                 return $e && $e['deleted_at'] !== null ? null : 'Nicht mehr rückgängig: Der Eintrag ist schon wieder da oder gelöscht.';
             case 'plan.move':
+            case 'plan.servings':
                 $e = $entry($u['entryId']);
                 if (!$e) {
                     return 'Nicht mehr rückgängig: Der Eintrag ist schon weg.';
@@ -118,6 +119,7 @@ final class ActivityService
                 'plan.remove' => $this->plan->remove($p, $u['entryId']),
                 'plan.restore' => $this->plan->restore($p, $u['entryId']),
                 'plan.move' => $this->plan->move($p, $u['entryId'], $u['from']),
+                'plan.servings' => $this->plan->setServings($p, $u['entryId'], $u['servings']),
                 'shopping.remove' => $this->shopping->removeManual($p, $u['itemId']),
                 'recipe.restore' => $this->recipes->restoreVersion($p, $u['before']),
                 'recipe.remove' => $this->recipes->delete($p, $u['recipeId']),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Essensplan\Mcp;
 
+use Essensplan\Ai\Ai;
 use Essensplan\Ai\ImportJobs;
 use Essensplan\Clock;
 use Essensplan\Domain\Catalog;
@@ -31,6 +32,7 @@ final class Tools
         private readonly PlanService $plan,
         private readonly ShoppingService $shopping,
         private readonly ImportJobs $imports,
+        private readonly Ai $ai,
     ) {
     }
 
@@ -47,7 +49,7 @@ final class Tools
         $patch['properties'] = ['id' => ['type' => 'string', 'description' => 'Recipe id'], ...$patch['properties']];
         $patch['required'] = ['id'];
 
-        return [
+        $tools = [
             'get_profile' => [
                 'scope' => 'profile:read',
                 'description' => 'Today\'s date, the family\'s week start and planning day (0 = Sunday … 6 = Saturday) and the week the app opens on. Call this before planning.',
@@ -160,7 +162,7 @@ final class Tools
             ],
             'add_meal' => [
                 'scope' => 'mealplan:write',
-                'description' => 'Plan a recipe (recipeId) or a free text (note), not both, for a day and slot. Several entries per slot are fine.',
+                'description' => 'Plan a recipe (recipeId) or a free text (note), not both, for a day and slot. Several entries per slot are fine. Leave servings out unless the family asks for a different amount than the recipe makes.',
                 'annotations' => ['title' => 'Mahlzeit planen', 'readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => false, 'openWorldHint' => false],
                 'inputSchema' => Schemas::get('plan-entry'),
                 'run' => fn (Principal $p, array $a) => $this->plan->add($p, $a),
@@ -177,6 +179,15 @@ final class Tools
                     unset($a['id']);
                     return $this->plan->move($p, $id, $a);
                 },
+            ],
+            'set_meal_servings' => [
+                'scope' => 'mealplan:write',
+                'description' => "Cook a planned recipe for other servings than the recipe makes (scales the shopping list), or null to go back to the recipe's own.",
+                'annotations' => ['title' => 'Portionen ändern', 'readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true, 'openWorldHint' => false],
+                'inputSchema' => ['type' => 'object', 'required' => ['id', 'servings'], 'additionalProperties' => false, 'properties' => [
+                    'id' => ['type' => 'string'], 'servings' => Schemas::get('plan-entry-patch')['properties']['servings'],
+                ]],
+                'run' => fn (Principal $p, array $a) => $this->plan->setServings($p, $a['id'], $a['servings'] === null ? null : (int) $a['servings']),
             ],
             'remove_meal' => [
                 'scope' => 'mealplan:write',
@@ -216,6 +227,11 @@ final class Tools
                 'run' => fn (Principal $p, array $a) => $this->shopping->addManual($p, $a['name']),
             ],
         ];
+        // The AI import is optional (D25): without a provider the tool is not offered.
+        if (!$this->ai->enabled()) {
+            unset($tools['import_recipe_from_url']);
+        }
+        return $tools;
     }
 
     /** Entries → days → slots, easier for a model to read than a flat list. */
@@ -230,6 +246,8 @@ final class Tools
                 'recipeId' => $e['recipeId'],
                 'title' => $e['recipe']['title'] ?? null,
                 'note' => $e['note'],
+                'servings' => $e['servings'],
+                'recipeServings' => $e['recipe']['servings'] ?? null,
                 'createdVia' => $e['createdVia'],
             ], fn ($v) => $v !== null);
         }

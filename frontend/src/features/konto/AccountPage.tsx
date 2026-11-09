@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowDown, ArrowUp, ChevronRight } from 'lucide-react'
 import { Segmented } from '../../components/controls'
-import { defaultWeekStart, getSectionOrder, getSettings, keyIsActive, listApiKeys, saveSectionOrder, saveSettings, subscribe, unseenActivityCount } from '../../lib/api'
+import { aiProviders, defaultWeekStart, getSectionOrder, getSettings, keyIsActive, listApiKeys, saveSectionOrder, saveSettings, subscribe, unseenActivityCount } from '../../lib/api'
 import { DevicesPanel } from './DevicesPanel'
 import { AccountDetails } from './AccountDetails'
 import { dayOfMonth, rangeLabel, todayIso, WEEKDAY, WEEKDAY_LONG, weekdayShort, weekStartOf } from '../../lib/format'
@@ -51,11 +51,33 @@ export function AccountPage() {
         </p>
       </section>
 
+      <AiProviderPanel />
       <StoreOrder />
       <DevicesPanel />
       <AgentsPanel />
       <AccountDetails />
     </div>
+  )
+}
+
+/** Which AI reads recipes from links and photos; only when the server has several (D25). */
+function AiProviderPanel() {
+  const providers = aiProviders()
+  if (providers.length < 2) return null
+  const current = getSettings().aiProvider ?? providers[0].key
+  const model = providers.find((p) => p.key === current)?.model
+  return (
+    <section className="panel konto__panel" aria-labelledby="ki-h">
+      <h2 id="ki-h" className="panel__title">
+        KI-Import
+      </h2>
+      <div className="konto__setting">
+        <Segmented label="Anbieter" value={current} onChange={(v) => saveSettings({ aiProvider: v })} options={providers.map((p) => ({ value: p.key, label: p.label }))} />
+        <p className="konto__hint">
+          Liest Rezepte aus Links und Fotos{model ? ` mit ${model}` : ''}. Die Wahl gilt für die ganze Familie und für Agenten mit dem Recht „KI-Import“.
+        </p>
+      </div>
+    </section>
   )
 }
 

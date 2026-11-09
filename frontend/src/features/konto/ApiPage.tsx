@@ -3,13 +3,15 @@ import { Link } from 'react-router-dom'
 import { ArrowLeft, ChevronRight, Copy } from 'lucide-react'
 import { Segmented } from '../../components/controls'
 import { useToast } from '../../components/toast'
-import { createApiKey, keyIsActive, listApiKeys, revokeApiKey, setApiKeyClient, subscribe, unrevokeApiKey, unseenActivityCount } from '../../lib/api'
+import { aiImportEnabled, createApiKey, keyIsActive, listApiKeys, revokeApiKey, setApiKeyClient, subscribe, unrevokeApiKey, unseenActivityCount } from '../../lib/api'
 import { SCOPES, type ApiClient, type ApiKey, type Scope } from '../../lib/types'
 
 /** Where agents reach the app. The prototype shows its own origin; production uses the real domain. */
 const BASE = (import.meta.env.VITE_PUBLIC_URL as string | undefined) ?? window.location.origin
 
 const GROUPS = [...new Set(SCOPES.map((s) => s.group))]
+// Without a configured AI provider there is nothing to grant for the import (D25).
+const offeredGroups = () => GROUPS.filter((g) => g !== 'KI-Import' || aiImportEnabled())
 
 export function agoText(iso: string | null): string {
   if (!iso) return 'noch nie benutzt'
@@ -207,7 +209,7 @@ function CreateKey({ onCancel, onCreated }: { onCancel: () => void; onCreated: (
 
       <fieldset className="rights">
         <legend className="field__label">Rechte</legend>
-        {GROUPS.map((g) => (
+        {offeredGroups().map((g) => (
           <div key={g} className="rights__group">
             <span className="rights__name">{g}</span>
             <div className="chips">

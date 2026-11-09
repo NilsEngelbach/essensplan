@@ -143,12 +143,13 @@ An agent only sees the tools its key's rights allow.
 | `suggest_meals` | recipes:read | The app's suggestion shelves for a week and slot (lange nicht gegessen, Lieblinge, schnell) |
 | `create_recipe` | recipes:write | Save a recipe |
 | `update_recipe` | recipes:write | Change part of a recipe |
-| `import_recipe_from_url` | ai:use (+ recipes:write to save) | The app's AI import from a link; `save: false` returns only the draft |
+| `import_recipe_from_url` | ai:use (+ recipes:write to save) | The app's AI import from a link; `save: false` returns only the draft. Only listed when the server has an AI provider configured |
 | `delete_recipe` | recipes:delete | Delete a recipe (its plan entries keep the title as text) |
 | `list_meal_slots` | mealplan:read | Frühstück, Mittagessen, Abendessen, Snack |
 | `get_meal_plan` | mealplan:read | Days → slots → entries for a date range |
-| `add_meal` | mealplan:write | Plan a recipe or a short text ("Reste") for a day and slot |
+| `add_meal` | mealplan:write | Plan a recipe or a short text ("Reste") for a day and slot; optional servings |
 | `move_meal` | mealplan:write | Move an entry to another day, slot or position |
+| `set_meal_servings` | mealplan:write | Cook a planned recipe for other servings (scales the shopping list) |
 | `remove_meal` | mealplan:write | Remove an entry |
 | `get_grocery_list` | shopping:read | The current shopping list, by store section |
 | `add_grocery_item` | shopping:write | Put an own item on the list |

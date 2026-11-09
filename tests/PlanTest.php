@@ -71,6 +71,37 @@ final class PlanTest extends TestCase
         $this->fails(422, 'validation_failed', 'GET', '/api/v1/meal-plan?from=2026-01-01&to=2026-12-31', null, $this->me);
     }
 
+    /** Per-entry servings (D24): recipe entries only, 1–12, null = the recipe's own. */
+    public function testEntryServings(): void
+    {
+        $r = $this->recipe($this->me);
+        $plain = $this->plan($this->me, self::TODAY, $r['id']);
+        $this->assertNull($plain['servings']);
+        $this->assertSame(4, $plain['recipe']['servings']);
+
+        $six = $this->ok(201, 'POST', '/api/v1/meal-plan/entries', ['date' => self::TODAY, 'slot' => 'dinner', 'recipeId' => $r['id'], 'servings' => 6], $this->me);
+        $this->assertSame(6, $six['servings']);
+        $this->fails(422, 'validation_failed', 'POST', '/api/v1/meal-plan/entries', ['date' => self::TODAY, 'slot' => 'lunch', 'note' => 'Reste', 'servings' => 2], $this->me);
+        $this->fails(422, 'validation_failed', 'POST', '/api/v1/meal-plan/entries', ['date' => self::TODAY, 'slot' => 'lunch', 'recipeId' => $r['id'], 'servings' => 13], $this->me);
+        $this->fails(422, 'validation_failed', 'POST', '/api/v1/meal-plan/entries', ['date' => self::TODAY, 'slot' => 'lunch', 'recipeId' => $r['id'], 'servings' => 0], $this->me);
+
+        // PATCH sets, resets and combines with a move.
+        $path = "/api/v1/meal-plan/entries/{$plain['id']}";
+        $this->assertSame(2, $this->ok(200, 'PATCH', $path, ['servings' => 2], $this->me)['servings']);
+        $this->assertNull($this->ok(200, 'PATCH', $path, ['servings' => null], $this->me)['servings']);
+        $both = $this->ok(200, 'PATCH', $path, ['servings' => 8, 'date' => '2026-11-13'], $this->me);
+        $this->assertSame([8, '2026-11-13'], [$both['servings'], $both['date']]);
+        $note = $this->plan($this->me, self::TODAY, null, 'lunch', 'Reste');
+        $this->fails(422, 'validation_failed', 'PATCH', "/api/v1/meal-plan/entries/{$note['id']}", ['servings' => 3], $this->me);
+        $this->assertSame(8, $this->ok(200, 'GET', '/api/v1/meal-plan?from=2026-11-13&to=2026-11-13', null, $this->me)['entries'][0]['servings']);
+
+        // A detached entry has no servings; restoring the recipe brings them back.
+        $this->ok(200, 'DELETE', "/api/v1/recipes/{$r['id']}", null, $this->me);
+        $this->assertNull($this->ok(200, 'GET', '/api/v1/meal-plan?from=2026-11-13&to=2026-11-13', null, $this->me)['entries'][0]['servings']);
+        $this->ok(200, 'POST', "/api/v1/recipes/{$r['id']}/restore", null, $this->me);
+        $this->assertSame(8, $this->ok(200, 'GET', '/api/v1/meal-plan?from=2026-11-13&to=2026-11-13', null, $this->me)['entries'][0]['servings']);
+    }
+
     public function testRecipeDeleteKeepsTheDayAndRestoreRelinks(): void
     {
         $r = $this->recipe($this->me);

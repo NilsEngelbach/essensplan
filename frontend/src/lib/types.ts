@@ -67,27 +67,42 @@ export type RecipeSummary = Omit<Recipe, 'ingredients' | 'instructions'> & { ing
 
 export type RecipeDraft = Omit<Recipe, 'id' | 'createdAt' | 'updatedAt' | 'cookingStats'>
 
-/** A plan entry is a recipe or free text, never both. No per-entry servings (D15). */
+/** A plan entry is a recipe or free text, never both (D15). A recipe entry may cook for other servings (D24). */
 export interface PlanEntry {
   id: string
   date: string // YYYY-MM-DD
   slot: SlotKey
   recipeId: string | null
   note: string | null // free text ("Reste", "Essen gehen"), or the title of a deleted recipe
+  servings: number | null // null = the recipe's own servings; scales the shopping list
   position: number
   createdVia: 'app' | 'api' | 'mcp'
   seenAt: string | null // set once an agent-created entry has been seen in the app
   /** Embedded by the server so the week can print titles without loading every recipe. */
-  recipe?: { id: string; title: string; imageUrl: string | null; thumbUrl?: string | null; cookingTime: number | null; category: string } | null
+  recipe?: { id: string; title: string; imageUrl: string | null; thumbUrl?: string | null; cookingTime: number | null; category: string; servings: number | null } | null
 }
 
 /** Fixed free-text presets; the user's recent own texts are added after them. */
 export const PRESETS = ['Reste', 'Essen gehen', 'Auswärts', 'Bestellen'] as const
 
+/** What a recipe without servings counts as (recipe page, Kochmodus, shopping list). */
+export const DEFAULT_SERVINGS = 4
+/** The servings dial's range; per-entry servings use the same (D24). */
+export const MIN_SERVINGS = 1
+export const MAX_SERVINGS = 12
+
 /** Weekdays as in Date.getUTCDay(): 0 = Sonntag … 6 = Samstag. */
 export interface Settings {
   weekStart: number // default 1 (Montag)
   planningWeekday: number // default 5 (Freitag): from this day home opens on next week
+  aiProvider?: string | null // the family's AI provider when the server has several; null while the AI import is off (D25)
+}
+
+/** One AI provider the server has a key for, the default first. */
+export interface AiProviderInfo {
+  key: string
+  label: string
+  model: string
 }
 
 /** One shopping trip: the days it covers and the state of each line. */

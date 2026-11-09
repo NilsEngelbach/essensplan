@@ -32,8 +32,9 @@ return [
     'RATE_LIMIT_KEY' => '120',
     'RATE_LIMIT_IP' => '300',
 
-    // AI import: opencode (default) | anthropic | openai. Without the chosen provider's key the
-    // import is off ("selbst eingeben").
+    // AI import (optional): every provider with a key is configured; none (or 'off') turns
+    // the import off ("selbst eingeben"). AI_PROVIDER names the default: opencode |
+    // anthropic | openai. With several keys set, each family picks one in Konto.
     'AI_PROVIDER' => 'opencode',
     'OPENCODE_API_KEY' => '',
     'OPENCODE_MODEL' => 'glm-5.2',

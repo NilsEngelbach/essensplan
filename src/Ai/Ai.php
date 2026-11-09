@@ -11,76 +11,122 @@ use Essensplan\Http\ApiError;
 use Essensplan\Http\Principal;
 
 /**
- * Picks the provider from AI_PROVIDER (openai | anthropic | opencode; the old
- * app's default opencode stays the default) and logs every call in ai_usage.
- * Without the provider's key the AI import is off and says so.
+ * The AI import is optional (D25): every provider whose API key is set is
+ * configured; with none (or AI_PROVIDER=off) the import is off and the app
+ * hides it. AI_PROVIDER names the default; with several configured, a family
+ * picks one in Konto (users.ai_provider). Every call is logged in ai_usage.
  */
 final class Ai
 {
     public const PROVIDERS = ['opencode', 'anthropic', 'openai'];
+    public const LABELS = ['opencode' => 'OpenCode', 'anthropic' => 'Anthropic (Claude)', 'openai' => 'OpenAI (GPT)'];
 
+    /** @param array<string, AiProvider> $providers by name, the default first */
     public function __construct(
         private readonly Db $db,
         private readonly Clock $clock,
-        private readonly ?AiProvider $provider,
-        private readonly string $missing = '',
+        private readonly array $providers = [],
+        private readonly string $why = '',
     ) {
     }
 
     public static function fromConfig(Config $config, Db $db, Clock $clock): self
     {
-        $name = strtolower($config->get('AI_PROVIDER', 'opencode'));
+        $wanted = strtolower(trim($config->get('AI_PROVIDER', 'opencode')));
+        if (in_array($wanted, ['off', 'none', 'aus'], true)) {
+            return new self($db, $clock, [], "AI_PROVIDER=$wanted");
+        }
         $timeout = (float) $config->int('AI_TIMEOUT', 150);
-        $key = fn (string $env) => $config->get($env);
-        [$provider, $env] = match ($name) {
-            'anthropic' => [$key('ANTHROPIC_API_KEY') === '' ? null : new AnthropicProvider(
-                $key('ANTHROPIC_API_KEY'),
-                $config->get('ANTHROPIC_MODEL', 'claude-opus-5-5'),
-                $config->get('ANTHROPIC_EFFORT', 'low'),
-                $timeout,
-            ), 'ANTHROPIC_API_KEY'],
-            'openai' => [$key('OPENAI_API_KEY') === '' ? null : new OpenAiProvider(
-                $key('OPENAI_API_KEY'),
-                $config->get('OPENAI_MODEL', 'gpt-5-mini'),
-                $config->get('OPENAI_EFFORT', 'low'),
-                $timeout,
-            ), 'OPENAI_API_KEY'],
-            'opencode' => [$key('OPENCODE_API_KEY') === '' ? null : new OpenCodeProvider(
-                $key('OPENCODE_API_KEY'),
+        $all = [];
+        if ($config->get('OPENCODE_API_KEY') !== '') {
+            $all['opencode'] = new OpenCodeProvider(
+                $config->get('OPENCODE_API_KEY'),
                 $config->get('OPENCODE_MODEL', 'glm-5.2'),
                 $config->get('OPENCODE_IMAGE_MODEL', $config->get('OPENCODE_MODEL', 'kimi-k3')),
                 $timeout,
-            ), 'OPENCODE_API_KEY'],
-            default => [null, "AI_PROVIDER=$name (erlaubt: " . implode(', ', self::PROVIDERS) . ')'],
-        };
-        return new self($db, $clock, $provider, $provider === null ? $env : '');
+            );
+        }
+        if ($config->get('ANTHROPIC_API_KEY') !== '') {
+            $all['anthropic'] = new AnthropicProvider(
+                $config->get('ANTHROPIC_API_KEY'),
+                $config->get('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+                $config->get('ANTHROPIC_EFFORT', 'low'),
+                $timeout,
+            );
+        }
+        if ($config->get('OPENAI_API_KEY') !== '') {
+            $all['openai'] = new OpenAiProvider(
+                $config->get('OPENAI_API_KEY'),
+                $config->get('OPENAI_MODEL', 'gpt-5-mini'),
+                $config->get('OPENAI_EFFORT', 'low'),
+                $timeout,
+            );
+        }
+        // The default first; one without a key falls back to the first configured.
+        if (isset($all[$wanted])) {
+            $all = [$wanted => $all[$wanted]] + $all;
+        }
+        return new self($db, $clock, $all, $all === [] ? 'kein KI-Schlüssel gesetzt (OPENCODE_API_KEY, ANTHROPIC_API_KEY oder OPENAI_API_KEY)' : '');
     }
 
     public function enabled(): bool
     {
-        return $this->provider !== null;
+        return $this->providers !== [];
     }
 
-    /** For bin/console check: "anthropic · claude-opus-5-5" or what is missing. */
+    public function configured(string $name): bool
+    {
+        return isset($this->providers[$name]);
+    }
+
+    /** @return list<array{key: string, label: string, model: string}> the default first */
+    public function providers(): array
+    {
+        $out = [];
+        foreach ($this->providers as $name => $p) {
+            $out[] = ['key' => $name, 'label' => self::LABELS[$name] ?? $name, 'model' => $p->model(false)];
+        }
+        return $out;
+    }
+
+    /** The provider name this family's imports use, or null when the AI import is off. */
+    public function chosen(string $userId): ?string
+    {
+        if (!$this->enabled()) {
+            return null;
+        }
+        $pick = count($this->providers) > 1 ? $this->db->value('SELECT ai_provider FROM users WHERE id = ?', [$userId]) : null;
+        return is_string($pick) && $this->configured($pick) ? $pick : (string) array_key_first($this->providers);
+    }
+
+    /** For bin/console check: "anthropic · claude-opus-5-5 (Standard), openai · gpt-5-mini" or why it is off. */
     public function describe(): string
     {
-        if ($this->provider === null) {
-            return $this->missing === '' ? 'kein Anbieter' : "$this->missing fehlt";
+        if (!$this->enabled()) {
+            return $this->why;
         }
-        $text = $this->provider->model(false);
-        $vision = $this->provider->model(true);
-        return $this->provider->name() . ' · ' . $text . ($vision !== $text ? " (Fotos: $vision)" : '');
+        $parts = [];
+        foreach ($this->providers as $p) {
+            $text = $p->model(false);
+            $vision = $p->model(true);
+            $parts[] = $p->name() . ' · ' . $text . ($vision !== $text ? " (Fotos: $vision)" : '') . ($parts === [] && count($this->providers) > 1 ? ' (Standard)' : '');
+        }
+        return implode(', ', $parts);
     }
 
-    public function endpoint(): string
+    /** @return array<string, string> provider name → endpoint, for the reachability check */
+    public function endpoints(): array
     {
-        return $this->provider?->endpoint() ?? '';
+        return array_map(fn (AiProvider $p) => $p->endpoint(), $this->providers);
     }
 
     /** @throws ApiError ai_unavailable when no provider is configured */
-    public function require(): AiProvider
+    public function require(?string $userId = null): AiProvider
     {
-        return $this->provider ?? throw new ApiError(503, 'ai_unavailable', 'Der KI-Import ist auf diesem Server nicht eingerichtet. Du kannst das Rezept selbst eingeben.');
+        if (!$this->enabled()) {
+            throw new ApiError(503, 'ai_unavailable', 'Der KI-Import ist auf diesem Server nicht eingerichtet. Du kannst das Rezept selbst eingeben.');
+        }
+        return $this->providers[$userId === null ? array_key_first($this->providers) : $this->chosen($userId)];
     }
 
     /**
@@ -91,7 +137,7 @@ final class Ai
      */
     public function json(string $userId, ?string $apiKeyId, string $feature, string $system, string $user, ?array $image, array $schema, string $schemaName): AiResult
     {
-        $provider = $this->require();
+        $provider = $this->require($userId);
         $start = hrtime(true);
         try {
             $result = $provider->json($system, $user, $image, $schema, $schemaName);

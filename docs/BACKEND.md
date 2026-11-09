@@ -1,6 +1,6 @@
 # Backend reference
 
-What the PHP backend does: conventions, auth, the data model, every REST endpoint, the MCP server, the console and the configuration. The JSON shapes match `frontend/src/lib/types.ts`; the OpenAPI document at `/api/v1/openapi.json` is generated from the same route table and JSON Schemas (`src/Http/Routes.php`, `src/Schema/`). Decisions cited as D1–D23 are in [DECISIONS.md](DECISIONS.md).
+What the PHP backend does: conventions, auth, the data model, every REST endpoint, the MCP server, the console and the configuration. The JSON shapes match `frontend/src/lib/types.ts`; the OpenAPI document at `/api/v1/openapi.json` is generated from the same route table and JSON Schemas (`src/Http/Routes.php`, `src/Schema/`). Decisions cited as D1–D25 are in [DECISIONS.md](DECISIONS.md).
 
 Setting it up locally: [DEVELOPMENT.md](DEVELOPMENT.md). Deploying: [DEPLOY.md](DEPLOY.md). Connecting agents: [MCP.md](MCP.md).
 
@@ -121,7 +121,7 @@ All tables: InnoDB, `utf8mb4` / `utf8mb4_unicode_ci` (accent- and case-insensiti
 
 | Table | Fields | Notes |
 |---|---|---|
-| `users` | id, name, email UNIQUE, password_hash, email_verified_at, disabled_at, week_start TINYINT (1), planning_weekday TINYINT (5), section_order JSON NULL, created_at, updated_at | One row = one family and the tenant key of every other table (§2.8). NULL `section_order` = default order |
+| `users` | id, name, email UNIQUE, password_hash, email_verified_at, disabled_at, week_start TINYINT (1), planning_weekday TINYINT (5), section_order JSON NULL, ai_provider VARCHAR(20) NULL, created_at, updated_at | One row = one family and the tenant key of every other table (§2.8). NULL `section_order` = default order; NULL `ai_provider` = the server's default (D25) |
 | `sessions` | id, user_id, token_hash UNIQUE, csrf_token, remember, device_label, user_agent, ip, via ENUM(password, pairing, reset, register, invite) (`register` is unused since D20), created_at, last_seen_at, expires_at | `id` is public (listing, revoking); the cookie value is never stored |
 | `device_links` | id, user_id, code_hash, token_hash UNIQUE, created_by_session, created_at, expires_at, used_at, used_by_session, used_by_label, spent_at | |
 | `password_resets` | id, user_id, purpose ENUM(reset, invite), token_hash UNIQUE, created_at, expires_at, used_at | reset: 60 min · invite: 7 days |
@@ -130,7 +130,7 @@ All tables: InnoDB, `utf8mb4` / `utf8mb4_unicode_ci` (accent- and case-insensiti
 | `ingredients` | id, recipe_id CASCADE, position, name, amount DECIMAL(10,3), unit, notes, component, section | `section` set on save by the word list (`Shopping::classify`) |
 | `instructions` | id, recipe_id CASCADE, step_number, description, image_path, ingredient_ids JSON NULL | NULL → the SPA matches ingredient names in the step text |
 | `meal_slots` | id, slot_key UNIQUE, name, short_name, position | seeded: breakfast/Frühstück, lunch/Mittagessen, dinner/Abendessen, snack/Snack |
-| `meal_plan_entries` | id, user_id, date, meal_slot_id, recipe_id NULL, note VARCHAR(80) NULL, detached_recipe_id NULL, position, created_via, seen_at, created_at, updated_at, deleted_at | CHECK exactly one of recipe_id / note. No servings (D15) |
+| `meal_plan_entries` | id, user_id, date, meal_slot_id, recipe_id NULL, note VARCHAR(80) NULL, servings TINYINT NULL, detached_recipe_id NULL, position, created_via, seen_at, created_at, updated_at, deleted_at | CHECK exactly one of recipe_id / note. `servings` 1–12, recipe entries only, NULL = the recipe's own (D24); kept while detached, reported as null |
 | `shopping_trips` | id, user_id, days JSON, days_chosen, created_at, completed_at | at most one open trip per user (app logic) |
 | `shopping_item_state` | trip_id, line_key, checked NULL, at_home NULL, seen_at, updated_at | PK(trip_id, line_key); NULL = never touched |
 | `shopping_manual_items` | id, user_id, name, section, created_via, created_at, bought_at, bought_trip_id, deleted_at | own items stay until bought |
@@ -174,8 +174,8 @@ Auth column: `public`, `session` (session only, never a key), or a scope (sessio
 | POST | `/auth/forgot-password` (logged out or in) | `{email}` → 204 always |
 | POST | `/auth/reset-password/check` (logged out) | `{token}` → `{purpose: "reset" \| "invite"}` or 400 `reset_invalid` |
 | POST | `/auth/reset-password` (logged out) | `{token, password, revokeOthers}` → like login |
-| GET | `/me` | `profile:read` (implicit for every key) → `{id, name, email, settings: {weekStart, planningWeekday}, today, defaultWeekStart, csrfToken?}` |
-| PATCH | `/me` | `{name?, email?, currentPassword?, settings?: {weekStart?, planningWeekday?}}`; `currentPassword` required only when the e-mail changes |
+| GET | `/me` | `profile:read` (implicit for every key) → `{id, name, email, settings: {weekStart, planningWeekday, aiProvider}, ai: {import, providers: [{key, label, model}]}, today, defaultWeekStart, csrfToken?}`; `aiProvider` is null while the AI import is off |
+| PATCH | `/me` | `{name?, email?, currentPassword?, settings?: {weekStart?, planningWeekday?, aiProvider?}}`; `currentPassword` required only when the e-mail changes; `aiProvider` must be configured on this server (D25) |
 
 `Session` = `{id, deviceLabel, remember, createdAt, lastSeenAt, via, current}`.
 
@@ -207,8 +207,8 @@ Validation (`src/Schema/recipe.schema.json`): title 1–200, category ∈ CATEGO
 |---|---|---|---|
 | GET | `/meal-slots` | mealplan:read | the four fixed slots |
 | GET | `/meal-plan?from&to` | mealplan:read | ≤ 62 days → `{from, to, entries: PlanEntry[]}`; each entry embeds `recipe: {id, title, imageUrl, cookingTime, category} \| null` |
-| POST | `/meal-plan/entries` | mealplan:write | `{date, slot, recipeId}` **xor** `{date, slot, note}` → `PlanEntry` (201), appended at the end of the slot |
-| PATCH | `/meal-plan/entries/{id}` | mealplan:write | `{date?, slot?, position?}`; a move without `position` goes to the end of the target slot |
+| POST | `/meal-plan/entries` | mealplan:write | `{date, slot, recipeId, servings?}` **xor** `{date, slot, note}` → `PlanEntry` (201), appended at the end of the slot. `PlanEntry.servings` is null unless set; `recipe.servings` is the recipe's own |
+| PATCH | `/meal-plan/entries/{id}` | mealplan:write | `{date?, slot?, position?, servings?}`; a move without `position` goes to the end of the target slot; `servings: null` goes back to the recipe's own |
 | DELETE | `/meal-plan/entries/{id}` | mealplan:write | soft delete → the removed `PlanEntry` |
 | POST | `/meal-plan/entries/{id}/restore` | mealplan:write | in-app undo of remove |
 | POST | `/meal-plan/seen` | session | `{ids}`: the LEDs of agent-created entries go out |
@@ -260,7 +260,7 @@ Validation (`src/Schema/recipe.schema.json`): title 1–200, category ∈ CATEGO
 
 **Running the job** (`ImportJobs`): under PHP-FPM (all-inkl) `POST` answers 202 at once and the work continues after `fastcgi_finish_request` (`AfterResponse`); everywhere else (php -S, Local's php-cgi, tests) it runs inside the request, which then answers finished. A queued job nobody started is run by the next poll after 20 s or by the cron; a job running longer than 10 minutes is failed (`import_timeout`). The claim is atomic (`UPDATE … WHERE status = 'queued'`). Up to `AI_IMPORTS_PER_HOUR` (30) per family.
 
-**Providers** (`AI_PROVIDER`, default `opencode`; `Ai::fromConfig`). Which one should be the default is still open ([TODO.md](../TODO.md)):
+**Providers** (`Ai::fromConfig`, D25). The AI import is optional: every provider whose API key is set is configured. With none, or `AI_PROVIDER=off`, it is off: `/me` and `/config` say `ai.import: false`, the app opens the editor instead of the import, hides the „KI-Import“ right for new keys, and MCP does not list `import_recipe_from_url`; `POST /ai/import` answers 503 `ai_unavailable`. `AI_PROVIDER` (default `opencode`) names the default among the configured ones; without its key the first configured one (in the order below) is the default. With two or more, a family picks one in Konto (`settings.aiProvider`, stored in `users.ai_provider`); a choice whose key was removed falls back to the default. Which one should be the default is still open ([TODO.md](../TODO.md)):
 
 | Provider | Call | Default model | Notes |
 |---|---|---|---|
@@ -268,7 +268,7 @@ Validation (`src/Schema/recipe.schema.json`): title 1–200, category ∈ CATEGO
 | `anthropic` | official SDK (`anthropic-ai/sdk`), `output_config.format` json_schema | `ANTHROPIC_MODEL` claude-opus-5-5, `ANTHROPIC_EFFORT` low | thinking at the model's default (adaptive); **server-side fallbacks on** (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`): a policy decline is retried on the default fallback model in the same call; a remaining `refusal` → `ai_refused` |
 | `openai` | Responses API, strict json_schema | `OPENAI_MODEL` gpt-5-mini, `OPENAI_EFFORT` low | |
 
-Every call writes an `ai_usage` row (tokens, duration, success; also failed calls). Without the provider's key the import answers 503 `ai_unavailable` and `/config` says `ai.import: false`. `AI_TIMEOUT` (150 s) per call. Image enhancement (`/ai/enhance-image`) is not built: no surface asks for it.
+Every call writes an `ai_usage` row (provider, tokens, duration, success; also failed calls). `AI_TIMEOUT` (150 s) per call. Image enhancement (`/ai/enhance-image`) is not built: no surface asks for it.
 
 ### 4.8 Hosting cron and maintenance
 | Method | Route | Auth | Does |
@@ -299,7 +299,7 @@ Title **or** any ingredient name contains `q` (LIKE under `utf8mb4_unicode_ci`, 
   3. `schnell` „Schnell“ / „Bis 30 Minuten“: cookingTime ≤ 30 by lovedScore.
 
 ### 5.4 Shopping (`shopping.ts`, `openTrip` / `buildLines` / `completeTrip` / `reopenTrip`)
-- **Lines from the plan are computed live, never stored.** Ingredients of every recipe entry on the trip's days, unscaled (recipe base servings, D15). Aggregation by `baseName()` (before the first comma) and `nameKey()` (lowercase); unit families g/kg → g, ml/l → ml, Zehe(n), Prise(n), others by unit label; plural keys fold into the singular ("Zwiebeln" + "Zwiebel"); amounts printed like `formatAmount()` (de-DE, ½ ¼ ¾ ⅓ ⅔, „1,2 kg“). `Wasser` / `Leitungswasser` are skipped.
+- **Lines from the plan are computed live, never stored.** Ingredients of every recipe entry on the trip's days, scaled by entry servings ÷ recipe servings when the entry has servings (a recipe without servings counts as 4; D24). `planDays[].dishes` marks a scaled dish as „Linsensuppe (6 Port.)“. Aggregation by `baseName()` (before the first comma) and `nameKey()` (lowercase); unit families g/kg → g, ml/l → ml, Zehe(n), Prise(n), others by unit label; plural keys fold into the singular ("Zwiebeln" + "Zwiebel"); amounts printed like `formatAmount()` (de-DE, ½ ¼ ¾ ⅓ ⅔, „1,2 kg“). `Wasser` / `Leitungswasser` are skipped.
 - Section: override for the name key, else the ingredient's stored section, else `classify()`.
 - **Trip:** the default days are the planned days (recipe entries) in the next 14 days not covered by a completed trip. An untouched trip (days not chosen, no line state) follows the plan. Manual-line keys are `m:<id>`.
 - "neu": lines whose key is not in the trip's seen set. A new trip starts with all current lines seen.
@@ -327,6 +327,7 @@ Fixed list in code; recents = the user's last 4 distinct notes of `created_via =
 |---|---|---|---|
 | `plan.remove` | entry added | removes it | entry gone: „Nicht mehr rückgängig: Der Eintrag ist schon weg.“ |
 | `plan.move` | entry moved | moves it back | entry gone, or changed since („… Der Eintrag wurde inzwischen geändert.“) |
+| `plan.servings` | entry servings changed | sets the previous servings | entry gone, or changed since |
 | `plan.restore` | entry removed | restores it | purged |
 | `shopping.remove` | own item added | removes it | gone or bought: „Nicht mehr rückgängig: Der Artikel ist schon von der Liste.“ |
 | `recipe.restore` | recipe updated | writes the previous version back | deleted („… Das Rezept gibt es nicht mehr.“) or `updated_at` changed („… „X“ wurde inzwischen geändert.“) |
@@ -357,14 +358,15 @@ How to connect a client: [MCP.md](MCP.md).
 | `update_recipe` | recipes:write | idempotent |
 | `delete_recipe` | recipes:delete | destructive |
 | `list_meal_slots` | mealplan:read | readOnly |
-| `get_meal_plan` | mealplan:read | readOnly · days → slots → entries |
+| `get_meal_plan` | mealplan:read | readOnly · days → slots → entries (with `servings` / `recipeServings`) |
 | `add_meal` | mealplan:write | – |
 | `move_meal` | mealplan:write | idempotent |
+| `set_meal_servings` | mealplan:write | idempotent · `{id, servings}`, null = the recipe's own |
 | `remove_meal` | mealplan:write | destructive |
 | `suggest_meals` | recipes:read | readOnly · same shelves as `/suggestions` |
 | `get_grocery_list` | shopping:read | readOnly |
 | `add_grocery_item` | shopping:write | – |
-| `import_recipe_from_url` | ai:use (+ recipes:write to save) | openWorld · `{url, save?}`: the app's own import (§4.7), synchronous; saves the recipe unless `save: false`, which returns the draft only |
+| `import_recipe_from_url` | ai:use (+ recipes:write to save) | openWorld · `{url, save?}`: the app's own import (§4.7) with the family's provider, synchronous; saves the recipe unless `save: false`, which returns the draft only. Only listed while an AI provider is configured (D25) |
 
 **Prompts:** `plan_week` (reads `week_start` / `planning_weekday` and targets `defaultWeekStart` unless a week is given; optional wishes) and `shopping_for_week`.
 
@@ -397,7 +399,7 @@ The first families came from the old Next.js/Supabase app at the cutover on 2026
 
 ## 8. Configuration (`.env` locally, see `.env.example`; `config.php` on the server, see `config.production.example.php`)
 `APP_ENV`, `APP_URL`, `APP_SECRET`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `MAIL_DRIVER` (log | smtp), `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM`, `SESSION_IDLE_HOURS`, `TRUSTED_PROXIES`, `RATE_LIMIT_KEY`, `RATE_LIMIT_IP`, `MEDIA_DIR` (default `storage/media`).
-AI (§4.7): `AI_PROVIDER` (opencode | anthropic | openai, default opencode), `OPENCODE_API_KEY`, `OPENCODE_MODEL`, `OPENCODE_IMAGE_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_EFFORT`, `AI_TIMEOUT`, `AI_IMPORTS_PER_HOUR`, `AI_INPUT_DIR` (tests).
+AI (§4.7, optional, D25): `AI_PROVIDER` (the default: opencode | anthropic | openai, default opencode; `off` turns the import off), `OPENCODE_API_KEY`, `OPENCODE_MODEL`, `OPENCODE_IMAGE_MODEL`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_EFFORT`, `AI_TIMEOUT`, `AI_IMPORTS_PER_HOUR`, `AI_INPUT_DIR` (tests).
 Cron (§4.8): `CRON_TOKEN` (≥ 32 characters, empty = off). Deploy settings live in `.env.deploy`, not here ([DEPLOY.md](DEPLOY.md)). When `config.php` exists (a PHP array, uploaded by `deploy.sh --push-config`), it replaces `.env`; real env vars fill in keys it leaves out.
 
 ---

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Essensplan\Schema;
 
+use Essensplan\Ai\Ai;
 use Essensplan\Domain\Catalog;
 use Essensplan\Domain\Shopping;
 use Essensplan\Http\ApiError;
+use Essensplan\Service\PlanService;
 use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\Validator;
 
@@ -36,6 +38,10 @@ final class Schemas
         $date = ['type' => 'string', 'format' => 'date', 'pattern' => '^\d{4}-\d{2}-\d{2}$'];
         $slot = ['enum' => array_keys(Catalog::SLOTS)];
         $weekday = ['type' => 'integer', 'minimum' => 0, 'maximum' => 6];
+        $servings = [
+            'type' => ['integer', 'null'], 'minimum' => PlanService::MIN_SERVINGS, 'maximum' => PlanService::MAX_SERVINGS,
+            'description' => "Servings to cook for this entry; scales the shopping list. Omit or null: the recipe's own servings. Recipe entries only.",
+        ];
         $obj = fn (array $props, array $required = [], array $extra = []) => [
             'type' => 'object',
             'properties' => $props,
@@ -57,15 +63,21 @@ final class Schemas
                 'name' => $str(100),
                 'email' => $str(190),
                 'currentPassword' => $str(1000),
-                'settings' => $obj(['weekStart' => $weekday, 'planningWeekday' => $weekday]),
+                'settings' => $obj(['weekStart' => $weekday, 'planningWeekday' => $weekday, 'aiProvider' => ['enum' => Ai::PROVIDERS]]),
             ], [], ['minProperties' => 1]),
             'plan-entry' => $obj([
                 'date' => $date,
                 'slot' => $slot,
                 'recipeId' => $str(36, 1),
                 'note' => $str(80, 1),
+                'servings' => $servings,
             ], ['date', 'slot']),
-            'plan-entry-patch' => $obj(['date' => $date, 'slot' => $slot, 'position' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100]], [], ['minProperties' => 1]),
+            'plan-entry-patch' => $obj([
+                'date' => $date,
+                'slot' => $slot,
+                'position' => ['type' => 'integer', 'minimum' => 0, 'maximum' => 100],
+                'servings' => $servings,
+            ], [], ['minProperties' => 1]),
             'ids' => $obj(['ids' => $ids], ['ids']),
             'trip-days' => $obj(['days' => ['type' => 'array', 'maxItems' => 31, 'items' => $date]], ['days']),
             'item-patch' => $obj(['checked' => ['type' => 'boolean'], 'atHome' => ['type' => 'boolean'], 'section' => ['enum' => Shopping::SECTIONS]], [], ['minProperties' => 1]),

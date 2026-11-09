@@ -2165,6 +2165,40 @@ select.input {
 .emenu__item--danger {
   color: var(--danger-ink);
 }
+/* Per-entry servings (D24): quiet, the cook bar's pill in a menu row. */
+.emenu__servings {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-2);
+  min-height: var(--tap);
+  padding: 2px var(--gap-1) 2px var(--gap-3);
+  border-top: 1px solid var(--seam);
+}
+.emenu__servings > .label {
+  margin-right: auto;
+}
+.emenu__reset {
+  min-height: 0;
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+.went__servings {
+  font-size: var(--fs-label);
+  font-weight: 620;
+  color: var(--label);
+  font-variant-numeric: tabular-nums;
+}
+.went--side .went__text,
+.went--other .went__text {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--gap-2);
+}
+.went--side .went__title,
+.went--other .went__title {
+  min-width: 0;
+}
 .emenu__move {
   display: flex;
   flex-direction: column;

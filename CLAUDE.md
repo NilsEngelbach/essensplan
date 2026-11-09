@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Essensplan is a German family meal planner: one family's recipe collection, a weekly meal plan with meal slots, a grocery list derived from the plan, a cooking mode, and AI import of recipes from a link or a photo. AI agents use it through a REST API and an MCP server with scoped API keys. Product context: [PRODUCT.md](PRODUCT.md); visual system: [DESIGN.md](DESIGN.md); data model, endpoints, MCP tools and error codes: [docs/BACKEND.md](docs/BACKEND.md); connecting agents: [docs/MCP.md](docs/MCP.md).
 
-It runs on all-inkl webspace (Apache, PHP-FPM, MySQL 8), live since 2026-11-08; it replaced a Next.js/Supabase app, which is gone. Decisions D1–D23, cited in code comments, are in [docs/DECISIONS.md](docs/DECISIONS.md); open work in [TODO.md](TODO.md).
+It runs on all-inkl webspace (Apache, PHP-FPM, MySQL 8), live since 2026-11-08; it replaced a Next.js/Supabase app, which is gone. Decisions D1–D25, cited in code comments, are in [docs/DECISIONS.md](docs/DECISIONS.md); open work in [TODO.md](TODO.md).
 
 ## Commands
 
@@ -36,7 +36,7 @@ Local environment: the "Local" site `essen` at http://essen.local (nginx, PHP 8.
 - `Repository/` – SQL. **Every method takes `$userId`**; there is no unscoped lookup. This is what keeps families apart.
 - `Domain/` – pure logic ported from the frontend (shopping aggregation and sections, catalog of categories/tags).
 - `Mcp/` – stateless Streamable HTTP MCP server and its tools.
-- `Ai/` – AI import: page fetching, providers (OpenCode, Anthropic, OpenAI behind `AI_PROVIDER`), import jobs that run after the response.
+- `Ai/` – optional AI import (D25): page fetching, providers (OpenCode, Anthropic, OpenAI; every one with a key is configured, `AI_PROVIDER` is the default, a family may pick another), import jobs that run after the response.
 - `Console/` – `bin/console` commands, migrator, server check.
 
 **Frontend** (`frontend/src/`, React 18 + react-router 6, no UI library):

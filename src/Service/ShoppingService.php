@@ -95,12 +95,12 @@ final class ShoppingService
         return $out;
     }
 
-    /** @return array<string, list<string>> date → recipe titles in meal order, for the next two weeks */
+    /** @return array<string, list<string>> date → recipe titles in meal order ("Linsensuppe (6 Port.)" when scaled), for the next two weeks */
     private function plannedDishes(string $userId): array
     {
         $today = $this->clock->today();
         $rows = $this->db->all(
-            'SELECT e.date, r.title FROM meal_plan_entries e
+            'SELECT e.date, r.title, e.servings, r.servings AS recipe_servings FROM meal_plan_entries e
              JOIN recipes r ON r.id = e.recipe_id AND r.user_id = e.user_id AND r.deleted_at IS NULL
              WHERE e.user_id = ? AND e.deleted_at IS NULL AND e.date BETWEEN ? AND ?
              ORDER BY e.date, e.meal_slot_id, e.position',
@@ -108,7 +108,8 @@ final class ShoppingService
         );
         $out = [];
         foreach ($rows as $r) {
-            $out[$r['date']][] = $r['title'];
+            $scaled = $r['servings'] !== null && (int) $r['servings'] !== ((int) ($r['recipe_servings'] ?? 0) ?: PlanService::DEFAULT_SERVINGS);
+            $out[$r['date']][] = $r['title'] . ($scaled ? " ({$r['servings']} Port.)" : '');
         }
         return $out;
     }
@@ -190,14 +191,15 @@ final class ShoppingService
     private function buildLines(string $userId, array $trip): array
     {
         $days = Util::decode($trip['days']);
-        $ingredients = $days === [] ? [] : $this->db->all(
-            'SELECT i.name, i.amount, i.unit, i.section FROM meal_plan_entries e
+        $rows = $days === [] ? [] : $this->db->all(
+            'SELECT i.name, i.amount, i.unit, i.section, e.servings AS entry_servings, r.servings AS recipe_servings FROM meal_plan_entries e
              JOIN recipes r ON r.id = e.recipe_id AND r.user_id = e.user_id AND r.deleted_at IS NULL
              JOIN ingredients i ON i.recipe_id = r.id
              WHERE e.user_id = ? AND e.deleted_at IS NULL AND e.date IN (' . Db::marks($days) . ')
              ORDER BY e.date, e.meal_slot_id, e.position, i.position',
             [$userId, ...$days],
         );
+        $ingredients = array_map(fn (array $i) => [...$i, 'amount' => self::scaled($i)], $rows);
         $state = [];
         $seen = [];
         foreach ($this->db->all('SELECT * FROM shopping_item_state WHERE trip_id = ?', [$trip['id']]) as $s) {
@@ -232,6 +234,16 @@ final class ShoppingService
             $lines[] = $line('m:' . $m['id'], $m['name'], '', $overrides[Shopping::nameKey($m['name'])] ?? $m['section'], $m['id'], $m['created_via'] !== 'app');
         }
         return $lines;
+    }
+
+    /** An ingredient amount for the servings this entry cooks (D24); the recipe's own when it has none. */
+    private static function scaled(array $i): float|string|null
+    {
+        if ($i['amount'] === null || $i['entry_servings'] === null) {
+            return $i['amount'];
+        }
+        $base = (int) ($i['recipe_servings'] ?? 0) ?: PlanService::DEFAULT_SERVINGS;
+        return (float) $i['amount'] * (int) $i['entry_servings'] / $base;
     }
 
     /** @return array<string, string> */

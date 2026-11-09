@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { AgentMark, LedRamp, Rocker, useMediaQuery } from '../../components/controls'
-import { agentChangedRecipeIds, listRecipes, recipeCount, subscribe } from '../../lib/api'
+import { agentChangedRecipeIds, aiImportEnabled, listRecipes, recipeCount, subscribe } from '../../lib/api'
 import { minutes, relativePast } from '../../lib/format'
 import { CATEGORIES, TAGS, type Category, type RecipeHit, type SortKey, type Tag } from '../../lib/types'
 
@@ -223,7 +223,9 @@ function RecipeResults({
     return (
       <div className="empty">
         <p className="empty__title">Noch keine Rezepte.</p>
-        <p className="empty__text">Füge dein erstes hinzu: Link einfügen oder Foto aus dem Kochbuch, den Rest erledigt die KI.</p>
+        <p className="empty__text">
+          {aiImportEnabled() ? 'Füge dein erstes hinzu: Link einfügen oder Foto aus dem Kochbuch, den Rest erledigt die KI.' : 'Füge dein erstes hinzu: Titel, Zutaten und Schritte, mehr braucht es nicht.'}
+        </p>
         <Link to="/rezepte/neu" className="btn btn--primary">
           Rezept hinzufügen
         </Link>

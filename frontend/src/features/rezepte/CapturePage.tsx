@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Camera, ClipboardPaste, Link2, X } from 'lucide-react'
-import { IMPORT_STEPS, ImportError, importRecipe } from '../../lib/api'
+import { aiImportEnabled, IMPORT_STEPS, ImportError, importRecipe } from '../../lib/api'
 import { photoBlob, readPhoto } from '../../lib/photo'
 import type { RecipeDraft } from '../../lib/types'
 
@@ -74,6 +74,12 @@ export function CapturePage() {
   const manual = () => navigate('/rezepte/neu/pruefen', { state: { draft: EMPTY_DRAFT, imported: false }, replace: true })
 
   const ready = Boolean(link.trim() || photo)
+
+  // Without a configured AI provider "Rezept hinzufügen" opens the editor; a shared link becomes the source (D25).
+  if (!aiImportEnabled()) {
+    const sourceUrl = shared.match(/https?:\/\/\S+/)?.[0] ?? null
+    return <Navigate to="/rezepte/neu/pruefen" state={{ draft: { ...EMPTY_DRAFT, sourceUrl }, imported: false }} replace />
+  }
 
   return (
     <div className="focus">

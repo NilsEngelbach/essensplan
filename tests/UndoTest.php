@@ -84,6 +84,26 @@ final class UndoTest extends TestCase
         $this->assertSame([], $this->ok(200, 'GET', '/api/v1/agent-activity/unseen-count', null, $this->me)['recipeIds']);
     }
 
+    public function testServingsUndo(): void
+    {
+        $r = $this->recipe($this->me);
+        $entry = $this->plan($this->me, self::TODAY, $r['id']);
+        $path = "/api/v1/meal-plan/entries/{$entry['id']}";
+        $this->ok(200, 'PATCH', $path, ['servings' => 6], $this->agent);
+        $act = $this->lastActivity();
+        $this->assertSame(['plan.servings', 'hat Do 12. Mittag: Linsensuppe auf 6 Portionen gesetzt'], [$act['undo']['kind'], $act['summary']]);
+        $this->ok(200, 'POST', "/api/v1/agent-activity/{$act['id']}/undo", null, $this->me);
+        $this->assertNull($this->ok(200, 'GET', '/api/v1/meal-plan?from=2026-11-12&to=2026-11-12', null, $this->me)['entries'][0]['servings']);
+
+        // Blocked once the family changed the entry again.
+        $this->tick('09:01:00');
+        $this->ok(200, 'PATCH', $path, ['servings' => 8], $this->agent);
+        $act = $this->lastActivity();
+        $this->tick('09:02:00');
+        $this->ok(200, 'PATCH', $path, ['servings' => 2], $this->me);
+        $this->fails(409, 'undo_blocked', 'POST', "/api/v1/agent-activity/{$act['id']}/undo", null, $this->me);
+    }
+
     public function testMoveAndDeleteUndo(): void
     {
         $r = $this->recipe($this->me);

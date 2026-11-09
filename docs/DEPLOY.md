@@ -36,7 +36,7 @@ The script runs in **Git Bash**, which brings `ssh`, `tar` and `curl`. For the b
    - `DB_HOST` `localhost`, `DB_PORT` `3306`, `DB_NAME`, `DB_USER`, `DB_PASS` from step 2;
    - `MAIL_DRIVER` `smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_ENCRYPTION`, `MAIL_USER`, `MAIL_PASS`, `MAIL_FROM` from step 3;
    - `CRON_TOKEN` (`php -r "echo bin2hex(random_bytes(24));"`);
-   - the AI provider and its key (`AI_PROVIDER`, `OPENCODE_API_KEY` …).
+   - optionally one or more AI provider keys (`OPENCODE_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) and the default `AI_PROVIDER`. Without a key the AI import is off; with several, each family picks one in Konto.
 
    It is plain PHP (`return ['KEY' => '…', …];`), so passwords need no escaping beyond `\'`. Both files are gitignored. Before uploading, the script loads the file with PHP and stops on syntax errors or missing values.
 8. **Deploy.** `./deploy.sh --dry-run`, then `./deploy.sh --push-config`.

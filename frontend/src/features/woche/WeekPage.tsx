@@ -6,6 +6,7 @@ import { useToast } from '../../components/toast'
 import {
   addPlanEntry,
   defaultWeekStart,
+  entryServings,
   getSettings,
   listPlanEntries,
   markSeen,
@@ -13,6 +14,7 @@ import {
   recipeById,
   removePlanEntry,
   restorePlanEntry,
+  setPlanEntryServings,
   subscribe,
   weekDates,
 } from '../../lib/api'
@@ -430,6 +432,7 @@ function EntryLine({
   const title = entryTitle(e)
   const agent = e.createdVia !== 'app' && !e.seenAt
   const open = menuFor === e.id
+  const { servings, scaled } = entryServings(e)
   return (
     <div className={`went went--${variant}`} data-free={!recipe || undefined} data-flip={lastPickId === e.id || undefined}>
       <button
@@ -449,6 +452,7 @@ function EntryLine({
         {variant === 'side' && <span className="went__plus" aria-hidden="true">+</span>}
         <span className="went__text">
           <span className="went__title">{title}</span>
+          {scaled && <span className="went__servings">{servings} Port.</span>}
           {agent && (
             <span className="went__agent">
               <span className="led" data-on="true" aria-hidden="true" />
@@ -463,7 +467,17 @@ function EntryLine({
         )}
         {variant !== 'other' && <span className="went__time num">{recipe ? minutes(recipe.cookingTime) : ''}</span>}
       </button>
-      {open && <EntryMenu entry={e} title={title} days={days} onMove={(d) => onMove(e, d)} onRemove={() => onRemove(e)} onClose={onCloseMenu} />}
+      {open && (
+        <EntryMenu
+          entry={e}
+          title={title}
+          days={days}
+          onMove={(d) => onMove(e, d)}
+          onServings={(n) => setPlanEntryServings(e.id, n)}
+          onRemove={() => onRemove(e)}
+          onClose={onCloseMenu}
+        />
+      )}
     </div>
   )
 }

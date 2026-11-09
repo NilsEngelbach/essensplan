@@ -38,7 +38,7 @@ final class PlanController
 
     public function move(Request $req, Response $res, array $args): Response
     {
-        return Io::json($res, $this->plan->move(Io::principal($req), Io::arg($args, 'id'), Io::body($req, 'plan-entry-patch')));
+        return Io::json($res, $this->plan->update(Io::principal($req), Io::arg($args, 'id'), Io::body($req, 'plan-entry-patch')));
     }
 
     public function remove(Request $req, Response $res, array $args): Response

@@ -59,6 +59,36 @@ final class ShoppingTest extends TestCase
         $this->assertSame(['spaghetti' => ['checked' => true, 'atHome' => false]], $list['trip']['state']);
     }
 
+    /** Entry servings scale that entry's ingredients (D24); a recipe without servings counts as 4. */
+    public function testEntryServingsScaleTheList(): void
+    {
+        $this->user();
+        $me = $this->login();
+        $soup = $this->recipe($me); // 4 servings: 250 g Linsen, 1 Zwiebel, 400 ml Kokosmilch
+        $pasta = $this->recipe($me, ['title' => 'Pasta', 'category' => 'Hauptspeise', 'servings' => null, 'ingredients' => [
+            ['name' => 'Spaghetti', 'amount' => 500, 'unit' => 'g'], ['name' => 'Salz', 'amount' => null, 'unit' => null],
+        ], 'instructions' => []]);
+        $entry = $this->plan($me, '2026-11-12', $soup['id']);
+        $this->ok(201, 'POST', '/api/v1/meal-plan/entries', ['date' => '2026-11-13', 'slot' => 'lunch', 'recipeId' => $pasta['id'], 'servings' => 2], $me);
+
+        $list = $this->ok(200, 'GET', '/api/v1/shopping/current', null, $me);
+        $lines = $this->lines($list);
+        $this->assertSame(['250 g', '1', '400 ml', '250 g', ''], [$lines['Rote Linsen']['qty'], $lines['Zwiebel']['qty'], $lines['Kokosmilch']['qty'], $lines['Spaghetti']['qty'], $lines['Salz']['qty']]);
+        $this->assertSame(['Linsensuppe'], $list['planDays'][0]['dishes']);
+        $this->assertSame(['Pasta (2 Port.)'], $list['planDays'][1]['dishes']);
+
+        // The list follows a change of servings live.
+        $this->ok(200, 'PATCH', "/api/v1/meal-plan/entries/{$entry['id']}", ['servings' => 6], $me);
+        $list = $this->ok(200, 'GET', '/api/v1/shopping/current', null, $me);
+        $lines = $this->lines($list);
+        $this->assertSame(['375 g', '1½', '600 ml'], [$lines['Rote Linsen']['qty'], $lines['Zwiebel']['qty'], $lines['Kokosmilch']['qty']]);
+        $this->assertSame(['Linsensuppe (6 Port.)'], $list['planDays'][0]['dishes']);
+
+        // Servings equal to the recipe's own read as unscaled.
+        $this->ok(200, 'PATCH', "/api/v1/meal-plan/entries/{$entry['id']}", ['servings' => 4], $me);
+        $this->assertSame(['Linsensuppe'], $this->ok(200, 'GET', '/api/v1/shopping/current', null, $me)['planDays'][0]['dishes']);
+    }
+
     public function testNewLinesAtHomeSectionsAndOwnItems(): void
     {
         $this->user();

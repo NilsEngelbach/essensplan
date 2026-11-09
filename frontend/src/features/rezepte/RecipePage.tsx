@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ChefHat, ExternalLink, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react'
 import { AgentMark, LedRamp, Segmented, ServingsDial } from '../../components/controls'
 import { useToast } from '../../components/toast'
@@ -7,6 +7,7 @@ import {
   addPlanEntry,
   deleteRecipe,
   agentChangedRecipeIds,
+  entryServings,
   getRecipe,
   markRecipeSeen,
   planEntriesForRecipe,
@@ -16,7 +17,7 @@ import {
   subscribe,
 } from '../../lib/api'
 import { addDays, dayLabel, formatAmount, minutes, monthYear, relativePast, todayIso, weekdayLong } from '../../lib/format'
-import { SLOTS, type Ingredient, type Recipe, type SlotKey } from '../../lib/types'
+import { DEFAULT_SERVINGS, MAX_SERVINGS, MIN_SERVINGS, SLOTS, type Ingredient, type Recipe, type SlotKey } from '../../lib/types'
 
 const SLOT_KEY = 'essensplan.lastSlot'
 
@@ -34,7 +35,8 @@ export function RecipePage() {
   const { id = '' } = useParams()
   const [recipe, setRecipe] = useState<Recipe | null | undefined>(undefined)
   const [version, setVersion] = useState(0)
-  const [servings, setServings] = useState(4)
+  const [servings, setServings] = useState(DEFAULT_SERVINGS)
+  const [params] = useSearchParams()
   const navigate = useNavigate()
   const toast = useToast()
 
@@ -51,7 +53,9 @@ export function RecipePage() {
       // Reset the dial only when a different recipe is shown, not on every store change.
       if (r && servingsFor.current !== r.id) {
         servingsFor.current = r.id
-        setServings(r.servings ?? 4)
+        // Opened from a plan entry that cooks for other servings (D24): the dial starts there.
+        const asked = Number(params.get('portionen'))
+        setServings(asked >= MIN_SERVINGS && asked <= MAX_SERVINGS ? Math.round(asked) : (r.servings ?? DEFAULT_SERVINGS))
       }
     })
   }, [id, version])
@@ -75,7 +79,7 @@ export function RecipePage() {
     )
   }
 
-  const base = recipe.servings ?? 4
+  const base = recipe.servings ?? DEFAULT_SERVINGS
   const factor = servings / base
 
   const onDelete = async () => {
@@ -129,7 +133,7 @@ export function RecipePage() {
         </section>
 
         <div className="recipe__side">
-          <PlanPanel recipe={recipe} />
+          <PlanPanel recipe={recipe} servings={servings} base={base} />
 
           <section className="steps" aria-labelledby="steps-h">
             <div className="panel__head">
@@ -245,7 +249,8 @@ function IngredientList({ ingredients, factor }: { ingredients: Ingredient[]; fa
   )
 }
 
-function PlanPanel({ recipe }: { recipe: Recipe }) {
+/** Plans the recipe; a dial set away from the base plans those servings (D24). */
+function PlanPanel({ recipe, servings, base }: { recipe: Recipe; servings: number; base: number }) {
   const [slot, setSlot] = useState<SlotKey>(readSlot)
   const [, force] = useState(0)
   const toast = useToast()
@@ -265,8 +270,10 @@ function PlanPanel({ recipe }: { recipe: Recipe }) {
   const slotName = (k: SlotKey) => SLOTS.find((s) => s.key === k)?.name ?? k
 
   const plan = async (date: string) => {
-    const entry = await addPlanEntry({ date, slot, recipeId: recipe.id })
-    toast.show(`Für ${dayLabel(date) === 'Heute' || dayLabel(date) === 'Morgen' ? dayLabel(date).toLowerCase() : weekdayLong(date)}, ${slotName(slot)} geplant.`, {
+    const scaled = servings !== base
+    const entry = await addPlanEntry({ date, slot, recipeId: recipe.id, servings: scaled ? servings : undefined })
+    const when = dayLabel(date) === 'Heute' || dayLabel(date) === 'Morgen' ? dayLabel(date).toLowerCase() : weekdayLong(date)
+    toast.show(`Für ${when}, ${slotName(slot)} geplant${scaled ? ` (${servings} Portionen)` : ''}.`, {
       undo: () => removePlanEntry(entry.id),
     })
   }
@@ -277,6 +284,7 @@ function PlanPanel({ recipe }: { recipe: Recipe }) {
         <h2 id="plan-h" className="panel__title">
           In den Plan
         </h2>
+        {servings !== base && <span className="label">für {servings} {servings === 1 ? 'Portion' : 'Portionen'}</span>}
       </div>
       <Segmented<SlotKey> label="Mahlzeit" hideLabel value={slot} onChange={setSlot} options={SLOTS.map((s) => ({ value: s.key, label: s.short }))} />
       <div className="days" role="group" aria-label="Tag wählen, um zu planen">
@@ -298,6 +306,7 @@ function PlanPanel({ recipe }: { recipe: Recipe }) {
               <span className="led" data-on="true" aria-hidden="true" />
               <span>
                 {dayLabel(e.date, today)} · {slotName(e.slot)}
+                {entryServings(e).scaled && ` · ${entryServings(e).servings} Port.`}
               </span>
               <button
                 type="button"
